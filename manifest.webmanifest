@@ -1,6 +1,6 @@
 {
- "name": "beLEAF",
- "short_name": "beLEAF",
+ "name": "beleaf",
+ "short_name": "beleaf",
  "description": "An emote-focused drawing app",
  "start_url": "./",
  "scope": "./",

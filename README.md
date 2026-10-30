@@ -1,4 +1,4 @@
-# beLEAF
+# beleaf
 
 An emote-focused drawing app. This folder is the whole app, ready to put online for free.
 Once it's online, you can install it like a normal app and it works offline.
@@ -14,7 +14,7 @@ Once it's online, you can install it like a normal app and it works offline.
 2. Drag this whole folder onto the page. You get a link right away; rename it under Site settings if you like.
 
 ## Install it as an app
-- **Windows (Chrome/Edge):** open your link, then click the install icon in the address bar (or Edge: ⋯ → Apps → Install beLEAF).
+- **Windows (Chrome/Edge):** open your link, then click the install icon in the address bar (or Edge: ⋯ → Apps → Install beleaf).
 - **Android (Chrome):** open your link, ⋮ → Add to Home screen / Install app.
 - **iPhone/iPad (Safari):** Share → Add to Home Screen.
 

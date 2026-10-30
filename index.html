@@ -1,11 +1,11 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#141416"><meta name="description" content="beLEAF: an emote-focused drawing app">
+<meta name="theme-color" content="#141416"><meta name="description" content="beleaf: an emote-focused drawing app">
 <link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icons/icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="beLEAF">
+<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="beleaf">
 <style>html,body{margin:0;height:100%}[hidden]{display:none!important}</style>
 <script>if('serviceWorker' in navigator&&location.protocol==='https:'||location.hostname==='localhost')addEventListener('load',()=>navigator.serviceWorker&&navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
-</head><body><title>beLEAF</title>
+</head><body><title>beleaf</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Lexend:wght@400;500;600;700&family=Comic+Neue:wght@400;700&display=swap">
@@ -1061,7 +1061,7 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
 <div class="app" id="app" data-open="" data-timeline="" data-quick="on" data-dl="open" data-dr="open">
   <header class="menubar">
     <button class="ibtn hamburger" id="hamb" aria-label="Menu" aria-haspopup="true"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-    <div class="logo" aria-hidden="true" title="beLEAF"><svg class="ic rac" viewBox="0 0 24 24" aria-hidden="true"><path style="fill:var(--lg)" d="M5.2 19.4C3.6 12.6 7.8 5.6 18.8 4.2 19.8 14.2 13.4 20.6 5.2 19.4Z"/><path style="fill:var(--ld)" opacity=".35" d="M5.2 19.4C10.2 15.8 13.6 11.2 16.4 6.4 17.4 14 12.6 19.6 5.2 19.4Z"/><path d="M3.4 21.2L7 17.6C10.4 14.2 13.6 10.2 16.4 6.4" style="stroke:var(--ld)" stroke-width="1.2" stroke-linecap="round" fill="none"/><path style="fill:var(--la)" d="M19.6 11.7C20.006 13.788 20.412000000000003 14.193999999999999 22.5 14.6C20.412000000000003 15.006 20.006 15.411999999999999 19.6 17.5C19.194000000000003 15.411999999999999 18.788 15.006 16.700000000000003 14.6C18.788 14.193999999999999 19.194000000000003 13.788 19.6 11.7Z"/><path style="fill:var(--la)" d="M6.2 2.3C6.522 3.9559999999999995 6.844 4.278 8.5 4.6C6.844 4.922 6.522 5.244 6.2 6.8999999999999995C5.878 5.244 5.556 4.922 3.9000000000000004 4.6C5.556 4.278 5.878 3.9559999999999995 6.2 2.3Z"/><path style="fill:var(--la)" d="M21.2 19.5C21.41 20.58 21.62 20.79 22.7 21C21.62 21.21 21.41 21.42 21.2 22.5C20.99 21.42 20.779999999999998 21.21 19.7 21C20.779999999999998 20.79 20.99 20.58 21.2 19.5Z"/></svg></div>
+    <div class="logo" aria-hidden="true" title="beleaf"><svg class="ic rac" viewBox="0 0 24 24" aria-hidden="true"><path style="fill:var(--lg)" d="M5.2 19.4C3.6 12.6 7.8 5.6 18.8 4.2 19.8 14.2 13.4 20.6 5.2 19.4Z"/><path style="fill:var(--ld)" opacity=".35" d="M5.2 19.4C10.2 15.8 13.6 11.2 16.4 6.4 17.4 14 12.6 19.6 5.2 19.4Z"/><path d="M3.4 21.2L7 17.6C10.4 14.2 13.6 10.2 16.4 6.4" style="stroke:var(--ld)" stroke-width="1.2" stroke-linecap="round" fill="none"/><path style="fill:var(--la)" d="M19.6 11.7C20.006 13.788 20.412000000000003 14.193999999999999 22.5 14.6C20.412000000000003 15.006 20.006 15.411999999999999 19.6 17.5C19.194000000000003 15.411999999999999 18.788 15.006 16.700000000000003 14.6C18.788 14.193999999999999 19.194000000000003 13.788 19.6 11.7Z"/><path style="fill:var(--la)" d="M6.2 2.3C6.522 3.9559999999999995 6.844 4.278 8.5 4.6C6.844 4.922 6.522 5.244 6.2 6.8999999999999995C5.878 5.244 5.556 4.922 3.9000000000000004 4.6C5.556 4.278 5.878 3.9559999999999995 6.2 2.3Z"/><path style="fill:var(--la)" d="M21.2 19.5C21.41 20.58 21.62 20.79 22.7 21C21.62 21.21 21.41 21.42 21.2 22.5C20.99 21.42 20.779999999999998 21.21 19.7 21C20.779999999999998 20.79 20.99 20.58 21.2 19.5Z"/></svg></div>
     <nav class="menus" aria-label="Main menu">
       <button class="mbtn" data-menu="file" aria-haspopup="true" aria-expanded="false">File</button>
       <button class="mbtn" data-menu="emote" aria-haspopup="true" aria-expanded="false">Emotes</button>
@@ -1108,7 +1108,7 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
               <div class="cats" id="cats"></div>
               <ul class="blist" id="blist"></ul>
               <div class="blist-actions">
-                <button class="sbtn" id="importSut" title="Import a Clip Studio .sut brush or a beLEAF brush card"><svg class="ic" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M4 20h16"/></svg>Import</button>
+                <button class="sbtn" id="importSut" title="Import a Clip Studio .sut brush or a beleaf brush card"><svg class="ic" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M4 20h16"/></svg>Import</button>
                 <button class="sbtn" id="dupBrush"><svg class="ic" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></svg>Duplicate</button>
                 <button class="sbtn" id="resetBrush"><svg class="ic" viewBox="0 0 24 24"><path d="M4 12a8 8 0 108-8H7"/><path d="M8 1L5 4l3 3"/></svg>Reset</button>
                 <button class="sbtn" id="shareBrush" title="Share this brush as a picture card"><svg class="ic" viewBox="0 0 24 24"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.4M8.2 13.2l7.6 4.4"/></svg>Share</button>
@@ -1132,7 +1132,7 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
 
     <div class="center">
       <div class="doctabs" role="tablist" aria-label="Open canvases"><div class="dtabs" id="docTabs"></div><span class="save-state" id="saveState"></span></div>
-      <main class="stage" id="stage"><svg width="0" height="0" style="position:absolute;pointer-events:none" aria-hidden="true"><defs><filter id="cvd-protan" color-interpolation-filters="linearRGB"><feColorMatrix type="matrix" values="0.152286 1.052583 -0.204868 0 0 0.114503 0.786281 0.099216 0 0 -0.003882 -0.048116 1.051998 0 0 0 0 0 1 0"/></filter><filter id="cvd-deutan" color-interpolation-filters="linearRGB"><feColorMatrix type="matrix" values="0.367322 0.860646 -0.227968 0 0 0.280085 0.672501 0.047413 0 0 -0.011820 0.042940 0.968881 0 0 0 0 0 1 0"/></filter><filter id="cvd-tritan" color-interpolation-filters="linearRGB"><feColorMatrix type="matrix" values="1.255528 -0.076749 -0.178779 0 0 -0.078411 0.930809 0.147602 0 0 0.004733 0.691367 0.303900 0 0 0 0 0 1 0"/></filter><filter id="cvd-achroma" color-interpolation-filters="linearRGB"><feColorMatrix type="matrix" values="0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0 0 0 1 0"/></filter></defs></svg><div class="startscreen" id="startScreen" hidden><div class="ss-card"><svg class="rac ss-logo" viewBox="0 0 24 24" aria-hidden="true"><path style="fill:var(--lg)" d="M5.2 19.4C3.6 12.6 7.8 5.6 18.8 4.2 19.8 14.2 13.4 20.6 5.2 19.4Z"/><path style="fill:var(--ld)" opacity=".35" d="M5.2 19.4C10.2 15.8 13.6 11.2 16.4 6.4 17.4 14 12.6 19.6 5.2 19.4Z"/><path d="M3.4 21.2L7 17.6C10.4 14.2 13.6 10.2 16.4 6.4" style="stroke:var(--ld)" stroke-width="1.2" stroke-linecap="round" fill="none"/><path style="fill:var(--la)" d="M19.6 11.7C20.006 13.788 20.412000000000003 14.193999999999999 22.5 14.6C20.412000000000003 15.006 20.006 15.411999999999999 19.6 17.5C19.194000000000003 15.411999999999999 18.788 15.006 16.700000000000003 14.6C18.788 14.193999999999999 19.194000000000003 13.788 19.6 11.7Z"/><path style="fill:var(--la)" d="M6.2 2.3C6.522 3.9559999999999995 6.844 4.278 8.5 4.6C6.844 4.922 6.522 5.244 6.2 6.8999999999999995C5.878 5.244 5.556 4.922 3.9000000000000004 4.6C5.556 4.278 5.878 3.9559999999999995 6.2 2.3Z"/><path style="fill:var(--la)" d="M21.2 19.5C21.41 20.58 21.62 20.79 22.7 21C21.62 21.21 21.41 21.42 21.2 22.5C20.99 21.42 20.779999999999998 21.21 19.7 21C20.779999999999998 20.79 20.99 20.58 21.2 19.5Z"/></svg><h1>beLEAF</h1><p>What would you like to make?</p>
+      <main class="stage" id="stage"><svg width="0" height="0" style="position:absolute;pointer-events:none" aria-hidden="true"><defs><filter id="cvd-protan" color-interpolation-filters="linearRGB"><feColorMatrix type="matrix" values="0.152286 1.052583 -0.204868 0 0 0.114503 0.786281 0.099216 0 0 -0.003882 -0.048116 1.051998 0 0 0 0 0 1 0"/></filter><filter id="cvd-deutan" color-interpolation-filters="linearRGB"><feColorMatrix type="matrix" values="0.367322 0.860646 -0.227968 0 0 0.280085 0.672501 0.047413 0 0 -0.011820 0.042940 0.968881 0 0 0 0 0 1 0"/></filter><filter id="cvd-tritan" color-interpolation-filters="linearRGB"><feColorMatrix type="matrix" values="1.255528 -0.076749 -0.178779 0 0 -0.078411 0.930809 0.147602 0 0 0.004733 0.691367 0.303900 0 0 0 0 0 1 0"/></filter><filter id="cvd-achroma" color-interpolation-filters="linearRGB"><feColorMatrix type="matrix" values="0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0 0 0 1 0"/></filter></defs></svg><div class="startscreen" id="startScreen" hidden><div class="ss-card"><svg class="rac ss-logo" viewBox="0 0 24 24" aria-hidden="true"><path style="fill:var(--lg)" d="M5.2 19.4C3.6 12.6 7.8 5.6 18.8 4.2 19.8 14.2 13.4 20.6 5.2 19.4Z"/><path style="fill:var(--ld)" opacity=".35" d="M5.2 19.4C10.2 15.8 13.6 11.2 16.4 6.4 17.4 14 12.6 19.6 5.2 19.4Z"/><path d="M3.4 21.2L7 17.6C10.4 14.2 13.6 10.2 16.4 6.4" style="stroke:var(--ld)" stroke-width="1.2" stroke-linecap="round" fill="none"/><path style="fill:var(--la)" d="M19.6 11.7C20.006 13.788 20.412000000000003 14.193999999999999 22.5 14.6C20.412000000000003 15.006 20.006 15.411999999999999 19.6 17.5C19.194000000000003 15.411999999999999 18.788 15.006 16.700000000000003 14.6C18.788 14.193999999999999 19.194000000000003 13.788 19.6 11.7Z"/><path style="fill:var(--la)" d="M6.2 2.3C6.522 3.9559999999999995 6.844 4.278 8.5 4.6C6.844 4.922 6.522 5.244 6.2 6.8999999999999995C5.878 5.244 5.556 4.922 3.9000000000000004 4.6C5.556 4.278 5.878 3.9559999999999995 6.2 2.3Z"/><path style="fill:var(--la)" d="M21.2 19.5C21.41 20.58 21.62 20.79 22.7 21C21.62 21.21 21.41 21.42 21.2 22.5C20.99 21.42 20.779999999999998 21.21 19.7 21C20.779999999999998 20.79 20.99 20.58 21.2 19.5Z"/></svg><h1>beleaf</h1><p>What would you like to make?</p>
   <div class="ss-btns"><button id="ssCanvas"><svg class="ic" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 15l3-3 2 2 3-4"/></svg><b>New canvas</b><small>Any size, for drawings and posts</small></button>
   <button id="ssSheet"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="7" height="7" rx="1.5"/><rect x="14" y="4" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><b>New emote sheet</b><small>A grid of emote boxes, 224 px each or your size</small></button></div>
   <div class="ss-more"><button class="btn" id="ssOpen">Open project file…</button><button class="btn" id="ssProjects">Projects and backups…</button></div></div></div><pre class="perfhud" id="perfHud" hidden aria-live="off"></pre><div class="cvdbadge" id="cvdBadge" hidden><span></span><button title="Turn off colour-blind preview">Off</button></div>
@@ -1312,7 +1312,7 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
     <div class="bar-scroll" id="barTools"></div>
     <button class="chip-btn" data-open="color" aria-label="Color"><span id="phoneChip"></span></button>
   </nav>
-  <nav class="drawer" id="drawer" aria-label="Menu" hidden><div class="drawer-h"><div class="logo" aria-hidden="true" title="beLEAF"><svg class="ic rac" viewBox="0 0 24 24" aria-hidden="true"><path style="fill:var(--lg)" d="M5.2 19.4C3.6 12.6 7.8 5.6 18.8 4.2 19.8 14.2 13.4 20.6 5.2 19.4Z"/><path style="fill:var(--ld)" opacity=".35" d="M5.2 19.4C10.2 15.8 13.6 11.2 16.4 6.4 17.4 14 12.6 19.6 5.2 19.4Z"/><path d="M3.4 21.2L7 17.6C10.4 14.2 13.6 10.2 16.4 6.4" style="stroke:var(--ld)" stroke-width="1.2" stroke-linecap="round" fill="none"/><path style="fill:var(--la)" d="M19.6 11.7C20.006 13.788 20.412000000000003 14.193999999999999 22.5 14.6C20.412000000000003 15.006 20.006 15.411999999999999 19.6 17.5C19.194000000000003 15.411999999999999 18.788 15.006 16.700000000000003 14.6C18.788 14.193999999999999 19.194000000000003 13.788 19.6 11.7Z"/><path style="fill:var(--la)" d="M6.2 2.3C6.522 3.9559999999999995 6.844 4.278 8.5 4.6C6.844 4.922 6.522 5.244 6.2 6.8999999999999995C5.878 5.244 5.556 4.922 3.9000000000000004 4.6C5.556 4.278 5.878 3.9559999999999995 6.2 2.3Z"/><path style="fill:var(--la)" d="M21.2 19.5C21.41 20.58 21.62 20.79 22.7 21C21.62 21.21 21.41 21.42 21.2 22.5C20.99 21.42 20.779999999999998 21.21 19.7 21C20.779999999999998 20.79 20.99 20.58 21.2 19.5Z"/></svg></div><b>beLEAF</b><button class="ibtn" id="drawerClose" aria-label="Close menu"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div class="drawer-b" id="drawerBody"></div></nav>
+  <nav class="drawer" id="drawer" aria-label="Menu" hidden><div class="drawer-h"><div class="logo" aria-hidden="true" title="beleaf"><svg class="ic rac" viewBox="0 0 24 24" aria-hidden="true"><path style="fill:var(--lg)" d="M5.2 19.4C3.6 12.6 7.8 5.6 18.8 4.2 19.8 14.2 13.4 20.6 5.2 19.4Z"/><path style="fill:var(--ld)" opacity=".35" d="M5.2 19.4C10.2 15.8 13.6 11.2 16.4 6.4 17.4 14 12.6 19.6 5.2 19.4Z"/><path d="M3.4 21.2L7 17.6C10.4 14.2 13.6 10.2 16.4 6.4" style="stroke:var(--ld)" stroke-width="1.2" stroke-linecap="round" fill="none"/><path style="fill:var(--la)" d="M19.6 11.7C20.006 13.788 20.412000000000003 14.193999999999999 22.5 14.6C20.412000000000003 15.006 20.006 15.411999999999999 19.6 17.5C19.194000000000003 15.411999999999999 18.788 15.006 16.700000000000003 14.6C18.788 14.193999999999999 19.194000000000003 13.788 19.6 11.7Z"/><path style="fill:var(--la)" d="M6.2 2.3C6.522 3.9559999999999995 6.844 4.278 8.5 4.6C6.844 4.922 6.522 5.244 6.2 6.8999999999999995C5.878 5.244 5.556 4.922 3.9000000000000004 4.6C5.556 4.278 5.878 3.9559999999999995 6.2 2.3Z"/><path style="fill:var(--la)" d="M21.2 19.5C21.41 20.58 21.62 20.79 22.7 21C21.62 21.21 21.41 21.42 21.2 22.5C20.99 21.42 20.779999999999998 21.21 19.7 21C20.779999999999998 20.79 20.99 20.58 21.2 19.5Z"/></svg></div><b>beleaf</b><button class="ibtn" id="drawerClose" aria-label="Close menu"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div class="drawer-b" id="drawerBody"></div></nav>
 </div>
 
 <div class="modal" id="exportModal" hidden><div class="card" role="dialog" aria-label="Export">
@@ -1404,7 +1404,7 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
   <h2>Pen and tablet</h2>
   <div class="tabs pentabs" id="penTabs" role="tablist"><button role="tab" data-t="ink" aria-selected="true">Windows Ink</button><button role="tab" data-t="hid" aria-selected="false">WebHID (experimental)</button></div>
   <div id="penInk">
-  <p class="note">A browser can only read your pen through <b>Windows Ink</b>, which is Clip Studio's <b>“Tablet PC”</b> option. <b>Wintab</b> can't be reached from a web page, so beLEAF always uses the Tablet PC route. If pressure doesn't come through, turn on Windows Ink in your tablet driver (Wacom: Wacom Tablet Properties → Mapping → “Use Windows Ink”; XP-Pen and Huion: tick “Windows Ink” in the driver), then reload. On Android and iPad the stylus works straight away.</p>
+  <p class="note">A browser can only read your pen through <b>Windows Ink</b>, which is Clip Studio's <b>“Tablet PC”</b> option. <b>Wintab</b> can't be reached from a web page, so beleaf always uses the Tablet PC route. If pressure doesn't come through, turn on Windows Ink in your tablet driver (Wacom: Wacom Tablet Properties → Mapping → “Use Windows Ink”; XP-Pen and Huion: tick “Windows Ink” in the driver), then reload. On Android and iPad the stylus works straight away.</p>
   <div class="penpad"><canvas id="penPad" width="520" height="150" aria-label="Pen test area: draw here"></canvas><div class="penread" id="penRead">Draw in the box with your pen</div></div>
   <div class="form">
     <label class="f wide">Pressure feel <output id="pgO"></output><input type="range" id="penGamma" min="30" max="300" step="5" aria-label="Pressure feel"></label>
@@ -1415,7 +1415,7 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
   <p class="note">Pressure feel works like Clip Studio's “Adjust pen pressure”: left needs a lighter touch for full strength, right needs you to press harder.</p>
   </div>
   <div id="penHid" hidden>
-    <p class="note"><b>What is this?</b> Normally your tablet talks to Windows, and Windows passes the pen to the browser (that's Windows Ink). <b>WebHID</b> lets beLEAF talk to the tablet directly instead, so pressure can work even with Windows Ink turned off. You pick your device, your browser asks “allow beLEAF to use this?”, and that's it. It's new and doesn't work with every tablet: some brands only speak their own private language. Buttons on remotes, keypads and controllers can also be set to beLEAF actions here.</p>
+    <p class="note"><b>What is this?</b> Normally your tablet talks to Windows, and Windows passes the pen to the browser (that's Windows Ink). <b>WebHID</b> lets beleaf talk to the tablet directly instead, so pressure can work even with Windows Ink turned off. You pick your device, your browser asks “allow beleaf to use this?”, and that's it. It's new and doesn't work with every tablet: some brands only speak their own private language. Buttons on remotes, keypads and controllers can also be set to beleaf actions here.</p>
     <p class="note" id="hidAvail"></p>
     <input class="keysearch" id="hidSearch" type="search" placeholder="Search devices: Wacom, Huion, XP-Pen, controller…" aria-label="Search devices">
     <div class="hidlist" id="hidList"></div>
@@ -1538,7 +1538,7 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
 <div class="modal" id="importModal" hidden><div class="card" role="dialog" aria-label="Import">
   <h2>Import</h2>
   <div class="importdrop" id="importDrop"><svg class="ic" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M4 20h16"/></svg><p id="importHint"></p><button class="btn primary" id="importPick">Choose file…</button></div>
-  <div class="field"><span class="flabel">Or paste a code</span><textarea class="tinput code" id="importCode" rows="3" placeholder="BLF1.…" aria-label="Paste a beLEAF code"></textarea></div>
+  <div class="field"><span class="flabel">Or paste a code</span><textarea class="tinput code" id="importCode" rows="3" placeholder="BLF1.…" aria-label="Paste a beleaf code"></textarea></div>
   <div class="actions"><button class="btn" data-dismiss>Cancel</button><button class="btn primary" id="importGo">Import code</button></div>
 </div></div>
 <input type="file" id="shareIn" accept=".png,.json,.txt,.sut,.beleaf,image/png" multiple hidden>
@@ -3683,7 +3683,7 @@ function penTestPad() {
     x.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--fg'); x.lineCap = 'round'; x.lineWidth = w * d; x.globalAlpha = a; x.beginPath(); x.moveTo(...last); x.lineTo(...q); x.stroke(); last = q;
     const none = (raw === .5 || raw === 0) && e.pointerType !== 'touch' && !hidPressure();
     read.classList.toggle('warn', none && pts > 6);
-    read.textContent = none && pts > 6 ? 'No pressure is reaching beLEAF. See Help › Pen and tablet.' : `${e.pointerType} · pressure ${p.toFixed(2)}`;
+    read.textContent = none && pts > 6 ? 'No pressure is reaching beleaf. See Help › Pen and tablet.' : `${e.pointerType} · pressure ${p.toFixed(2)}`;
   });
   cv.addEventListener('pointerup', () => last = null);
   const clear = el('button', { class: 'btn', text: 'Clear strokes', onclick: () => { x.clearRect(0, 0, cv.width, cv.height); box.classList.remove('used'); read.classList.remove('warn'); read.textContent = 'Draw in the box with your pen'; msg.textContent = pressText(); } });
@@ -3776,15 +3776,15 @@ $('#penGamma').oninput = e => { pressGamma = +e.target.value / 100; store.set('p
 $('#penOnlyCk').onchange = e => { penOnly.checked = e.target.checked; store.set('penOnly', penOnly.checked); };
 $('#penReset').onclick = () => { pressGamma = 1; store.set('pressGamma', 1); penOnly.checked = false; store.set('penOnly', false); openPen(); };
 penOnly.checked = store.get('penOnly', false);
-// favicon: the beLEAF leaf, its sparkles follow the accent colour
+// favicon: the beleaf leaf, its sparkles follow the accent colour
 function setFavicon() {
   const ac = theme.accent || '#F5D547', svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#5DBB63" d="M5.2 19.4C3.6 12.6 7.8 5.6 18.8 4.2 19.8 14.2 13.4 20.6 5.2 19.4Z"/><path fill="#235C2B" opacity=".35" d="M5.2 19.4C10.2 15.8 13.6 11.2 16.4 6.4 17.4 14 12.6 19.6 5.2 19.4Z"/><path d="M3.4 21.2L7 17.6C10.4 14.2 13.6 10.2 16.4 6.4" stroke="#235C2B" stroke-width="1.2" stroke-linecap="round" fill="none"/><path fill="${ac}" d="M19.6 11.7C20.006 13.788 20.412000000000003 14.193999999999999 22.5 14.6C20.412000000000003 15.006 20.006 15.411999999999999 19.6 17.5C19.194000000000003 15.411999999999999 18.788 15.006 16.700000000000003 14.6C18.788 14.193999999999999 19.194000000000003 13.788 19.6 11.7Z"/><path fill="${ac}" d="M6.2 2.3C6.522 3.9559999999999995 6.844 4.278 8.5 4.6C6.844 4.922 6.522 5.244 6.2 6.8999999999999995C5.878 5.244 5.556 4.922 3.9000000000000004 4.6C5.556 4.278 5.878 3.9559999999999995 6.2 2.3Z"/><path fill="${ac}" d="M21.2 19.5C21.41 20.58 21.62 20.79 22.7 21C21.62 21.21 21.41 21.42 21.2 22.5C20.99 21.42 20.779999999999998 21.21 19.7 21C20.779999999999998 20.79 20.99 20.58 21.2 19.5Z"/></svg>`;
   let l = document.querySelector('link[rel=icon][data-beleaf]'); if (!l) { l = document.createElement('link'); l.rel = 'icon'; l.type = 'image/svg+xml'; l.dataset.beleaf = '1'; document.head.append(l); }
-  l.href = 'data:image/svg+xml,' + encodeURIComponent(svg); document.title = 'beLEAF';
+  l.href = 'data:image/svg+xml,' + encodeURIComponent(svg); document.title = 'beleaf';
 }
 setFavicon();
 
-$('#lowLatCk').onchange = e => { store.set('lowLatency', e.target.checked); toast('Reload beLEAF to apply'); };
+$('#lowLatCk').onchange = e => { store.set('lowLatency', e.target.checked); toast('Reload beleaf to apply'); };
 
 /* ================= customisable tool bar (order, dividers, hidden tools) ================= */
 let toolOrder = store.get('toolOrder', null), toolHidden = store.get('toolHidden', []);
@@ -4171,15 +4171,15 @@ async function saveProjectFile() {
   try {
     toast('Packing your canvas…'); const blob = await projectFileBlob();
     if (window.showSaveFilePicker && window.top === window) {
-      try { const h = await showSaveFilePicker({ suggestedName: name, types: [{ description: 'beLEAF project', accept: { 'application/octet-stream': ['.beleaf'] } }] }); const w = await h.createWritable(); await w.write(blob); await w.close(); toast('Project file saved'); return; }
+      try { const h = await showSaveFilePicker({ suggestedName: name, types: [{ description: 'beleaf project', accept: { 'application/octet-stream': ['.beleaf'] } }] }); const w = await h.createWritable(); await w.write(blob); await w.close(); toast('Project file saved'); return; }
       catch (err) { if (err && err.name === 'AbortError') return; }
     }
-    saveBlob(blob, name); toast(`Saved ${name} (${fmtKB(blob.size)}). Open it in beLEAF on any device with File › Open project file.`);
+    saveBlob(blob, name); toast(`Saved ${name} (${fmtKB(blob.size)}). Open it in beleaf on any device with File › Open project file.`);
   } catch (err) { toast('Couldn’t make the project file: ' + (err.message || err)); }
 }
 const isProjectBytes = u8 => u8.length > 9 && new TextDecoder().decode(u8.subarray(0, 8)) === PROJ_MAGIC;
 async function openProjectBytes(u8, fname) {
-  const o = await unpackObj(u8.subarray(8)); if (!o || o.kind !== 'project' || !o.rec) throw new Error('This isn’t a beLEAF project file');
+  const o = await unpackObj(u8.subarray(8)); if (!o || o.kind !== 'project' || !o.rec) throw new Error('This isn’t a beleaf project file');
   const blobs = {}; for (const [k, v] of Object.entries(o.blobs || {})) blobs[k] = new Blob([unb64u(v)], { type: 'image/png' });
   if (fname && !o.rec.name) o.rec.name = fname.replace(/\.beleaf$/i, '');
   await openRecord(o.rec, true, k => blobs[k] || null); DOC.name = o.rec.name || DOC.name.replace(/ \(restored\)$/, ''); buildTabs(); toast(`Opened “${o.rec.name || 'project'}” in a new tab`);
@@ -4413,7 +4413,7 @@ function hidFlash(D, b) { const el2 = $(`.hidrow[data-k="${D.dev.vendorId}:${D.d
 async function hidConnect(filters) {
   if (!hidOK) return;
   try { const devs = await navigator.hid.requestDevice({ filters }); if (!devs.length) return; for (const d of devs) await hidAttach(d); }
-  catch (err) { toast(/permission|policy|allowed/i.test(String(err)) ? 'This page isn’t allowed to use WebHID here. It works in the installed app or with beLEAF opened directly in Chrome or Edge.' : 'Couldn’t connect: ' + (err.message || err)); }
+  catch (err) { toast(/permission|policy|allowed/i.test(String(err)) ? 'This page isn’t allowed to use WebHID here. It works in the installed app or with beleaf opened directly in Chrome or Edge.' : 'Couldn’t connect: ' + (err.message || err)); }
 }
 function buildHid() {
   $('#hidAvail').textContent = hidOK ? 'Your browser supports WebHID. Pick your device below; Chrome or Edge will ask you to confirm it.' : 'This browser doesn’t have WebHID. It works in Chrome and Edge on Windows, Mac, Linux and ChromeOS (not Firefox or Safari).';
@@ -5357,7 +5357,7 @@ document.addEventListener('dblclick', e => {
 /* ================= Accessibility: reading fonts, text size and spacing, colour vision, contrast, motion ================= */
 const A11Y_FONTS = [
   ['system', 'Your device’s font', 'system-ui,-apple-system,"Segoe UI",Roboto,sans-serif', 'Whatever your phone or computer normally uses'],
-  ['default', 'beLEAF (default)', '"Rubik",system-ui,sans-serif', 'Rounded and friendly'],
+  ['default', 'beleaf (default)', '"Rubik",system-ui,sans-serif', 'Rounded and friendly'],
   ['atkinson', 'Atkinson Hyperlegible', '"Atkinson Hyperlegible",Verdana,sans-serif', 'Made by the Braille Institute so look-alike letters (I l 1, O 0, b d) are easy to tell apart'],
   ['lexend', 'Lexend', '"Lexend",Verdana,sans-serif', 'Wide, even letters designed to make reading easier'],
   ['verdana', 'Verdana', 'Verdana,"DejaVu Sans",sans-serif', 'Wide letters and generous spacing'],
@@ -5508,7 +5508,7 @@ async function decodeCode(text) {
   text = String(text || '').trim();
   const m = text.match(/BLF1\.([A-Za-z0-9_-]+)/); if (m) return unpackObj(unb64u(m[1]));
   if (text.startsWith('{')) { const o = JSON.parse(text); if (o.nib === 'shortcuts') return { app: 'beLEAF', kind: 'keys', data: o.keys || {} }; return o; }
-  throw new Error('That isn’t a beLEAF code');
+  throw new Error('That isn’t a beleaf code');
 }
 async function decodeFile(f) {
   const u8 = new Uint8Array(await f.arrayBuffer());
@@ -5517,9 +5517,9 @@ async function decodeFile(f) {
   if (u8[0] === 0x89 && u8[1] === 0x50) {
     const t = pngReadText(u8, 'beLEAF'); if (t) return decodeCode(t);
     const bmp = await createImageBitmap(new Blob([u8])), c = mkc(bmp.width, bmp.height); c.getContext('2d').drawImage(bmp, 0, 0); const p = readStrip(c); if (p) return unpackObj(p);
-    throw new Error('This picture has no beLEAF theme or brush inside');
+    throw new Error('This picture has no beleaf theme or brush inside');
   }
-  if (/^image\//.test(f.type)) { const bmp = await createImageBitmap(f), c = mkc(bmp.width, bmp.height); c.getContext('2d').drawImage(bmp, 0, 0); const p = readStrip(c); if (p) return unpackObj(p); throw new Error('This picture has no beLEAF data (a JPEG or resized copy loses it; ask for the original PNG)'); }
+  if (/^image\//.test(f.type)) { const bmp = await createImageBitmap(f), c = mkc(bmp.width, bmp.height); c.getContext('2d').drawImage(bmp, 0, 0); const p = readStrip(c); if (p) return unpackObj(p); throw new Error('This picture has no beleaf data (a JPEG or resized copy loses it; ask for the original PNG)'); }
   return decodeCode(new TextDecoder().decode(u8));
 }
 
@@ -5546,19 +5546,19 @@ async function addBrush(d, quiet) {
 async function applyPayload(o) {
   if (o.kind === 'sut') { await importSutBytes(o.bytes, o.name); saveBrushLib(); return; }
   if (o.kind === 'projfile') { await openProjectBytes(o.bytes, o.name); return; }
-  if (!o || o.app !== 'beLEAF') throw new Error('That isn’t a beLEAF code');
+  if (!o || o.app !== 'beLEAF') throw new Error('That isn’t a beleaf code');
   const d = o.data || {};
   if (o.kind === 'theme') { const keep = { ...theme }; Object.assign(theme, { ui: d.ui || theme.ui, box: d.box || theme.box, accent: d.accent || theme.accent, stage: d.stage || theme.stage, name: o.name }); applyTheme(); toastUndo(`Theme “${o.name || 'shared theme'}” applied`, () => { Object.keys(theme).forEach(k => delete theme[k]); Object.assign(theme, keep); applyTheme(); }); }
   else if (o.kind === 'a11y') { a11y = Object.assign({}, A11Y_DEF, d); applyA11y(); if (!$('#apA11y').hidden) buildA11y(); toast('Accessibility settings loaded'); }
   else if (o.kind === 'keys') { const clean = {}; for (const id in d) if (ACT[id] && Array.isArray(d[id])) clean[id] = d[id].filter(s => typeof s === 'string').slice(0, 6); keyOver = clean; store.set('keys', keyOver); rebuildKeymap(); keysChanged(); toast('Shortcuts loaded'); }
   else if (o.kind === 'brush') { const b = await addBrush(d); toast(`Brush “${b.name}” added to ${b.cat}`); }
   else if (o.kind === 'settings') {
-    if (!await confirmAsk('Load all settings?', 'This replaces your theme, shortcuts, panel layout, brushes and other settings on this device with the ones in the file, then reloads beLEAF. Your drawings aren’t touched.', 'Load and reload')) return;
+    if (!await confirmAsk('Load all settings?', 'This replaces your theme, shortcuts, panel layout, brushes and other settings on this device with the ones in the file, then reloads beleaf. Your drawings aren’t touched.', 'Load and reload')) return;
     Object.keys(localStorage).filter(k => k.startsWith('nib.') && !SETTINGS_SKIP.has(k.slice(4))).forEach(k => localStorage.removeItem(k));
     for (const [k, v] of Object.entries(d.store || {})) if (!SETTINGS_SKIP.has(k)) store.set(k, v);
     if (d.brushes && idbOK) try { await IDB.put('blobs', 'brushlib', d.brushes); } catch { }
     location.reload();
-  } else throw new Error('beLEAF doesn’t know this kind of item yet');
+  } else throw new Error('beleaf doesn’t know this kind of item yet');
 }
 function toastUndo(msg, undoFn) { toast(msg); const t = $('#toast'); if (t && undoFn) { const b = el('button', { class: 'toast-undo', text: 'Undo', onclick: () => { undoFn(); t.hidden = true; } }); t.append(' ', b); clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 6000); } }
 
@@ -5572,7 +5572,7 @@ function cardFrame(W, H, ui, ac, title, kindLabel) {
   // leaf badge
   x.save(); x.translate(30, 24); x.fillStyle = mixc(ui, ac, .18); x.beginPath(); x.roundRect(0, 0, 44, 44, 12); x.fill();
   x.translate(22, 22); x.rotate(-Math.PI / 4); x.fillStyle = '#5DBB63'; x.beginPath(); x.ellipse(0, 0, 15, 8.5, 0, 0, Math.PI * 2); x.fill(); x.strokeStyle = '#235C2B'; x.lineWidth = 1.6; x.beginPath(); x.moveTo(-17, 0); x.lineTo(12, 0); x.stroke(); x.restore();
-  x.fillStyle = sub; x.font = '600 13px Rubik, system-ui, sans-serif'; x.fillText('beLEAF ' + kindLabel, 86, 40);
+  x.fillStyle = sub; x.font = '600 13px Rubik, system-ui, sans-serif'; x.fillText('beleaf ' + kindLabel, 86, 40);
   x.fillStyle = fg; x.font = '700 24px Rubik, system-ui, sans-serif'; x.fillText(title.slice(0, 32), 86, 66);
   return { c, x, fg, sub, dark };
 }
@@ -5604,7 +5604,7 @@ function drawBrushCard(p) {
   x.fillStyle = sub; x.font = '500 12.5px Rubik, system-ui, sans-serif'; x.fillText(facts.join('  ·  '), 32, 292);
   return c;
 }
-function drawPlainCard(p, label) { const { c, x, sub } = cardFrame(600, 200, theme.ui, theme.accent, label, KIND_NAMES[p.kind]); x.fillStyle = sub; x.font = '500 13px Rubik, system-ui, sans-serif'; x.fillText('Open it in beLEAF with File › Import…', 86, 100); return c; }
+function drawPlainCard(p, label) { const { c, x, sub } = cardFrame(600, 200, theme.ui, theme.accent, label, KIND_NAMES[p.kind]); x.fillStyle = sub; x.font = '500 13px Rubik, system-ui, sans-serif'; x.fillText('Open it in beleaf with File › Import…', 86, 100); return c; }
 async function makeCard(p) {
   const payload = await packObj(p), art = p.kind === 'theme' ? drawThemeCard(p) : p.kind === 'brush' ? drawBrushCard(p) : drawPlainCard(p, p.name || 'Settings');
   const rows = stripRows(payload.length), c = mkc(art.width, art.height + rows + 2), x = c.getContext('2d');
@@ -5628,7 +5628,7 @@ async function openShare(kind) {
   $('#shareImg').removeAttribute('src'); $('#shareCode').value = 'Making…';
   const card = kind === 'theme' || kind === 'brush';
   $('#shareImgWrap').hidden = !card; $('#shareSaveImg').hidden = !card; $('#shareCopyImg').hidden = !card || !window.ClipboardItem; $('#shareSaveFile').hidden = card;
-  $('#shareHint').textContent = card ? `Send the picture to a friend as a file (not a screenshot). They open it in beLEAF with File › Import…, or drop it on the canvas. The code below works too.` : kind === 'settings' ? 'Saves your theme, accessibility, shortcuts, panel layout, tool bar, colour sets, pen settings and brushes in one file. Open it on another device with File › Import… Drawings aren’t included; they live in Projects.' : 'Save the file or copy the code, then load it with Import….';
+  $('#shareHint').textContent = card ? `Send the picture to a friend as a file (not a screenshot). They open it in beleaf with File › Import…, or drop it on the canvas. The code below works too.` : kind === 'settings' ? 'Saves your theme, accessibility, shortcuts, panel layout, tool bar, colour sets, pen settings and brushes in one file. Open it on another device with File › Import… Drawings aren’t included; they live in Projects.' : 'Save the file or copy the code, then load it with Import….';
   const r = await makeCard(p); shareCur = { ...r, kind, name: p.name };
   if (card) $('#shareImg').src = URL.createObjectURL(r.blob);
   $('#shareCode').value = r.code; $('#shareSize').textContent = (r.code.length > 1500 ? 'Long code · ' : '') + fmtKB(r.code.length);
@@ -5642,7 +5642,7 @@ $('#shareCode').onfocus = e => e.target.select();
 /* ---- the import window ---- */
 function openImport(hint) {
   closeMenu(); $('#importModal').hidden = false; $('#importCode').value = '';
-  $('#importHint').textContent = hint || 'Choose a beLEAF picture card (.png), settings file (.json), Clip Studio brush (.sut), or paste a code.';
+  $('#importHint').textContent = hint || 'Choose a beleaf picture card (.png), settings file (.json), Clip Studio brush (.sut), or paste a code.';
 }
 async function importFiles(files) {
   for (const f of files) { try { await applyPayload(await decodeFile(f)); $('#importModal').hidden = true; } catch (err) { toast(`${f.name}: ${err.message || err}`); } }
@@ -5682,19 +5682,19 @@ async function loadBrushLib() {
 }
 async function deleteBrush() {
   const b = cur(); if (!b.user) { toast('Built-in brushes can’t be deleted, but Reset brush puts them back how they were'); return; }
-  if (!await confirmAsk(`Delete “${b.name}”?`, 'This removes the brush from beLEAF on this device.', 'Delete')) return;
+  if (!await confirmAsk(`Delete “${b.name}”?`, 'This removes the brush from beleaf on this device.', 'Delete')) return;
   const i = BRUSHES.indexOf(b); BRUSHES.splice(i, 1); brush = BRUSHES.find(x => x.cat === b.cat) || BRUSHES[0]; cat = brush.cat; setTool('brush'); buildBrushUI(); saveBrushLib(); toast('Brush deleted');
 }
 
 $('#thShare').onclick = () => openShare('theme');
-$('#thImport').onclick = () => openImport('Choose a beLEAF theme picture (.png) or paste a theme code.');
+$('#thImport').onclick = () => openImport('Choose a beleaf theme picture (.png) or paste a theme code.');
 $('#aExport').onclick = () => openShare('a11y');
-$('#aImport').onclick = () => openImport('Choose a beLEAF accessibility file (.json) or paste its code.');
+$('#aImport').onclick = () => openImport('Choose a beleaf accessibility file (.json) or paste its code.');
 $('#keysShare').onclick = () => openShare('keys');
-$('#keysOpen').onclick = () => openImport('Choose a beLEAF shortcuts file (.json) or paste its code.');
+$('#keysOpen').onclick = () => openImport('Choose a beleaf shortcuts file (.json) or paste its code.');
 $('#shareBrush').onclick = () => openShare('brush');
 $('#delBrush').onclick = deleteBrush;
-$('#importSut').onclick = () => openImport('Choose a Clip Studio brush (.sut) or a beLEAF brush picture (.png), or paste a brush code.');
+$('#importSut').onclick = () => openImport('Choose a Clip Studio brush (.sut) or a beleaf brush picture (.png), or paste a brush code.');
 
 /* ================= focus timer (Pomodoro): work in focused stretches with short breaks ================= */
 const POMO_DEF = { focus: 25, short: 5, long: 15, every: 4, autoNext: false, sound: true };
@@ -5785,7 +5785,7 @@ function makePop(win) {
 async function screenPick() {
   if (!window.EyeDropper) return canvasPick();
   try { const r = await new EyeDropper().open(); return r.sRGBHex.length === 7 ? r.sRGBHex.toUpperCase() : rgbStr(r.sRGBHex); }
-  catch (err) { if (err && err.name !== 'AbortError') toast('The screen colour picker isn’t allowed here. Open beLEAF in its own tab to use it.'); return null; }
+  catch (err) { if (err && err.name !== 'AbortError') toast('The screen colour picker isn’t allowed here. Open beleaf in its own tab to use it.'); return null; }
 }
 // browsers without a screen picker (Firefox, Safari): the next tap on the canvas area picks what you see there
 let pickWait = null;
