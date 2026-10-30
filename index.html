@@ -1034,6 +1034,28 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
   .ph,.sec-h,.dbar{touch-action:none}
   .rgrip,.sec-x{display:none}
 }
+
+/* start screen */
+.startscreen{position:absolute;inset:0;z-index:8;display:grid;place-items:center;background:var(--stage);padding:16px;overflow:auto}
+.ss-card{display:flex;flex-direction:column;align-items:center;gap:10px;max-width:560px;width:100%;text-align:center}
+.ss-logo{width:64px;height:64px;padding:10px;border-radius:18px;background:color-mix(in srgb,var(--accent) 12%,var(--panel-2))}
+.ss-card h1{margin:0;font-size:calc(26px*var(--fz,1))}
+.ss-card>p{margin:0 0 6px;color:var(--muted);font-size:calc(14px*var(--fz,1))}
+.ss-btns{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;width:100%}
+.ss-btns button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:22px 16px;border-radius:16px;border:1px solid var(--line2);background:var(--panel-2);color:var(--fg);cursor:pointer}
+.ss-btns button:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--panel-2))}
+.ss-btns .ic{width:calc(34px*var(--iz,1));height:calc(34px*var(--iz,1));color:var(--accent)}
+.ss-btns b{font-size:calc(15px*var(--fz,1))}
+.ss-btns small{color:var(--muted);font-size:calc(12px*var(--fz,1));line-height:1.35}
+.ss-more{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:6px}
+.app.blank .floatbar,.app.blank .quick,.app.blank #layersPanel .llist,.app.blank #canvasRow{visibility:hidden}
+/* setup previews */
+.setprev{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px;border-radius:12px;background:var(--stage);border:1px solid var(--line)}
+.setprev canvas{display:block;max-width:100%;border-radius:4px}
+.setprev small{color:var(--muted);font-size:calc(11.5px*var(--fz,1))}
+.prevrow{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.exbgq{display:flex;flex-direction:column;gap:6px}.exbgq>span{font-size:calc(12px*var(--fz,1));color:var(--fg2)}
+.exsw{display:inline-block;width:12px;height:12px;border-radius:50%;border:1px solid rgba(128,128,128,.6);margin-right:6px;vertical-align:-1px}
 </style>
 
 <div class="app" id="app" data-open="" data-timeline="" data-quick="on" data-dl="open" data-dr="open">
@@ -1110,7 +1132,10 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
 
     <div class="center">
       <div class="doctabs" role="tablist" aria-label="Open canvases"><div class="dtabs" id="docTabs"></div><span class="save-state" id="saveState"></span></div>
-      <main class="stage" id="stage"><svg width="0" height="0" style="position:absolute;pointer-events:none" aria-hidden="true"><defs><filter id="cvd-protan" color-interpolation-filters="linearRGB"><feColorMatrix type="matrix" values="0.152286 1.052583 -0.204868 0 0 0.114503 0.786281 0.099216 0 0 -0.003882 -0.048116 1.051998 0 0 0 0 0 1 0"/></filter><filter id="cvd-deutan" color-interpolation-filters="linearRGB"><feColorMatrix type="matrix" values="0.367322 0.860646 -0.227968 0 0 0.280085 0.672501 0.047413 0 0 -0.011820 0.042940 0.968881 0 0 0 0 0 1 0"/></filter><filter id="cvd-tritan" color-interpolation-filters="linearRGB"><feColorMatrix type="matrix" values="1.255528 -0.076749 -0.178779 0 0 -0.078411 0.930809 0.147602 0 0 0.004733 0.691367 0.303900 0 0 0 0 0 1 0"/></filter><filter id="cvd-achroma" color-interpolation-filters="linearRGB"><feColorMatrix type="matrix" values="0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0 0 0 1 0"/></filter></defs></svg><pre class="perfhud" id="perfHud" hidden aria-live="off"></pre><div class="cvdbadge" id="cvdBadge" hidden><span></span><button title="Turn off colour-blind preview">Off</button></div>
+      <main class="stage" id="stage"><svg width="0" height="0" style="position:absolute;pointer-events:none" aria-hidden="true"><defs><filter id="cvd-protan" color-interpolation-filters="linearRGB"><feColorMatrix type="matrix" values="0.152286 1.052583 -0.204868 0 0 0.114503 0.786281 0.099216 0 0 -0.003882 -0.048116 1.051998 0 0 0 0 0 1 0"/></filter><filter id="cvd-deutan" color-interpolation-filters="linearRGB"><feColorMatrix type="matrix" values="0.367322 0.860646 -0.227968 0 0 0.280085 0.672501 0.047413 0 0 -0.011820 0.042940 0.968881 0 0 0 0 0 1 0"/></filter><filter id="cvd-tritan" color-interpolation-filters="linearRGB"><feColorMatrix type="matrix" values="1.255528 -0.076749 -0.178779 0 0 -0.078411 0.930809 0.147602 0 0 0.004733 0.691367 0.303900 0 0 0 0 0 1 0"/></filter><filter id="cvd-achroma" color-interpolation-filters="linearRGB"><feColorMatrix type="matrix" values="0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0 0 0 1 0"/></filter></defs></svg><div class="startscreen" id="startScreen" hidden><div class="ss-card"><svg class="rac ss-logo" viewBox="0 0 24 24" aria-hidden="true"><path style="fill:var(--lg)" d="M5.2 19.4C3.6 12.6 7.8 5.6 18.8 4.2 19.8 14.2 13.4 20.6 5.2 19.4Z"/><path style="fill:var(--ld)" opacity=".35" d="M5.2 19.4C10.2 15.8 13.6 11.2 16.4 6.4 17.4 14 12.6 19.6 5.2 19.4Z"/><path d="M3.4 21.2L7 17.6C10.4 14.2 13.6 10.2 16.4 6.4" style="stroke:var(--ld)" stroke-width="1.2" stroke-linecap="round" fill="none"/><path style="fill:var(--la)" d="M19.6 11.7C20.006 13.788 20.412000000000003 14.193999999999999 22.5 14.6C20.412000000000003 15.006 20.006 15.411999999999999 19.6 17.5C19.194000000000003 15.411999999999999 18.788 15.006 16.700000000000003 14.6C18.788 14.193999999999999 19.194000000000003 13.788 19.6 11.7Z"/><path style="fill:var(--la)" d="M6.2 2.3C6.522 3.9559999999999995 6.844 4.278 8.5 4.6C6.844 4.922 6.522 5.244 6.2 6.8999999999999995C5.878 5.244 5.556 4.922 3.9000000000000004 4.6C5.556 4.278 5.878 3.9559999999999995 6.2 2.3Z"/><path style="fill:var(--la)" d="M21.2 19.5C21.41 20.58 21.62 20.79 22.7 21C21.62 21.21 21.41 21.42 21.2 22.5C20.99 21.42 20.779999999999998 21.21 19.7 21C20.779999999999998 20.79 20.99 20.58 21.2 19.5Z"/></svg><h1>beLEAF</h1><p>What would you like to make?</p>
+  <div class="ss-btns"><button id="ssCanvas"><svg class="ic" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 15l3-3 2 2 3-4"/></svg><b>New canvas</b><small>Any size, for drawings and posts</small></button>
+  <button id="ssSheet"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="7" height="7" rx="1.5"/><rect x="14" y="4" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><b>New emote sheet</b><small>A grid of emote boxes, 224 px each or your size</small></button></div>
+  <div class="ss-more"><button class="btn" id="ssOpen">Open project file…</button><button class="btn" id="ssProjects">Projects and backups…</button></div></div></div><pre class="perfhud" id="perfHud" hidden aria-live="off"></pre><div class="cvdbadge" id="cvdBadge" hidden><span></span><button title="Turn off colour-blind preview">Off</button></div>
         <canvas id="view" aria-label="Drawing canvas"></canvas>
         <div class="quick" aria-label="Quick brush sliders">
           <label>Size<output id="qSizeO"></output><input id="qSize" type="range" min="0" max="1000" step="1" aria-label="Brush size"></label>
@@ -1300,7 +1325,7 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
   <div class="form">
     <label class="f wide" id="exWhatRow">Export<select id="exWhat"></select></label>
     <label class="f">Size<select id="exSize"></select></label>
-    <label class="f">Background<select id="exBg"><option value="transparent">Transparent (Paper hidden)</option><option value="paper">Keep the Paper layer</option></select></label>
+    <div class="f wide exbgq"><span>Background: keep it transparent, or include it?</span><div class="seg" role="radiogroup" id="exBgSeg" aria-label="Background"></div><select id="exBg" hidden></select></div>
     <label class="f gifonly">Soft edges blend into<select id="exMatte"><option value="#313338">Dark chat background</option><option value="#000000">Black</option><option value="#FFFFFF">White</option><option value="#F2F3F5">Light chat background</option><option value="none">Nothing (hard edges)</option></select></label>
     <label class="f gifonly">Edge cutoff <output id="oCut">40%</output><input id="exCut" type="range" min="5" max="95" value="40" aria-label="Edge cutoff"></label>
     <label class="check gifonly">Dithering (smoother gradients, bigger file)<input id="exDither" type="checkbox"></label>
@@ -1328,6 +1353,7 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
   </div>
   <div class="field"><span class="flabel">Canvas color</span>
     <div class="npaper"><label class="cswitch" title="Off = see-through background"><input type="checkbox" id="npOn"><i></i></label><button class="cbgsw" id="npSw" aria-label="Choose the new canvas colour" title="Choose the colour"></button><span class="nphex" id="npHex"></span></div></div>
+  <div class="field"><label class="check wide prevrow">Show preview<input type="checkbox" id="nPrevOn"></label><div class="setprev" id="nPrevBox"><canvas id="nPrev" width="300" height="180"></canvas><small id="nPrevInfo"></small></div></div>
   <p class="note">Opens in a new tab. Your other canvases stay open, and everything autosaves in this browser.</p>
   <div class="actions"><button class="btn" data-dismiss>Cancel</button><button class="btn primary" id="nGo">Create</button></div>
 </div></div>
@@ -1343,6 +1369,7 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
     <label class="check wide" id="shScaleRow">Scale my drawings to the new box size<input id="shScale" type="checkbox" checked></label>
     <label class="check wide" id="shAnimRow">Start with an animation layer<input id="shAnim" type="checkbox"></label>
   </div>
+  <div class="field"><label class="check wide prevrow">Show preview<input type="checkbox" id="shPrevOn"></label><div class="setprev" id="shPrevBox"><canvas id="shPrev" width="320" height="200"></canvas></div></div>
   <p class="note" id="shInfo"></p>
   <p class="note" id="shNote"></p>
   <div class="actions"><button class="btn" data-dismiss>Cancel</button><button class="btn primary" id="shGo">Apply</button></div>
@@ -3404,7 +3431,7 @@ const SHEET_MAX_SIDE = 8192, SHEET_MAX_PX = 40e6;
 function newSheet(o, withAnim) {
   stopPlay(); if (xform) xform = null;
   const s = { cols: o.cols, rows: o.rows, box: o.box, gap: gapFor(o.box), labels: [], bg: o.bg || gutterFor(theme.box), boxCol: o.boxCol || theme.box };
-  DOC.sheet = s; DOC.paper = null; const [W, H] = sheetSize(s); allocDoc(W, H);
+  DOC.sheet = s; DOC.paper = null; const [W, H] = sheetSize(s); allocDoc(W, H); setPlaceholder(false);
   anim.n = 1; anim.cur = 0; anim.holds = [1];
   layers = [newLayer('Sketch'), newLayer('Color'), newLayer('Line art')]; layers[0].draft = true; layers[0].opacity = .5; lcount = 1; acount = 1; active = 2;
   if (withAnim) { layers.push(newAnimLayer('Animation 1')); acount = 2; active = 3; app.dataset.timeline = 'on'; $('#tlBtn').setAttribute('aria-pressed', 'true'); }
@@ -3451,19 +3478,20 @@ function sheetInfo() {
   $('#shInfo').classList.toggle('warn', bad || px > 14e6); $('#shGo').disabled = bad;
 }
 function openSheet(mode) {
-  sheetMode = mode; const s = DOC.sheet || { cols: 5, rows: 3, box: 224, bg: gutterFor(theme.box), boxCol: theme.box };
+  // new sheets start with white boxes (or the box colour you used last time) so they look like a clean page
+  sheetMode = mode; const nb = store.get('newSheetBox', '#FFFFFF'), s = mode === 'new' || !DOC.sheet ? { cols: 5, rows: 3, box: 224, bg: gutterFor(nb), boxCol: nb } : DOC.sheet;
   $('#shTitle').textContent = mode === 'new' ? 'New emote sheet' : 'Emote sheet';
   $('#shCols').value = s.cols; $('#shRows').value = s.rows; $('#shBox').value = s.box; $('#shBg').value = s.bg; $('#shBoxCol').value = s.boxCol; $('#shBoxCol').oninput = () => { $('#shBg').value = gutterFor($('#shBoxCol').value.toUpperCase()).toLowerCase(); };
   $('#shScaleRow').hidden = mode === 'new' || !DOC.sheet; $('#shAnimRow').hidden = mode !== 'new';
   $('#shNote').textContent = mode === 'new' ? 'Opens in a new tab. Your other canvases stay open and saved.' : 'Changing the sheet clears undo history. Drawings move with their boxes.';
   $('#shGo').textContent = mode === 'new' ? 'Create sheet' : 'Apply';
-  sheetInfo(); $('#sheetModal').hidden = false; closeMenu(); $('#newModal').hidden = true;
+  sheetInfo(); $('#sheetModal').hidden = false; if (typeof shPreview === 'function') shPreview(); closeMenu(); $('#newModal').hidden = true;
 }
 $$('#shBoxSeg button').forEach(b => b.onclick = () => { if (b.dataset.box !== 'custom') $('#shBox').value = b.dataset.box; else $('#shBox').focus(); sheetInfo(); });
 ['#shBox', '#shCols', '#shRows'].forEach(s => $(s).addEventListener('input', sheetInfo));
 $('#shGo').onclick = () => {
   const o = sheetVals(); $('#sheetModal').hidden = true;
-  if (sheetMode === 'new') { newTab(); newSheet(o, $('#shAnim').checked); buildTabs(); saveNow(true); toast(`New sheet: ${o.cols * o.rows} emote boxes at ${o.box} × ${o.box}`); }
+  if (sheetMode === 'new') { store.set('newSheetBox', o.boxCol); newTab(); newSheet(o, $('#shAnim').checked); buildTabs(); saveNow(true); toast(`New sheet: ${o.cols * o.rows} emote boxes at ${o.box} × ${o.box}`); }
   else { const was = DOC.sheet && DOC.sheet.box; reshapeSheet(o, $('#shScale').checked); toast(was && was !== o.box ? `Boxes are now ${o.box} × ${o.box}` : 'Sheet updated'); }
 };
 
@@ -3988,17 +4016,18 @@ function snapDoc() {
 }
 function loadDoc(t) {
   stopPlay(); if (xform) xform = null; liveOp = null;
-  DOC.pid = t.pid; DOC.name = t.name; DOC.sheet = t.sheet || null; DOC.paper = t.paper || null; allocDoc(t.w, t.h);
+  DOC.pid = t.pid; DOC.name = t.name; DOC.sheet = t.sheet || null; DOC.paper = t.paper || null; allocDoc(t.w, t.h); setPlaceholder(false);
   layers = t.layers; active = Math.min(t.active, layers.length - 1); Object.assign(anim, t.anim, { playing: false }); $('#fps').value = anim.fps;
   history.length = 0; history.push(...(t.history || [])); future.length = 0; future.push(...(t.future || []));
   lcount = t.lcount || 1; acount = t.acount || 1; lfcount = t.lfcount || 1; curBox = t.curBox || 0; tlFrames = t.tl || {};
   ver++; onionKey = ''; syncUndo(); buildLayers(); buildTimeline(); buildEmotes(); sheetTitle(); refreshStage();
   if (t.V) Object.assign(V, t.V); else fit(); dirty(); buildTabs();
 }
-function switchTab(i) { if (i === tabIdx || !tabs[i]) return; tabs[tabIdx] = snapDoc(); saveNow(true); tabIdx = i; loadDoc(tabs[i]); }
-function newTab() { tabs[tabIdx] = snapDoc(); saveNow(true); tabs.push(null); tabIdx = tabs.length - 1; DOC.pid = newPid(); DOC.name = ''; tlFrames = {}; }
+function switchTab(i) { if (i === tabIdx || !tabs[i]) return; if (DOC.placeholder) { tabs.splice(tabIdx, 1); if (i > tabIdx) i--; tabIdx = i; loadDoc(tabs[i]); return; } tabs[tabIdx] = snapDoc(); saveNow(true); tabIdx = i; loadDoc(tabs[i]); }
+function newTab() { if (DOC.placeholder) { tabs[tabIdx] = null; DOC.pid = newPid(); DOC.name = ''; tlFrames = {}; return; } tabs[tabIdx] = snapDoc(); saveNow(true); tabs.push(null); tabIdx = tabs.length - 1; DOC.pid = newPid(); DOC.name = ''; tlFrames = {}; }
 async function closeTab(i) {
-  if (tabs.length <= 1) { toast('This is the only open canvas'); return; }
+  if (DOC.placeholder) return;
+  if (tabs.length <= 1) { await saveNow(true); newDocument(512, 512, false); setPlaceholder(true); DOC.pid = newPid(); DOC.name = ''; tabs = [null]; tabIdx = 0; buildTabs(); saveSession(); toast('Closed. It’s still saved under File → Projects.'); return; }
   if (i === tabIdx) await saveNow(true); else if (tabs[i]) await saveDocSnapshot(tabs[i]);
   tabs.splice(i, 1);
   if (i === tabIdx) { tabIdx = Math.max(0, i - 1); loadDoc(tabs[tabIdx]); } else { if (i < tabIdx) tabIdx--; buildTabs(); }
@@ -4007,12 +4036,13 @@ async function closeTab(i) {
 function buildTabs() {
   const bar = $('#docTabs'); if (!bar) return;
   bar.replaceChildren(...tabs.map((t, i) => {
+    if (i === tabIdx && DOC.placeholder) return null;
     const nm = i === tabIdx ? docName() : (t && (t.name || (t.sheet ? 'Emote sheet' : 'Untitled'))) || 'Canvas';
     const b = el('div', { class: 'dtab' + (i === tabIdx ? ' on' : ''), role: 'tab', 'aria-selected': i === tabIdx, title: nm },
       el('button', { class: 'dtab-name', text: nm, onclick: () => switchTab(i), ondblclick: async () => { if (i !== tabIdx) return; const v = await askName('Canvas name', DOC.name || ''); if (v != null) { DOC.name = v; buildTabs(); saveNow(); } } }),
       el('button', { class: 'dtab-x', 'aria-label': 'Close ' + nm, title: 'Close', text: '×', onclick: () => closeTab(i) }));
     return b;
-  }), el('button', { class: 'dtab-add', title: 'New canvas or emote sheet', 'aria-label': 'New canvas', text: '+', onclick: () => openNew() }));
+  }).filter(Boolean), el('button', { class: 'dtab-add', title: 'New canvas or emote sheet', 'aria-label': 'New canvas', text: '+', onclick: () => openNew() }));
   $('#saveState').textContent = '';
 }
 
@@ -4044,7 +4074,7 @@ async function saveDocSnapshot0(t, backup) {
 }
 async function pruneBackups(pid) { const ks = (await IDB.keys('backups')).filter(k => k.startsWith(pid + ':')).sort(); for (const k of ks.slice(0, Math.max(0, ks.length - 6))) await IDB.del('backups', k); }
 async function saveNow(quiet, backup) {
-  if (!idbOK || saveBusy) return; saveBusy = true;
+  if (!idbOK || saveBusy || DOC.placeholder) return; saveBusy = true;
   try {
     if (!DOC.pid) DOC.pid = newPid();
     snapCur = job('autosave', snapDoc); await saveDocSnapshot(snapCur, backup); lastSaveVer = ver; saveSession();
@@ -4052,7 +4082,7 @@ async function saveNow(quiet, backup) {
   } catch (err) { console.warn(err); if (!quiet) toast('Could not save here: ' + (err.message || 'storage blocked')); idbOK = !/denied|security|disabled/i.test(String(err)); }
   saveBusy = false; snapCur = null;
 }
-function saveSession() { store.set('session', { open: tabs.map((t, i) => i === tabIdx ? DOC.pid : t && t.pid).filter(Boolean), cur: tabIdx }); }
+function saveSession() { store.set('session', { open: tabs.map((t, i) => i === tabIdx ? (DOC.placeholder ? null : DOC.pid) : t && t.pid).filter(Boolean), cur: tabIdx }); }
 // autosave: about every 45 s when something changed, plus a backup copy every 10 minutes (the last 6 are kept)
 // it waits for a pause (2.5 s without touching the canvas) so a save never lands in the middle of drawing
 let lastSaveAt = Date.now();
@@ -4084,7 +4114,7 @@ async function openRecord(rec, asCopy, src) {
   const t = await deserialize(rec, asCopy, src);
   const at = tabs.findIndex((x, i) => (i === tabIdx ? DOC.pid : x && x.pid) === t.pid);
   if (at >= 0 && !asCopy) { switchTab(at); return; }
-  tabs[tabIdx] = snapDoc(); tabs.push(t); tabIdx = tabs.length - 1; loadDoc(t); saveSession();
+  if (DOC.placeholder) tabs[tabIdx] = t; else { tabs[tabIdx] = snapDoc(); tabs.push(t); tabIdx = tabs.length - 1; } loadDoc(t); saveSession();
   if (asCopy) saveNow(true);
 }
 async function restoreSession() {
@@ -4967,8 +4997,13 @@ function exFillSizes() {
   else $('#exSize').replaceChildren(...SIZES.filter(([v]) => v === 'orig' || v < Math.max(DOC.w, DOC.h)).map(([v, t]) => el('option', { value: v, text: v === 'orig' ? `Original (${DOC.w} × ${DOC.h})` : t })));
   if (one && exFmt !== 'png') $('#exSize').value = 112 < DOC.sheet.box ? '112' : 'box';
   const bg = $('#exBg'), sheet = DOC.sheet && exWhat === 'sheet';
-  bg.replaceChildren(...(sheet ? [['transparent', 'Transparent (drawings only)'], ['sheet', 'Sheet with boxes and names']] : DOC.sheet ? [['transparent', 'Transparent']] : [...(DOC.paper ? [['canvas', `Canvas color (${DOC.paper.col})`]] : []), ['transparent', 'Transparent'], ...(layers.some(L => L.paper) ? [['paper', 'Keep the Paper layer']] : [])]).map(([v, t]) => el('option', { value: v, text: t })));
-  if (!sheet && !DOC.sheet && DOC.paper) bg.value = DOC.paper.on ? 'canvas' : 'transparent';
+  // always ask: transparent, or with the background you see (box colour, canvas colour, or the whole sheet)
+  const opts = sheet ? [['transparent', 'Transparent'], ['sheet', 'Include boxes and names']] : DOC.sheet ? [['transparent', 'Transparent'], ['box', 'Include box colour', sheetBox(DOC.sheet)]]
+    : [['transparent', 'Transparent'], ...(DOC.paper ? [['canvas', 'Include canvas colour', DOC.paper.col]] : []), ...(layers.some(L => L.paper) ? [['paper', 'Include Paper layer']] : [])];
+  bg.replaceChildren(...opts.map(([v, t]) => el('option', { value: v, text: t })));
+  const want = store.get('exBgInclude', false) ? opts[1] && opts[1][0] : 'transparent'; bg.value = want || 'transparent';
+  const seg = () => $('#exBgSeg').replaceChildren(...opts.map(([v, t, c]) => el('button', { role: 'radio', 'aria-checked': bg.value === v, onclick: () => { bg.value = v; store.set('exBgInclude', v !== 'transparent'); seg(); $('#exResult').hidden = true; } }, ...(c ? [el('i', { class: 'exsw', style: 'background:' + c })] : []), t)));
+  seg();
 }
 function openExport(what) {
   exWhat = DOC.sheet ? (what === 'all' || what === 'emote' || what === 'sheet' ? what : 'emote') : 'sheet';
@@ -5009,7 +5044,7 @@ async function encodeOne(frames, w, h, transparent) {
   const o = mk(w, h); o.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(frames[0].data), w, h), 0, 0);
   return new Promise(r => o.toBlob(r, 'image/png'));
 }
-function exBgRGB() { if ($('#exBg').value === 'canvas' && DOC.paper) return hexRgb(DOC.paper.col); const P = layers.find(L => L.paper); if ($('#exBg').value === 'paper' && P) { const p = P.s.ctx.getImageData(0, 0, 1, 1).data; return [p[0], p[1], p[2]]; } if ($('#exBg').value === 'sheet') return hexRgb(DOC.sheet.bg); return [255, 255, 255]; }
+function exBgRGB() { if ($('#exBg').value === 'canvas' && DOC.paper) return hexRgb(DOC.paper.col); if ($('#exBg').value === 'box' && DOC.sheet) return hexRgb(sheetBox(DOC.sheet)); const P = layers.find(L => L.paper); if ($('#exBg').value === 'paper' && P) { const p = P.s.ctx.getImageData(0, 0, 1, 1).data; return [p[0], p[1], p[2]]; } if ($('#exBg').value === 'sheet') return hexRgb(DOC.sheet.bg); return [255, 255, 255]; }
 const fmtKB = n => { const kb = n / 1024; return kb < 1024 ? kb.toFixed(1) + ' KB' : (kb / 1024).toFixed(2) + ' MB'; };
 const blobURL = blob => new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
 function boxesWithArt() {
@@ -5029,7 +5064,7 @@ $('#exGo').onclick = async () => {
       if (!boxes.length) throw new Error('None of the boxes have a drawing yet');
       const bs = DOC.sheet.box, sizes = sv === 'twitch' ? [112, 56, 28].filter(v => v <= bs) : [sv === 'box' ? bs : +sv];
       for (const i of boxes) for (const sz of sizes) {
-        const frames = renderFrames(list, sz, sz, false, boxRect(i)), blob = await encodeOne(frames, sz, sz, true);
+        const inc = bgv === 'box', frames = renderFrames(list, sz, sz, false, boxRect(i), false, inc ? sheetBox(DOC.sheet) : null), blob = await encodeOne(frames, sz, sz, !inc);
         items.push({ name: emoteName(i), w: sz, h: sz, blob, url: await blobURL(blob) });
         go.textContent = `Working… ${items.length}`; await new Promise(r => setTimeout(r, 0));
       }
@@ -5059,8 +5094,10 @@ function openNew() {
   $('#nW').value = DOC.w; $('#nH').value = DOC.h; $('#newModal').hidden = false; closeMenu(); buildNewPaper();
 }
 $('#nGo').onclick = () => { newTab(); const w = Math.max(16, Math.min(4096, +$('#nW').value || 512)), h = Math.max(16, Math.min(4096, +$('#nH').value || 512)); newDocument(w, h, $('#nAnim').checked); $('#newModal').hidden = true; buildTabs(); saveNow(true); toast(`New canvas ${w} × ${h}`); };
+// the start screen sits over an empty placeholder canvas until you make or open something
+function setPlaceholder(on) { DOC.placeholder = !!on; const s = $('#startScreen'); if (s) s.hidden = !on; app.classList.toggle('blank', !!on); if (on) $('#docTitle').textContent = ''; else sheetTitle(); }
 function newDocument(w, h, withAnim) {
-  stopPlay(); DOC.sheet = null; allocDoc(w, h);
+  stopPlay(); DOC.sheet = null; allocDoc(w, h); setPlaceholder(false);
   anim.n = 1; anim.cur = 0; anim.holds = [1];
   DOC.paper = { ...newPaper };
   layers = [newLayer('Layer 1')]; lcount = 2; acount = 1; active = 0;
@@ -5858,12 +5895,45 @@ function npSync() {
   const sw = $('#npSw'); sw.style.background = newPaper.col; sw.classList.toggle('off', !newPaper.on); sw.setAttribute('aria-pressed', !$('#cbgPop').hidden && popT === NEW_TARGET);
   $('#npOn').checked = newPaper.on; $('#npHex').textContent = newPaper.on ? newPaper.col : 'See-through';
   if (popT === NEW_TARGET) popSync();
+  if (typeof nPreview === 'function' && !$('#newModal').hidden) nPreview();
 }
-function buildNewPaper() { npSync(); }
+function buildNewPaper() { npSync(); requestAnimationFrame(nPreview); }
 $('#npSw').onclick = () => openColorPop(NEW_TARGET);
 $('#npOn').onchange = e => NEW_TARGET.setOn(e.target.checked);
 // the New canvas window closing also closes its colour window
 new MutationObserver(() => { if ($('#newModal').hidden && popT === NEW_TARGET && !$('#cbgPop').hidden) { cbgPop.close(); popT = DOC_TARGET; } }).observe($('#newModal'), { attributes: true, attributeFilter: ['hidden'] });
+
+/* ---- start screen ---- */
+$('#ssCanvas').onclick = () => openNew();
+$('#ssSheet').onclick = () => openSheet('new');
+$('#ssOpen').onclick = () => openProjectFile();
+$('#ssProjects').onclick = () => openProjects();
+
+/* ---- live previews while setting up a canvas or an emote sheet ---- */
+const PREV_ON = { n: store.get('prevNew', true), s: store.get('prevSheet', true) };
+function fitPrev(cv, W, H, maxW, maxH) { const k = Math.min(maxW / W, maxH / H), d = Math.min(devicePixelRatio || 1, 2), w = Math.max(8, Math.round(W * k)), h = Math.max(8, Math.round(H * k)); cv.width = w * d; cv.height = h * d; cv.style.width = w + 'px'; cv.style.height = h + 'px'; const x = cv.getContext('2d'); x.setTransform(d * k, 0, 0, d * k, 0, 0); return x; }
+function checkerFill(x, w, h, k) { const s = 8 / k; for (let yy = 0; yy < h; yy += s) for (let xx = 0; xx < w; xx += s) { x.fillStyle = ((xx / s + yy / s) & 1) ? '#c9ccd2' : '#e6e8ec'; x.fillRect(xx, yy, s, s); } }
+function nPreview() {
+  const on = PREV_ON.n; $('#nPrevOn').checked = on; $('#nPrevBox').hidden = !on; if (!on) return;
+  const W = Math.max(16, Math.min(4096, +$('#nW').value || 512)), H = Math.max(16, Math.min(4096, +$('#nH').value || 512)), cv = $('#nPrev');
+  const x = fitPrev(cv, W, H, Math.min(300, $('#nPrevBox').clientWidth - 24 || 300), 170), k = Math.min(300 / W, 170 / H);
+  if (newPaper.on) { x.fillStyle = newPaper.col; x.fillRect(0, 0, W, H); } else checkerFill(x, W, H, k);
+  $('#nPrevInfo').textContent = `${W} × ${H} px · ${newPaper.on ? 'canvas colour ' + newPaper.col : 'see-through background'}`;
+}
+function shPreview() {
+  const on = PREV_ON.s; $('#shPrevOn').checked = on; $('#shPrevBox').hidden = !on; if (!on) return;
+  const o = sheetVals(), sh = { cols: o.cols, rows: o.rows, box: o.box, gap: gapFor(o.box), bg: o.bg, boxCol: o.boxCol, labels: [] }, [W, H] = sheetSize(sh);
+  const x = fitPrev($('#shPrev'), W, H, Math.min(320, $('#shPrevBox').clientWidth - 24 || 320), 200), k = Math.min(320 / W, 200 / H);
+  x.fillStyle = o.bg; x.fillRect(0, 0, W, H); x.fillStyle = o.boxCol;
+  for (let i = 0; i < o.cols * o.rows; i++) { const [bx, by, bw] = boxRect(i, sh); x.fillRect(bx, by, bw, bw); }
+  if (k * sh.gap > 7) { x.fillStyle = lum(o.bg) > .35 ? 'rgba(30,31,36,.55)' : 'rgba(236,236,239,.6)'; x.font = `600 ${Math.round(sh.gap * .36)}px Rubik, system-ui, sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle'; for (let i = 0; i < o.cols * o.rows; i++) { const [bx, by] = boxRect(i, sh); x.fillText('Emote ' + (i + 1), bx + o.box / 2, by - sh.gap / 2); } }
+}
+$('#nPrevOn').onchange = e => { PREV_ON.n = e.target.checked; store.set('prevNew', PREV_ON.n); nPreview(); };
+$('#shPrevOn').onchange = e => { PREV_ON.s = e.target.checked; store.set('prevSheet', PREV_ON.s); shPreview(); };
+['#nW', '#nH'].forEach(s => $(s).addEventListener('input', nPreview));
+['#shBox', '#shCols', '#shRows', '#shBg', '#shBoxCol'].forEach(s => $(s).addEventListener('input', () => requestAnimationFrame(shPreview)));
+$$('#shBoxSeg button').forEach(b => b.addEventListener('click', () => requestAnimationFrame(shPreview)));
+$('#presets').addEventListener('click', () => requestAnimationFrame(nPreview));
 
 /* ================= window chrome: hold-to-open tool settings, minimise / close buttons, resize grips, swipe-down sheets ================= */
 const IC_MIN = '<svg class="ic" viewBox="0 0 24 24"><path d="M5 12h14"/></svg>', IC_X = '<svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
@@ -5996,7 +6066,7 @@ function sample() {
 }
 
 /* ================= start ================= */
-applyTheme(); themeReady = true; sampleSheet(); DOC.pid = newPid(); tabs = [null]; tabIdx = 0; setColor('#F2A65A'); drawSwatches(); buildSizes(); buildBrushUI(); setTool('brush'); buildLayers(); buildTimeline(); syncUndo(); buildPal(); buildEmotes(); buildTabs(); lastSaveVer = ver; restoreSession(); $('#mixSrc').onchange();
+applyTheme(); themeReady = true; newDocument(512, 512, false); setPlaceholder(true); DOC.pid = newPid(); tabs = [null]; tabIdx = 0; setColor('#F2A65A'); drawSwatches(); buildSizes(); buildBrushUI(); setTool('brush'); buildLayers(); buildTimeline(); syncUndo(); buildPal(); buildEmotes(); buildTabs(); lastSaveVer = ver; restoreSession(); $('#mixSrc').onchange();
 (async () => {
   for (const [name, b64] of Object.entries(EMBED)) {
     const bin = atob(b64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
