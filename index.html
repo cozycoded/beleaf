@@ -336,6 +336,19 @@ input[type=range]{accent-color:var(--accent)}
 .cbox[hidden]{display:none!important}
 .wheel{width:100%;max-width:240px;aspect-ratio:1;margin:0 auto;display:block;touch-action:none;cursor:crosshair}
 .wheel.compact{max-width:170px}
+.wheel.fit{max-width:none;flex-shrink:0}
+/* phone tool bar: main + sub colour discs and a transparent strip, as compact as the desktop chips */
+.pchips{position:relative;flex:0 0 76px;height:50px;align-self:center}
+.pchip{position:absolute;border:0;background:transparent;padding:0;display:grid;place-items:center;-webkit-tap-highlight-color:transparent}
+.pchip.main{left:0;top:0;width:38px;height:38px;z-index:2}
+.pchip.sub{left:22px;top:14px;width:36px;height:36px;z-index:1}
+.pchip.clear{right:0;top:2px;width:20px;height:46px}
+.pchip.main span{width:30px;height:30px;border-radius:50%;border:3px solid var(--fg);box-sizing:border-box;display:block}
+.pchip.sub span{width:24px;height:24px;border-radius:50%;border:2px solid var(--line2);box-sizing:border-box;display:block}
+.pchip.clear span{width:12px;height:38px;border-radius:5px;border:1px solid var(--line2);display:block;background:repeating-conic-gradient(#bbb 0 25%,#fff 0 50%) 0 0/8px 8px}
+.pchip[aria-pressed="true"] span{box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--accent)}
+.pchip.sub[aria-pressed="true"]{z-index:3}
+#colorPanel .cbox{flex-shrink:0}
 .crow{display:flex;align-items:center;gap:8px}
 .cur-sw{width:30px;height:30px;border-radius:50%;border:2px solid var(--fg);flex-shrink:0}
 .hex{border-radius:8px;background:var(--panel-2);border-color:var(--line2)}
@@ -617,7 +630,12 @@ html.sb-reset *{overflow:hidden!important}
 }
 @container (max-width:200px){ .brush canvas{display:none} .cats .cat{font-size:calc(11px*var(--fz,1));padding:4px 8px} }
 
-.toolrail .tool{height:calc(38px*var(--iz,1))}
+.toolrail .tool{height:var(--rth,calc(38px*var(--iz,1)));flex-shrink:0}
+.toolrail.tight .tool .ic{width:min(calc(20px*var(--iz,1)),calc(var(--rth) - 10px));height:min(calc(20px*var(--iz,1)),calc(var(--rth) - 10px))}
+.toolrail .rail-sep{margin:var(--rsm,4px) 0}
+.rail-tools > .chips{margin-top:6px;margin-bottom:2px}
+.rail-tools > .chips:last-child{margin-top:auto}
+.chips[hidden]{display:none!important}
 .toolrail .rail-tools{display:flex;flex-direction:column;align-items:center;gap:2px}
 
 .toolrail{overflow:hidden!important}
@@ -635,9 +653,16 @@ html.sb-reset *{overflow:hidden!important}
 .tool.dragging{opacity:.35}
 .tools-card{max-width:420px}
 .tlist{display:flex;flex-direction:column;gap:2px;overflow:auto;max-height:56vh}
-.trow{display:grid;grid-template-columns:28px 1fr auto 28px 28px;align-items:center;gap:6px;min-height:34px;padding:2px 6px;border-radius:8px}
+.trow{display:grid;grid-template-columns:18px 28px 1fr auto 28px 28px;cursor:grab;user-select:none;align-items:center;gap:6px;min-height:34px;padding:2px 6px;border-radius:8px}
 .trow:hover{background:var(--panel-2)}
-.trow.sep{grid-template-columns:28px 1fr 28px 28px 28px}
+.trow.sep{grid-template-columns:18px 28px 1fr 28px 28px 28px;width:auto;height:auto;margin:0;background:transparent}
+.trow[aria-selected="true"],.trow.sep[aria-selected="true"]{background:color-mix(in srgb,var(--accent) 18%,transparent);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.trow.dragging{opacity:.4}
+.tgrip{display:grid;place-items:center;color:var(--muted);touch-action:none;cursor:grab}
+.tgrip .ic{width:16px;height:16px}
+#toolsList{position:relative}
+#toolsList.reordering,#toolsList.reordering *{cursor:grabbing!important}
+.tdrop{position:absolute;left:6px;right:6px;height:3px;border-radius:3px;background:var(--accent);pointer-events:none;z-index:2}
 .tsep{height:2px;background:var(--line2);border-radius:2px;margin:0 4px}
 .tic .ic{width:calc(18px*var(--iz,1));height:calc(18px*var(--iz,1))}
 .trow input{width:18px;height:18px;accent-color:var(--accent)}
@@ -1310,7 +1335,7 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
 
   <nav class="bottombar" aria-label="Tools">
     <div class="bar-scroll" id="barTools"></div>
-    <button class="chip-btn" data-open="color" aria-label="Color"><span id="phoneChip"></span></button>
+    <div class="pchips" role="group" aria-label="Drawing color"><button class="pchip main" id="pMain" aria-label="Main color" title="Main color (tap again for the color panel)"><span id="phoneChip"></span></button><button class="pchip sub" id="pSub" aria-label="Sub color" title="Sub color (tap again for the color panel)"><span id="pSubDot"></span></button><button class="pchip clear" id="pClear" aria-label="Transparent color" title="Transparent color: brushes, fill and shapes erase"><span></span></button></div>
   </nav>
   <nav class="drawer" id="drawer" aria-label="Menu" hidden><div class="drawer-h"><div class="logo" aria-hidden="true" title="beleaf"><svg class="ic rac" viewBox="0 0 24 24" aria-hidden="true"><path style="fill:var(--lg)" d="M5.2 19.4C3.6 12.6 7.8 5.6 18.8 4.2 19.8 14.2 13.4 20.6 5.2 19.4Z"/><path style="fill:var(--ld)" opacity=".35" d="M5.2 19.4C10.2 15.8 13.6 11.2 16.4 6.4 17.4 14 12.6 19.6 5.2 19.4Z"/><path d="M3.4 21.2L7 17.6C10.4 14.2 13.6 10.2 16.4 6.4" style="stroke:var(--ld)" stroke-width="1.2" stroke-linecap="round" fill="none"/><path style="fill:var(--la)" d="M19.6 11.7C20.006 13.788 20.412000000000003 14.193999999999999 22.5 14.6C20.412000000000003 15.006 20.006 15.411999999999999 19.6 17.5C19.194000000000003 15.411999999999999 18.788 15.006 16.700000000000003 14.6C18.788 14.193999999999999 19.194000000000003 13.788 19.6 11.7Z"/><path style="fill:var(--la)" d="M6.2 2.3C6.522 3.9559999999999995 6.844 4.278 8.5 4.6C6.844 4.922 6.522 5.244 6.2 6.8999999999999995C5.878 5.244 5.556 4.922 3.9000000000000004 4.6C5.556 4.278 5.878 3.9559999999999995 6.2 2.3Z"/><path style="fill:var(--la)" d="M21.2 19.5C21.41 20.58 21.62 20.79 22.7 21C21.62 21.21 21.41 21.42 21.2 22.5C20.99 21.42 20.779999999999998 21.21 19.7 21C20.779999999999998 20.79 20.99 20.58 21.2 19.5Z"/></svg></div><b>beleaf</b><button class="ibtn" id="drawerClose" aria-label="Close menu"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div class="drawer-b" id="drawerBody"></div></nav>
 </div>
@@ -1376,7 +1401,7 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
 </div></div>
 <div class="modal" id="toolsModal" hidden><div class="card tools-card" role="dialog" aria-label="Customize tool bar">
   <h2>Customize tool bar</h2>
-  <p class="note">Untick a tool to hide it, use the arrows to reorder, or drag tools straight up and down the tool bar.</p>
+  <p class="note">Drag rows by their dots (or use the arrows) to reorder. Click a row, then <b>Add divider</b> to put a divider under it. Untick to hide. <b>Colors</b> is the main, sub and transparent swatches. You can also drag tools straight up and down the tool bar.</p>
   <div class="tlist" id="toolsList"></div>
   <div class="actions"><button class="btn" id="toolsAddSep">Add divider</button><button class="btn" id="toolsReset">Reset</button><button class="btn primary" data-dismiss>Done</button></div>
 </div></div>
@@ -3619,11 +3644,16 @@ function paintChips() {
   const m = slot === 'main' ? color.hex : sub.hex, s = slot === 'sub' ? color.hex : sub.hex;
   [['#mainChip', m, !clearOn && slot === 'main'], ['#subChip', s, !clearOn && slot === 'sub'], ['#cMain', m, !clearOn && slot === 'main'], ['#cSub', s, !clearOn && slot === 'sub']].forEach(([q, c, on]) => { const e = $(q); if (e) { e.style.background = c; e.setAttribute('aria-pressed', on); } });
   ['#clearChip', '#cClear'].forEach(q => { const e = $(q); if (e) e.setAttribute('aria-pressed', clearOn); });
-  $('#phoneChip').classList.toggle('clear', clearOn);
+  [['#pMain', '#phoneChip', m, !clearOn && slot === 'main'], ['#pSub', '#pSubDot', s, !clearOn && slot === 'sub']].forEach(([b, d, c, on]) => { const B = $(b), D = $(d); if (D) D.style.background = c; if (B) B.setAttribute('aria-pressed', on); });
+  const pc = $('#pClear'); if (pc) pc.setAttribute('aria-pressed', clearOn);
 }
 $('#mainChip').onclick = () => { if (slot === 'main' && !clearOn) openPanel('color'); else useSlot('main'); };
 $('#subChip').onclick = () => { if (slot === 'sub' && !clearOn) openPanel('color'); else useSlot('sub'); };
 $('#clearChip').onclick = () => clearOn ? useSlot(slot) : useSlot('clear');
+// phone tool bar: tap a colour to draw with it, tap the one you're already using to open the colour panel
+$('#pMain').onclick = () => { if (slot === 'main' && !clearOn) openPanel('color'); else useSlot('main'); };
+$('#pSub').onclick = () => { if (slot === 'sub' && !clearOn) openPanel('color'); else useSlot('sub'); };
+$('#pClear').onclick = () => clearOn ? useSlot(slot) : useSlot('clear');
 $('#cMain').onclick = () => useSlot('main'); $('#cSub').onclick = () => useSlot('sub'); $('#cClear').onclick = () => clearOn ? useSlot(slot) : useSlot('clear');
 
 /* ================= per-tool options ================= */
@@ -3796,12 +3826,13 @@ function railList() {
   return o.map(x => x === '|' ? '|' : def[x]);
 }
 const saveRail = () => { store.set('toolOrder', toolOrder); store.set('toolHidden', toolHidden); };
-function cleanOrder(o) { const r = []; o.forEach(x => { if (x === '|' && (!r.length || r[r.length - 1] === '|')) return; r.push(x); }); while (r[r.length - 1] === '|') r.pop(); return r; }
+// only drop doubled-up dividers; ones at the ends are kept (the tool bar just doesn't draw them) so moving a divider never deletes it
+function cleanOrder(o) { const r = []; o.forEach(x => { if (x === '|' && r[r.length - 1] === '|') return; r.push(x); }); return r; }
 function setOrder(o) { toolOrder = cleanOrder(o); saveRail(); buildTools(); setTool(tool); if (!$('#toolsModal').hidden) buildToolsEditor(); }
 
 /* drag a tool up or down the rail to move it */
 let rdragT = null;
-$('#railTools').addEventListener('pointerdown', e => { const b = e.target.closest('.tool'); if (!b || e.button !== 0) return; rdragT = { b, id: b.dataset.tool, y0: e.clientY, started: false, pid: e.pointerId }; });
+$('#railTools').addEventListener('pointerdown', e => { const b = e.target.closest('.tool, .chips'); if (!b || e.button !== 0) return; rdragT = { b, id: b.dataset.tool || 'colors', y0: e.clientY, started: false, pid: e.pointerId }; });
 window.addEventListener('pointermove', e => {
   const d = rdragT; if (!d) return;
   if (!d.started) { if (Math.abs(e.clientY - d.y0) < 8) return; d.started = true; d.b.classList.add('dragging'); d.line = el('div', { class: 'dropline' }); document.body.append(d.line); }
@@ -3823,22 +3854,82 @@ window.addEventListener('pointerup', () => {
 });
 
 /* Window → Customize tool bar */
+// Click a row to select it (Add divider goes under it). Drag a row by its grip, or anywhere on it, to move it; the arrows still work.
+let tedSel = null; // index of the selected row
+const IC_COLORS = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="11" height="11" rx="2.5" fill="currentColor" fill-opacity=".55"/><rect x="10" y="10" width="11" height="11" rx="2.5"/></svg>';
+const IC_DRAG = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="6" r="1.3" fill="currentColor"/><circle cx="15" cy="6" r="1.3" fill="currentColor"/><circle cx="9" cy="12" r="1.3" fill="currentColor"/><circle cx="15" cy="12" r="1.3" fill="currentColor"/><circle cx="9" cy="18" r="1.3" fill="currentColor"/><circle cx="15" cy="18" r="1.3" fill="currentColor"/></svg>';
+const curOrder = () => railList().map(x => x === '|' ? '|' : x[0]);
 function buildToolsEditor() {
   const list = railList();
+  if (tedSel != null && tedSel >= list.length) tedSel = list.length - 1;
   $('#toolsList').replaceChildren(...list.map((t, i) => {
-    const mv = d => { const o = list.map(x => x === '|' ? '|' : x[0]), j = i + d; if (j < 0 || j >= o.length) return; [o[i], o[j]] = [o[j], o[i]]; setOrder(o); };
+    const mv = d => { const o = curOrder(), j = i + d; if (j < 0 || j >= o.length) return; [o[i], o[j]] = [o[j], o[i]]; tedSel = j; setOrder(o); };
     const up = el('button', { class: 'ibtn sm', 'aria-label': 'Move up', title: 'Move up', onclick: () => mv(-1) }), dn = el('button', { class: 'ibtn sm', 'aria-label': 'Move down', title: 'Move down', onclick: () => mv(1) });
     up.innerHTML = '<svg class="ic" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg>'; dn.innerHTML = '<svg class="ic" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>';
-    if (t === '|') return el('div', { class: 'trow sep' }, el('span', { class: 'tsep' }), el('span', { class: 'tname', text: 'Divider' }), up, dn, el('button', { class: 'ibtn sm', text: '×', title: 'Remove divider', 'aria-label': 'Remove divider', onclick: () => { const o = list.map(x => x === '|' ? '|' : x[0]); o.splice(i, 1); setOrder(o); } }));
-    const [id, label] = t, ic = el('span', { class: 'tic' }); ic.innerHTML = svgIc(id);
-    const ck = el('input', { type: 'checkbox', 'aria-label': 'Show ' + label }); ck.checked = !toolHidden.includes(id);
-    ck.onchange = () => { toolHidden = ck.checked ? toolHidden.filter(x => x !== id) : [...toolHidden, id]; saveRail(); buildTools(); setTool(tool === id && !ck.checked ? 'brush' : tool); };
-    return el('div', { class: 'trow' }, ic, el('span', { class: 'tname', text: label }), ck, up, dn);
+    const grip = el('span', { class: 'tgrip', title: 'Drag to move' }); grip.innerHTML = IC_DRAG;
+    let row;
+    if (t === '|') row = el('div', { class: 'trow sep' }, grip, el('span', { class: 'tsep' }), el('span', { class: 'tname', text: 'Divider' }), up, dn, el('button', { class: 'ibtn sm', text: '×', title: 'Remove divider', 'aria-label': 'Remove divider', onclick: () => { const o = curOrder(); o.splice(i, 1); tedSel = null; setOrder(o); } }));
+    else {
+      const [id, label] = t, ic = el('span', { class: 'tic' }); ic.innerHTML = id === 'colors' ? IC_COLORS : svgIc(id);
+      const ck = el('input', { type: 'checkbox', 'aria-label': 'Show ' + label }); ck.checked = !toolHidden.includes(id);
+      ck.onchange = () => { toolHidden = ck.checked ? toolHidden.filter(x => x !== id) : [...toolHidden, id]; saveRail(); buildTools(); setTool(tool === id && !ck.checked ? 'brush' : tool); };
+      row = el('div', { class: 'trow' }, grip, ic, el('span', { class: 'tname', text: label }), ck, up, dn);
+    }
+    row.dataset.i = i; row.tabIndex = -1; row.setAttribute('aria-selected', tedSel === i);
+    row.addEventListener('click', e => { if (e.target.closest('button, input')) return; tedSel = tedSel === i ? null : i; $$('#toolsList .trow').forEach((r, k) => r.setAttribute('aria-selected', tedSel === k)); });
+    return row;
   }));
+  const sr = tedSel != null && $('#toolsList').children[tedSel]; if (sr) sr.scrollIntoView({ block: 'nearest' });
 }
-function openToolsEditor() { buildToolsEditor(); $('#toolsModal').hidden = false; closeMenu(); }
-$('#toolsAddSep').onclick = () => setOrder([...railList().map(x => x === '|' ? '|' : x[0]), '|']);
-$('#toolsReset').onclick = () => { toolOrder = null; toolHidden = []; saveRail(); buildTools(); setTool(tool); buildToolsEditor(); };
+// drag rows to reorder them
+let ted = null;
+$('#toolsList').addEventListener('pointerdown', e => {
+  const row = e.target.closest('.trow'); if (!row || e.button !== 0 || e.target.closest('button, input')) return;
+  ted = { row, i: +row.dataset.i, y0: e.clientY, pid: e.pointerId, on: false };
+  if (e.target.closest('.tgrip')) e.preventDefault();
+});
+window.addEventListener('pointermove', e => {
+  const d = ted; if (!d || e.pointerId !== d.pid) return;
+  const list = $('#toolsList');
+  if (!d.on) { if (Math.abs(e.clientY - d.y0) < 6) return; d.on = true; d.row.classList.add('dragging'); list.classList.add('reordering'); d.line = el('div', { class: 'tdrop' }); list.append(d.line); try { list.setPointerCapture(d.pid); } catch { } }
+  e.preventDefault();
+  const lr = list.getBoundingClientRect();
+  if (e.clientY < lr.top + 28) list.scrollTop -= 10; else if (e.clientY > lr.bottom - 28) list.scrollTop += 10; // scroll while dragging near the edges
+  const rows = [...list.querySelectorAll('.trow')];
+  d.to = rows.findIndex(r => { const q = r.getBoundingClientRect(); return e.clientY < q.top + q.height / 2; }); if (d.to < 0) d.to = rows.length;
+  const ref = rows[d.to] || rows[rows.length - 1], q = ref.getBoundingClientRect();
+  d.line.style.top = (d.to < rows.length ? q.top : q.bottom) - lr.top + list.scrollTop - 1 + 'px';
+}, { passive: false });
+const tedEnd = e => {
+  const d = ted; if (!d || (e && e.pointerId !== d.pid)) return; ted = null; if (!d.on) return;
+  d.row.classList.remove('dragging'); $('#toolsList').classList.remove('reordering'); d.line.remove();
+  window.addEventListener('click', ev => { ev.stopPropagation(); ev.preventDefault(); }, { capture: true, once: true }); setTimeout(() => window.dispatchEvent(new MouseEvent('click')), 0);
+  if (d.to == null) return; const o = curOrder(), [x] = o.splice(d.i, 1), at = d.to > d.i ? d.to - 1 : d.to; o.splice(at, 0, x); tedSel = at; setOrder(o);
+};
+window.addEventListener('pointerup', tedEnd); window.addEventListener('pointercancel', tedEnd);
+function openToolsEditor() { tedSel = null; buildToolsEditor(); $('#toolsModal').hidden = false; closeMenu(); }
+$('#toolsAddSep').onclick = () => {
+  const o = curOrder(); let at = tedSel != null ? tedSel + 1 : o.length - 1; // under the selected row, or above the last item
+  if (o[at - 1] === '|' || o[at] === '|') { toast('There’s already a divider there'); return; }
+  o.splice(at, 0, '|'); tedSel = at; setOrder(o); toast(tedSel != null ? 'Divider added. Drag it or use the arrows to move it.' : 'Divider added');
+};
+$('#toolsReset').onclick = () => { toolOrder = null; toolHidden = []; tedSel = null; saveRail(); buildTools(); setTool(tool); buildToolsEditor(); };
+
+/* the side tool bar shrinks its buttons to fit the window's height, so it never needs scrolling */
+function fitRail() {
+  const rt = $('#railTools'), rail = rt && rt.closest('.toolrail'); if (!rail || !rail.offsetParent) return;
+  const iz = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--iz')) || 1;
+  const tools = rt.querySelectorAll('.tool').length, seps = rt.querySelectorAll('.rail-sep').length, chips = RAIL_CHIPS.hidden ? 0 : 66;
+  const avail = rt.clientHeight - 4, gaps = Math.max(0, rt.children.length - 1) * 2;
+  const natural = 38 * iz, sepM = 9;
+  let h = (avail - chips - gaps - seps * sepM) / Math.max(1, tools);
+  let sepH = sepM; if (h < natural * .8) { sepH = 5; h = (avail - chips - gaps - seps * sepH) / Math.max(1, tools); }
+  h = Math.max(20, Math.min(natural, Math.floor(h)));
+  rail.style.setProperty('--rth', h + 'px'); rail.style.setProperty('--rsm', (sepH - 1) / 2 + 'px');
+  rail.classList.toggle('tight', h < natural);
+}
+new ResizeObserver(() => fitRail()).observe($('.toolrail'));
+window.addEventListener('resize', fitRail);
 
 /* ================= layer folders, colour labels, drag to organise ================= */
 // Layers stay one flat list (bottom → top). A folder sits directly above its contents; each layer's `parent` is its folder's id.
@@ -4472,12 +4563,15 @@ const TOOLS = [['hand', 'Hand', 'or hold Space'], ['zoom', 'Zoom', 'drag up/down
   ['brush', 'Brush', ''], ['blend', 'Blend', 'smudges colors together'], ['eraser', 'Eraser', ''], '|',
   ['fill', 'Fill', ''], ['gradient', 'Gradient', 'main color fading out, Shift snaps angle'], '|',
   ['line', 'Line', 'Shift snaps to 15°'], ['rect', 'Rectangle', 'Shift for a square'], ['ellipse', 'Ellipse', 'Shift for a circle'], ['text', 'Text', 'tap where the text goes'], '|',
-  ['picker', 'Eyedropper', 'or Alt+click']];
+  ['picker', 'Eyedropper', 'or Alt+click'], ['colors', 'Colors', 'main, sub and transparent']];
+const RAIL_CHIPS = document.querySelector('.toolrail .chips');
 function buildTools() {
   const rail = [], bar = [];
+  RAIL_CHIPS.hidden = toolHidden.includes('colors');
   railList().forEach(t => {
     if (t !== '|' && toolHidden.includes(t[0])) return;
     if (t === '|') { rail.push(el('div', { class: 'rail-sep' })); bar.push(el('div', { class: 'bar-sep' })); return; }
+    if (t[0] === 'colors') { rail.push(RAIL_CHIPS); return; } // the main/sub/transparent chips; on phones they sit at the end of the bar instead
     const [id, label, h] = t, k = keysOf('tool.' + id).map(prettyKey).join(' / '), hint = [k, h].filter(Boolean).join(' · ');
     const r = el('button', { class: 'tool', 'data-tool': id, 'aria-label': hint ? `${label} (${hint})` : label, title: hint ? `${label} — ${hint}` : label }); r.innerHTML = svgIc(id);
     const b = el('button', { class: 'btool', 'data-tool': id, 'aria-label': label }); b.innerHTML = svgIc(id) + `<span>${label}</span>`;
@@ -4485,8 +4579,12 @@ function buildTools() {
   });
   bar.push(el('div', { class: 'bar-sep' }));
   [['emotes', 'Emotes', 'emotes'], ['brushes', 'Settings', 'brush'], ['layers', 'Layers', 'layers'], ['nav', 'Navigator', 'nav']].forEach(([ic, label, open]) => { const b = el('button', { class: 'btool', 'aria-label': label, onclick: () => openPanel(open) }); b.innerHTML = svgIc(ic) + `<span>${label}</span>`; bar.push(b); });
-  const tidy = a => a.filter((x, i) => !(x.classList.contains('rail-sep') || x.classList.contains('bar-sep')) || (i > 0 && !(a[i - 1].classList.contains('rail-sep') || a[i - 1].classList.contains('bar-sep'))));
-  $('#railTools').replaceChildren(...tidy(rail)); $('#barTools').replaceChildren(...tidy(bar));
+  // dividers only show between tools: none at the ends, never two in a row
+  const isSep = x => x.classList.contains('rail-sep') || x.classList.contains('bar-sep');
+  const tidy = a => { const r = []; a.forEach(x => { if (isSep(x) && (!r.length || isSep(r[r.length - 1]))) return; r.push(x); }); while (r.length && isSep(r[r.length - 1])) r.pop(); return r; };
+  const railOut = tidy(rail); if (!railOut.includes(RAIL_CHIPS)) railOut.push(RAIL_CHIPS); // hidden chips stay in the page so their buttons keep working
+  $('#railTools').replaceChildren(...railOut); $('#barTools').replaceChildren(...tidy(bar));
+  if (typeof fitRail === 'function') fitRail();
 }
 buildTools();
 const CURSORS = { liquify: 'none', select: 'crosshair', hand: 'grab', zoom: 'zoom-in', rotate: 'alias', move: 'move', text: 'text', lasso: 'crosshair', gradient: 'crosshair' };
@@ -6024,6 +6122,37 @@ const swEnd = e => {
   else if (dy < 0) { sheetH[s.p.id] = Math.round(s.p.getBoundingClientRect().height); store.set('sheetH', sheetH); }
 };
 document.addEventListener('pointerup', swEnd); document.addEventListener('pointercancel', swEnd);
+
+/* ---- colour panel: the wheel grows and shrinks to fill whatever room the panel has, like the other panels' contents ---- */
+// Everything else in the panel keeps its size; the wheel takes the height left over (never wider than the panel).
+// If even the smallest wheel doesn't fit, the panel scrolls like Tool property does.
+{
+  const body = $('#colorPanel .color-body'), WMIN = 96, WMAX = 460;
+  let fitQ = 0;
+  function fitWheel() {
+    fitQ = 0; if (!body || !body.offsetParent) return;
+    const box = [...body.querySelectorAll(':scope > .cbox')].find(b => !b.hidden), cv = box && box.querySelector('canvas.wheel');
+    if (!cv) return;
+    // whichever box scrolls (the panel body on desktop, the whole sheet on phones) sets how much room there is
+    const ov = x => /auto|scroll/.test(getComputedStyle(x).overflowY), panel = body.parentElement, sc = ov(body) ? body : ov(panel) ? panel : null;
+    const cs = getComputedStyle(body), padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0), wide = body.clientWidth - padX;
+    const cur = cv.getBoundingClientRect().height;
+    let room = wide;
+    if (sc) {
+      const scs = getComputedStyle(sc), kids = [...sc.children].filter(k => k.offsetParent && !/absolute|fixed/.test(getComputedStyle(k).position)); if (!kids.length) return;
+      const content = kids[kids.length - 1].getBoundingClientRect().bottom - kids[0].getBoundingClientRect().top;
+      room = sc.clientHeight - (parseFloat(scs.paddingTop) || 0) - (parseFloat(scs.paddingBottom) || 0) - (content - cur) - 2;
+    }
+    const size = Math.round(Math.max(WMIN, Math.min(wide, WMAX, room)));
+    if (Math.abs(size - cur) > 1) { cv.style.width = cv.style.height = size + 'px'; }
+  }
+  const queueFit = () => { if (!fitQ) fitQ = requestAnimationFrame(fitWheel); };
+  $$('#wheelMain, #wheelMix').forEach(c => c.classList.add('fit'));
+  const ro = new ResizeObserver(queueFit); ro.observe(body); ro.observe(body.parentElement); $$('#colorPanel .color-body > *').forEach(k => ro.observe(k));
+  new MutationObserver(queueFit).observe(body, { subtree: true, attributes: true, attributeFilter: ['hidden'], childList: true });
+  window.addEventListener('resize', queueFit); queueFit();
+  window.fitWheel = fitWheel;
+}
 
 
 /* ================= sample: a blinking cat ================= */
