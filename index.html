@@ -1100,7 +1100,7 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
 .canvasrow{flex-wrap:wrap}
 .canvasrow span{white-space:normal!important;overflow-wrap:break-word;flex:1 1 60px}
 .crow{flex-wrap:wrap;row-gap:6px}
-.crow .hex{flex:1 1 84px;min-width:84px}
+.crow .hex{flex:1 1 72px;min-width:64px}
 .crow:has(.colname:not([hidden])) .hex{flex:1 1 80px}
 .swatches{grid-template-columns:repeat(auto-fill,minmax(20px,1fr))!important}
 .swatches .sw{min-height:0}
@@ -1114,8 +1114,10 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
 }
 
 /* section and panel headers get the same fill as the small buttons (Import, Duplicate…), so they stand out in every theme */
-.sec-h,.panel > .ph,[data-unit] > .ph{background:var(--panel-2);border-radius:9px;margin:4px 6px 3px;width:auto!important;box-sizing:border-box}
-.sec-h:hover,.panel > .ph:hover,[data-unit] > .ph:hover{background:color-mix(in srgb,var(--panel-2) 88%,var(--fg) 12%)}
+.sec-h,.panel > .ph,[data-unit] > .ph{background:color-mix(in srgb,var(--panel-2) 84%,var(--fg) 16%);border:0;border-radius:9px;margin:4px 6px 3px;width:auto!important;box-sizing:border-box;color:var(--fg);box-shadow:0 1px 0 color-mix(in srgb,var(--fg) 10%,transparent) inset}
+.sec-h > .ic:first-child,.panel > .ph > .ic:first-child,[data-unit] > .ph > .ic:first-child{color:var(--accent)}
+.panel > .ph h2,[data-unit] > .ph h2{color:var(--fg)}
+.sec-h:hover,.panel > .ph:hover,[data-unit] > .ph:hover{background:color-mix(in srgb,var(--panel-2) 76%,var(--fg) 24%)}
 .sec-h:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 @container (max-width:210px){ .sec-h,.dhead .dtitle,.ph h2{letter-spacing:.02em!important} .sec-h,.panel > .ph,[data-unit] > .ph{margin-left:4px;margin-right:4px} }
 </style>
