@@ -190,7 +190,7 @@ input[type=range]{width:100%;accent-color:var(--fg);height:24px;margin:0;min-wid
 .hud .ibtn{width:calc(34px*var(--iz,1));height:calc(34px*var(--iz,1))}
 .hud output{font-family:var(--mono);font-size:calc(12px*var(--fz,1));min-width:46px;text-align:center;font-variant-numeric:tabular-nums}
 .sep{width:1px;height:20px;background:var(--line2);margin:0 3px;flex-shrink:0}
-.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 58px);transform:translateX(-50%);background:var(--float);border:1px solid var(--line2);border-radius:14px;padding:8px 14px;font-size:calc(12.5px*var(--fz,1));line-height:1.4;z-index:120;pointer-events:none;white-space:normal;overflow-wrap:anywhere;text-align:center;width:max-content;max-width:min(560px,calc(100% - 24px));box-sizing:border-box}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 58px);transform:translateX(-50%);background:var(--float);border:1px solid var(--line2);border-radius:14px;padding:8px 14px;font-size:calc(12.5px*var(--fz,1));line-height:1.4;z-index:120;pointer-events:none;white-space:normal;overflow-wrap:break-word;text-align:center;width:max-content;max-width:min(560px,calc(100% - 24px));box-sizing:border-box}
 .quick{display:flex;position:absolute;left:10px;top:50%;transform:translateY(-50%);flex-direction:column;align-items:center;gap:12px;z-index:4;background:var(--float);border:1px solid var(--line2);border-radius:22px;padding:10px 6px}
 .app[data-quick="off"] .quick{display:none}
 .quick label{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:calc(10px*var(--fz,1));color:var(--muted)}
@@ -1028,7 +1028,7 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
 .btn{white-space:normal;line-height:1.2;max-width:100%}
 .apbtns .btn,.actions .btn{flex-shrink:1;min-width:0}
 .btn:not(.dock .btn){height:auto;min-height:36px;padding-top:6px;padding-bottom:6px}
-.klabel{overflow-wrap:anywhere}
+.klabel{overflow-wrap:break-word}
 @media (max-width:520px){
   .krow{grid-template-columns:minmax(0,1fr) 26px;grid-template-areas:"l r" "k k";row-gap:4px;padding:6px}
   .krow>.klabel{grid-area:l}.krow>.kkeys{grid-area:k}.krow>:last-child:not(.kkeys):not(.klabel){grid-area:r}
@@ -1085,6 +1085,39 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
 .prevrow{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .exbgq{display:flex;flex-direction:column;gap:6px}.exbgq>span{font-size:calc(12px*var(--fz,1));color:var(--fg2)}
 .exsw{display:inline-block;width:12px;height:12px;border-radius:50%;border:1px solid rgba(128,128,128,.6);margin-right:6px;vertical-align:-1px}
+
+/* ===== squished panels: wrap and rearrange instead of cutting things off ===== */
+.dhead{height:auto!important;min-height:22px}
+.dhead .dtitle{white-space:normal!important;overflow:visible!important;overflow-wrap:break-word;line-height:1.25;padding:3px 0}
+.sec-h span{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:break-word;line-height:1.25}
+.ph h2{overflow-wrap:break-word;line-height:1.25;min-width:0}
+.layer .meta b,.layer .meta small{white-space:normal!important;overflow-wrap:break-word;text-overflow:clip!important}
+.sec-h,.ph,.dhead{flex-shrink:0!important}
+.layer{flex-wrap:wrap;row-gap:2px}
+.layer .meta{flex:1 1 56px;min-width:56px}
+.tp-padbar{flex-wrap:wrap}
+.tp-padbar output{white-space:normal!important;overflow:visible!important;flex:1 1 110px}
+.canvasrow{flex-wrap:wrap}
+.canvasrow span{white-space:normal!important;overflow-wrap:break-word;flex:1 1 60px}
+.crow{flex-wrap:wrap;row-gap:6px}
+.crow .hex{flex:1 1 84px;min-width:84px}
+.crow:has(.colname:not([hidden])) .hex{flex:1 1 80px}
+.swatches{grid-template-columns:repeat(auto-fill,minmax(20px,1fr))!important}
+.swatches .sw{min-height:0}
+.tabs{flex-wrap:wrap}
+.tabs button{flex:1 1 auto;min-width:0;padding:0 8px;white-space:nowrap}
+.lfoot{flex-wrap:wrap;justify-content:center;gap:2px}
+.lfoot .ibtn{flex-shrink:0!important;min-width:calc(28px*var(--iz,1))!important;width:calc(28px*var(--iz,1))!important}
+@container (max-width:210px){
+  .tabs{border-radius:14px}
+  .tabs button{padding:0 5px;font-size:calc(11px*var(--fz,1))!important}
+}
+
+/* section and panel headers get the same fill as the small buttons (Import, Duplicate…), so they stand out in every theme */
+.sec-h,.panel > .ph,[data-unit] > .ph{background:var(--panel-2);border-radius:9px;margin:4px 6px 3px;width:auto!important;box-sizing:border-box}
+.sec-h:hover,.panel > .ph:hover,[data-unit] > .ph:hover{background:color-mix(in srgb,var(--panel-2) 88%,var(--fg) 12%)}
+.sec-h:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+@container (max-width:210px){ .sec-h,.dhead .dtitle,.ph h2{letter-spacing:.02em!important} .sec-h,.panel > .ph,[data-unit] > .ph{margin-left:4px;margin-right:4px} }
 </style>
 
 <div class="app" id="app" data-open="" data-timeline="" data-quick="on" data-dl="open" data-dr="open">
