@@ -522,7 +522,7 @@ html.sb-reset *{overflow:hidden!important}
   .dhead .dtitle{flex:1;white-space:nowrap;overflow:hidden}
   .dhead .ibtn{width:calc(24px*var(--iz,1));height:calc(24px*var(--iz,1));border-radius:7px}
   .dhead .ibtn .ic{width:calc(15px*var(--iz,1));height:calc(15px*var(--iz,1))}
-  .dock[data-mini="1"]{width:46px!important;overflow:hidden}
+  .dock[data-mini="1"]{width:calc(36px*var(--iz,1))!important;overflow:hidden}
   .dock[data-mini="1"] > :not(.dhead):not(.dicons){display:none!important}
   .dock[data-mini="1"] .dtitle{display:none}
   .dock[data-mini="1"] .dhead{justify-content:center;padding:2px 0 0}
@@ -1161,7 +1161,39 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
 }
 @container (max-width:170px){ #colorPanel{--pib:calc(23px*var(--iz,1));--pii:calc(15px*var(--iz,1))} .crow .hex{flex:1 1 52px;min-width:52px;padding:0 4px} }
 /* layer buttons shrink to keep a full row (8 across) before they ever wrap, never below 16px */
-#layersPanel{--pib:clamp(16px,calc((100cqw - 16px) / 8 - 1px),calc(28px*var(--iz,1)));--pii:clamp(11px,calc(var(--pib) * .66),calc(18px*var(--iz,1)))}
+#layersPanel{--pib:calc(28px*var(--iz,1));--pii:calc(18px*var(--iz,1))}
+#layersPanel .lflags.bal,#layersPanel .lfoot.bal{display:grid!important;grid-template-columns:repeat(var(--cols),var(--pib));justify-content:center!important}
+
+/* ===== shrunk columns: a divider between panels, like the tool bar ===== */
+.dicons .dsep{width:24px;height:1px;background:var(--line);margin:3px 0;flex-shrink:0}
+.dicons{padding:4px 0!important;gap:2px!important}
+.dicons button{width:calc(30px*var(--iz,1))!important;height:calc(30px*var(--iz,1))!important;border-radius:8px!important}
+.dicons button .ic{width:calc(19px*var(--iz,1));height:calc(19px*var(--iz,1))}
+.dicons .dsep{width:calc(20px*var(--iz,1))!important}
+.dock[data-mini="1"] .dhead .ibtn{width:calc(28px*var(--iz,1));height:calc(24px*var(--iz,1))}
+/* ===== tabs: panels sharing one slot ===== */
+.cpanel > .color-body{display:flex;flex-direction:column;gap:10px}
+@media (min-width:700px){ .cpanel > .color-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden} }
+[data-unit].tab-off{display:none!important}
+.color-body > .tabs[hidden]{display:none!important}
+[data-unit].in-tabs > .ph,[data-unit].in-tabs > .sec-h,[data-unit].in-tabs > .sec-x{display:none!important}
+.tabstrip{display:flex;align-items:stretch;gap:1px;flex-shrink:0;min-height:32px;padding:0 4px 0 8px;background:color-mix(in srgb,var(--panel-2) 82%,var(--fg) 12%);border-top:1px solid color-mix(in srgb,var(--fg) 9%,transparent);border-bottom:5px solid var(--panel);cursor:grab;touch-action:none;user-select:none}
+.tabstrip.folded{border-bottom-width:1px}
+.tsgrip{flex:0 0 11px;align-self:center;height:9px;margin-right:4px;opacity:.55;color:var(--fg);background:linear-gradient(currentColor 0 0) top/100% 1.6px no-repeat,linear-gradient(currentColor 0 0) center/100% 1.6px no-repeat,linear-gradient(currentColor 0 0) bottom/100% 1.6px no-repeat}
+.ptab{display:flex;align-items:center;gap:6px;border:0;background:transparent;color:var(--fg2);padding:0 8px;min-width:0;border-radius:7px 7px 0 0;margin-top:3px;font-size:calc(12.5px*var(--fz,1));font-weight:600;cursor:pointer}
+.ptab .ic{width:var(--pii,18px);height:var(--pii,18px);flex-shrink:0}
+.ptab span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.ptab:hover{background:color-mix(in srgb,var(--fg) 8%,transparent);color:var(--fg)}
+.ptab[aria-selected="true"]{background:var(--panel);color:var(--fg);flex:0 1 auto}
+.ptab[aria-selected="true"] .ic{color:var(--accent)}
+.tsfill{flex:1 1 0;min-width:4px}
+.tabstrip .ibtn{align-self:center;width:24px;height:24px;flex-shrink:0}
+.tabstrip .ibtn .ic{width:14px;height:14px}
+.tabstrip.folded .tsfold .ic{transform:rotate(-90deg)}
+.tab-drop{outline:2px solid var(--accent)!important;outline-offset:-2px;background:color-mix(in srgb,var(--accent) 22%,var(--panel-2))!important}
+.ptab{flex-shrink:0!important}
+@container (max-width:190px){ .ptab{padding:0 3px} .tabstrip{padding-left:4px} .tsgrip{display:none} }
+@container (max-width:230px){ .ptab{padding:0 5px} .ptab[aria-selected="true"] span{display:none} }
 </style>
 
 <div class="app" id="app" data-open="" data-timeline="" data-quick="on" data-dl="open" data-dr="open">
@@ -1378,6 +1410,14 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
           </div>
           <div class="recent"><span>Recent</span><div class="swatches" id="swatches"></div></div>
         </div>
+      </section>
+      <section class="panel cpanel" id="mixPanel" aria-label="Color mixing" hidden>
+        <div class="ph"><h2>Mixing</h2><button class="ibtn collapse-btn" data-collapse aria-label="Collapse mixing"><svg class="ic" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button><button class="ibtn close" data-close aria-label="Close"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+        <div class="color-body"></div>
+      </section>
+      <section class="panel cpanel" id="savedPanel" aria-label="Saved colors" hidden>
+        <div class="ph"><h2>Color set</h2><button class="ibtn collapse-btn" data-collapse aria-label="Collapse color set"><svg class="ic" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button><button class="ibtn close" data-close aria-label="Close"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+        <div class="color-body"></div>
       </section>
       <section class="panel layers" id="layersPanel" aria-label="Layers">
         <div class="ph"><h2>Layers</h2><button class="ibtn close" data-close aria-label="Close"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
@@ -5368,41 +5408,49 @@ async function openImageFile(f) {
 /* ================= dockable, floating panels (desktop + tablet) ================= */
 const UNITS = {
   emotes: ['#emotePanel', 'Emotes', ICON.emotes], nav: ['#navPanel', 'Navigator', ICON.nav],
-  color: ['#colorPanel', 'Color', '<circle cx="12" cy="12" r="9"/><circle cx="8" cy="10" r="1.6" fill="currentColor"/><circle cx="12" cy="7.5" r="1.6" fill="currentColor"/><circle cx="16" cy="10" r="1.6" fill="currentColor"/><path d="M12 21a3 3 0 010-6h2"/>'],
+  color: ['#colorPanel', 'Color wheel', '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.2"/><rect x="10" y="10" width="4" height="4" rx=".8" fill="currentColor" stroke="none"/>'],
+  mix: ['#mixPanel', 'Mixing', '<path d="M7 18c-2.2 0-4-1.6-4-3.7C3 10 8.5 5 13.5 5 18 5 21 8 21 11.2c0 2.3-1.8 3.3-3.6 3.3h-1.7c-1 0-1.7.8-1.7 1.7 0 1.2-1 1.8-2.2 1.8H7z"/><circle cx="8" cy="12.5" r="1.3" fill="currentColor"/><circle cx="11" cy="9" r="1.3" fill="currentColor"/><circle cx="15.5" cy="9" r="1.3" fill="currentColor"/>'],
+  saved: ['#savedPanel', 'Color set', '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9.3h18M3 14.7h18M9 4v16M15 4v16"/><rect x="3.8" y="4.8" width="4.4" height="3.7" fill="currentColor" stroke="none"/><rect x="9.8" y="10.1" width="4.4" height="3.8" fill="currentColor" stroke="none"/>'],
   layers: ['#layersPanel', 'Layers', ICON.layers],
   brushes: ['.sec[data-sec="brushes"]', 'Brushes', ICON.brush], sizes: ['.sec[data-sec="sizes"]', 'Brush size', '<circle cx="6" cy="12" r="2"/><circle cx="12" cy="12" r="3"/><circle cx="19" cy="12" r="4"/>'],
   settings: ['.sec[data-sec="settings"]', 'Brush settings', ICON.brushes],
   ref: ['#refPanel', 'Reference', '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 8"/>'],
   notes: ['#notesPanel', 'Notes', '<path d="M5 4h11l3 3v13H5z"/><path d="M8 10h8M8 14h8M8 18h5"/>'],
 };
-const HOME = { left: ['brushes', 'settings', 'sizes'], r1: ['emotes', 'nav', 'ref', 'notes'], r2: ['color', 'layers'] };
+const HOME = { left: ['brushes', 'settings', 'sizes'], r1: ['emotes', 'nav', 'ref', 'notes'], r2: ['color', 'mix', 'saved', 'layers'] };
 const DOCK_NAMES = { left: 'Brush', r1: 'Emotes', r2: 'Color' };
 const unitCache = {};
 const unitEl = id => { const e = unitCache[id] || (unitCache[id] = $(UNITS[id][0])); e.dataset.unit = id; return e; };
 const dockEl = d => $(`.dock[data-dock="${d}"]`);
 const bodyOf = d => d === 'left' ? $('#brushPanel > .scroll') : dockEl(d).querySelector('.dbody');
 const homeOf = id => Object.keys(HOME).find(d => HOME[d].includes(id));
-const defaultLayout = () => ({ docks: JSON.parse(JSON.stringify(HOME)), floats: {}, hidden: ['ref', 'notes'], known: Object.keys(UNITS), mini: { r1: innerWidth < 1500 } });
-let lay = (() => { const s = store.get('layout2', null); if (!s || !s.docks) return defaultLayout(); const L = Object.assign(defaultLayout(), s); const known = s.known || ['emotes', 'nav', 'color', 'layers', 'brushes', 'sizes', 'settings']; Object.keys(UNITS).forEach(id => { if (!known.includes(id) && !L.hidden.includes(id)) L.hidden.push(id); }); L.known = Object.keys(UNITS); return L; })();
+const defaultGroups = () => [{ ids: ['color', 'mix', 'saved'], active: 'color' }];
+const defaultLayout = () => ({ docks: JSON.parse(JSON.stringify(HOME)), floats: {}, hidden: ['ref', 'notes'], known: Object.keys(UNITS), groups: defaultGroups(), mini: { r1: innerWidth < 1500 } });
+let lay = (() => { const s = store.get('layout2', null); if (!s || !s.docks) return defaultLayout(); const L = Object.assign(defaultLayout(), s); const known = s.known || ['emotes', 'nav', 'color', 'layers', 'brushes', 'sizes', 'settings']; Object.keys(UNITS).forEach(id => { if (!known.includes(id) && !L.hidden.includes(id)) L.hidden.push(id); }); if (!s.groups) { L.groups = defaultGroups(); L.hidden = L.hidden.filter(x => x !== 'mix' && x !== 'saved'); } L.known = Object.keys(UNITS); return L; })();
 const saveLay = () => store.set('layout2', lay);
 let layMode = '';
 function applyLayout(force) {
   const desk = docked(), mode = desk ? 'desk' : 'phone'; if (mode === layMode && !force) return; layMode = mode;
-  const L = desk ? lay : defaultLayout(), placed = new Set();
+  const L = desk ? lay : defaultLayout(), placed = new Set(); placeColorBoxes(desk);
   $$('.fwin').forEach(w => { const u = w.querySelector('[data-unit]'); if (u) bodyOf(homeOf(u.dataset.unit)).append(u); w.remove(); });
   for (const d of Object.keys(HOME)) for (const id of L.docks[d] || []) if (UNITS[id] && !placed.has(id) && !(desk && L.floats[id])) { bodyOf(d).append(unitEl(id)); placed.add(id); }
   for (const id of Object.keys(UNITS)) if (!placed.has(id) && !(desk && L.floats[id])) { bodyOf(homeOf(id)).append(unitEl(id)); placed.add(id); }
   if (desk) for (const id in L.floats) if (UNITS[id]) makeFloat(id, L.floats[id]);
-  for (const id of Object.keys(UNITS)) unitEl(id).hidden = desk && L.hidden.includes(id);
+  for (const id of Object.keys(UNITS)) unitEl(id).hidden = desk ? L.hidden.includes(id) : (id === 'mix' || id === 'saved');
   for (const d of Object.keys(HOME)) dockEl(d).dataset.mini = desk && L.mini[d] ? '1' : '';
   refreshDocks();
 }
 function refreshDocks() {
   for (const d of Object.keys(HOME)) {
+    if (d === Object.keys(HOME)[0]) layoutGroups();
     const units = [...bodyOf(d).querySelectorAll(':scope > [data-unit]')].filter(u => !u.hidden), D = dockEl(d);
     D.dataset.empty = units.length ? '' : '1';
-    D.querySelector('.dtitle').textContent = units.length ? units.map(u => UNITS[u.dataset.unit][1]).slice(0, 2).join(' · ') : DOCK_NAMES[d];
-    D.querySelector('.dicons').replaceChildren(...units.map(u => { const id = u.dataset.unit, b = el('button', { title: UNITS[id][1], 'aria-label': 'Show ' + UNITS[id][1] }); b.innerHTML = `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${UNITS[id][2]}</svg>`; b.onclick = () => showUnit(id); return b; }));
+    D.querySelector('.dtitle').textContent = units.length ? units.filter(u => !u.classList.contains('tab-off')).map(u => UNITS[u.dataset.unit][1]).slice(0, 2).join(' · ') : DOCK_NAMES[d];
+    // shrunk column: one icon per panel, a divider between panels (tabs that share a slot stay together, no divider between them)
+    const icons = []; let prevG = null;
+    units.forEach((u, i) => { const id = u.dataset.unit, g = groupOf(id), b = el('button', { title: UNITS[id][1], 'aria-label': 'Show ' + UNITS[id][1] }); b.innerHTML = `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${UNITS[id][2]}</svg>`; b.onclick = () => showUnit(id);
+      if (i && !(g && g === prevG)) icons.push(el('div', { class: 'dsep', 'aria-hidden': 'true' })); icons.push(b); prevG = g; });
+    D.querySelector('.dicons').replaceChildren(...icons);
   }
   queueThumbs(150);
   $('#brushPanel').style.display = docked() && ![...bodyOf('left').children].some(u => u.dataset.unit && !u.hidden) ? 'none' : '';
@@ -5426,14 +5474,15 @@ function makeFloat(id, pos) {
   new ResizeObserver(() => { if (!win.isConnected || !lay.floats[id]) return; lay.floats[id].w = win.offsetWidth; lay.floats[id].h = win.offsetHeight; saveLay(); }).observe(win);
   lay.floats[id] = { x, y, w, h }; return win;
 }
+function killWin(win) { if (!win) return; win.querySelectorAll('[data-unit]').forEach(x => bodyOf(homeOf(x.dataset.unit)).append(x)); win.remove(); }
 function dockUnit(id, d, before) {
   const u = unitEl(id), win = u.closest('.fwin'); delete lay.floats[id];
   const body = bodyOf(d); before && before.parentElement === body ? body.insertBefore(u, before) : body.append(u);
-  if (win) win.remove(); lay.hidden = lay.hidden.filter(x => x !== id); u.hidden = false; syncFromDOM();
+  killWin(win); lay.hidden = lay.hidden.filter(x => x !== id); u.hidden = false; syncFromDOM();
 }
-function hideUnit(id) { const u = unitEl(id), win = u.closest('.fwin'); if (win) { delete lay.floats[id]; bodyOf(homeOf(id)).append(u); win.remove(); } if (!lay.hidden.includes(id)) lay.hidden.push(id); u.hidden = true; syncFromDOM(); }
+function hideUnit(id) { const u = unitEl(id), win = u.closest('.fwin'); if (win && win.dataset.float === id) { delete lay.floats[id]; killWin(win); } else if (win) bodyOf(homeOf(id)).append(u); if (!lay.hidden.includes(id)) lay.hidden.push(id); u.hidden = true; syncFromDOM(); }
 function showUnit(id) {
-  const u = unitEl(id); lay.hidden = lay.hidden.filter(x => x !== id); u.hidden = false;
+  const u = unitEl(id); lay.hidden = lay.hidden.filter(x => x !== id); u.hidden = false; const g = groupOf(id); if (g) { g.active = id; g.folded = false; layoutGroups(); }
   const win = u.closest('.fwin'); if (win) { win.style.zIndex = 31 + (++zTop % 50); saveLay(); refreshDocks(); return; }
   const d = Object.keys(HOME).find(k => bodyOf(k).contains(u)); if (d) { if (lay.mini[d]) { lay.mini[d] = false; dockEl(d).dataset.mini = ''; } setDock(d === 'left' ? 'left' : 'right', 'open'); }
   if (u.dataset.collapsed === 'true') u.dataset.collapsed = 'false';
@@ -5448,24 +5497,39 @@ function resetLayout() { lay = defaultLayout(); lay.h = {}; lay.w = {}; saveLay(
 let pdrag = null;
 document.addEventListener('pointerdown', e => {
   if (!docked() || e.button !== 0) return;
+  const tab = e.target.closest('.ptab'), strip = !tab && e.target.closest('.tabstrip');
+  if (tab || strip) {
+    if (e.target.closest('.tsx, .tsfold')) return;
+    const id = tab ? tab.dataset.id : strip.dataset.lead, u = unitEl(id), g = groupOf(id);
+    // a tab drags just that panel out; the strip's handle or empty space moves the whole tab group
+    const win = strip ? u.closest('.fwin') : null, r = (win || (tab || strip)).getBoundingClientRect();
+    pdrag = { u, id, win, tabOut: !!tab, group: strip ? g : null, x0: e.clientX, y0: e.clientY, ox: e.clientX - r.left, oy: e.clientY - r.top, started: false, target: null, before: null };
+    return;
+  }
   const bar = e.target.closest('.fbar'), h = bar || e.target.closest('.ph, .sec-h'); if (!h) return;
   if (!bar && e.target.closest('button:not(.sec-h), input, select, output, label')) return;
   if (bar && e.target.closest('button')) return;
   const u = bar ? bar.parentElement.querySelector('[data-unit]') : h.closest('[data-unit]'); if (!u) return;
-  const win = u.closest('.fwin'), r = (win || u).getBoundingClientRect();
-  pdrag = { u, id: u.dataset.unit, win, x0: e.clientX, y0: e.clientY, ox: e.clientX - r.left, oy: e.clientY - r.top, started: false, target: null, before: null };
+  const win = u.closest('.fwin'), r = (win || u).getBoundingClientRect(), g0 = groupOf(u.dataset.unit);
+  pdrag = { u, id: u.dataset.unit, win, group: bar ? g0 : null, x0: e.clientX, y0: e.clientY, ox: e.clientX - r.left, oy: e.clientY - r.top, started: false, target: null, before: null };
 }, true);
 document.addEventListener('pointermove', e => {
   const d = pdrag; if (!d) return;
-  if (!d.started) { if (Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 7) return; d.started = true; app.dataset.dragging = '1'; if (!d.win) { d.ghost = el('div', { class: 'dghost', text: UNITS[d.id][1] }); document.body.append(d.ghost); } d.line = el('div', { class: 'dropline', hidden: '' }); document.body.append(d.line); if (d.win) d.win.style.zIndex = 31 + (++zTop % 50); }
+  if (!d.started) { if (Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 7) return; d.started = true; app.dataset.dragging = '1'; if (!d.win) { d.ghost = el('div', { class: 'dghost', text: d.group ? d.group.ids.map(x => UNITS[x][1]).join(' · ') : UNITS[d.id][1] }); document.body.append(d.ghost); } d.line = el('div', { class: 'dropline', hidden: '' }); document.body.append(d.line); if (d.win) d.win.style.zIndex = 31 + (++zTop % 50); }
   e.preventDefault();
   if (d.ghost) { d.ghost.style.left = e.clientX + 12 + 'px'; d.ghost.style.top = e.clientY + 10 + 'px'; }
   if (d.win) { const wr = $('.work').getBoundingClientRect(); d.win.style.left = (e.clientX - wr.left - d.ox) + 'px'; d.win.style.top = Math.max(0, e.clientY - wr.top - d.oy) + 'px'; d.win.style.pointerEvents = 'none'; }
   const under = document.elementFromPoint(e.clientX, e.clientY), dk = under && under.closest('.dock[data-dock]');
   $$('.dock.drop-on').forEach(x => x.classList.toggle('drop-on', x === dk));
-  d.target = null; d.before = null; d.line.hidden = true;
+  d.target = null; d.before = null; d.line.hidden = true; d.tabInto = null; $$('.tab-drop').forEach(x => x.classList.remove('tab-drop'));
+  // over another panel's title bar or tab strip: join it as a tab
+  const hd = under && under.closest('.ph, .sec-h, .tabstrip, .fbar'), tu = hd && (hd.matches('.tabstrip') ? unitEl(hd.dataset.lead) : hd.matches('.fbar') ? hd.parentElement.querySelector('[data-unit]') : hd.closest('[data-unit]'));
+  const mine = d.group ? d.group.ids : [d.id];
+  if (tu && !mine.includes(tu.dataset.unit) && !(groupOf(tu.dataset.unit) && groupOf(tu.dataset.unit) === groupOf(d.id) && !d.tabOut)) {
+    d.tabInto = tu.dataset.unit; hd.classList.add('tab-drop'); if (d.ghost) d.ghost.textContent = 'Add as a tab'; return;
+  } else if (d.ghost) d.ghost.textContent = d.group ? d.group.ids.map(x => UNITS[x][1]).join(' · ') : UNITS[d.id][1];
   if (dk && dk.dataset.mini !== '1') {
-    dk.classList.add('drop-on'); const name = dk.dataset.dock, body = bodyOf(name), kids = [...body.querySelectorAll(':scope > [data-unit]')].filter(k => k !== d.u && !k.hidden);
+    dk.classList.add('drop-on'); const name = dk.dataset.dock, body = bodyOf(name), kids = [...body.querySelectorAll(':scope > [data-unit], :scope > .tabstrip')].filter(k => k !== d.u && !k.hidden && !k.classList.contains('tab-off') && !(k.matches('.tabstrip') && mine.includes(k.dataset.lead)) && !(k.matches('[data-unit]') && (mine.includes(k.dataset.unit) || groupOf(k.dataset.unit))));
     d.target = name; d.before = kids.find(k => { const r = k.getBoundingClientRect(); return e.clientY < r.top + r.height / 2; }) || null;
     const br = (d.before || kids[kids.length - 1] || body).getBoundingClientRect(), y = d.before ? br.top : kids.length ? br.bottom : br.top + 4, dr = dk.getBoundingClientRect();
     Object.assign(d.line.style, { left: dr.left + 6 + 'px', width: dr.width - 12 + 'px', top: y - 1 + 'px' }); d.line.hidden = false;
@@ -5473,18 +5537,70 @@ document.addEventListener('pointermove', e => {
 });
 function endPanelDrag(e, cancel) {
   const d = pdrag; pdrag = null; if (!d || !d.started) return;
-  app.dataset.dragging = ''; if (d.ghost) d.ghost.remove(); d.line.remove(); $$('.dock.drop-on').forEach(x => x.classList.remove('drop-on'));
+  app.dataset.dragging = ''; if (d.ghost) d.ghost.remove(); d.line.remove(); $$('.dock.drop-on').forEach(x => x.classList.remove('drop-on')); $$('.tab-drop').forEach(x => x.classList.remove('tab-drop'));
   if (d.win) d.win.style.pointerEvents = '';
   window.addEventListener('click', ev => { ev.stopPropagation(); ev.preventDefault(); }, { capture: true, once: true });
   if (cancel) { applyLayout(true); return; }
-  if (d.target) dockUnit(d.id, d.target, d.before);
+  if (d.tabInto) { joinGroup(d.group ? d.group.ids : [d.id], d.tabInto); setTimeout(() => { window.dispatchEvent(new MouseEvent('click')); }, 0); return; }
+  if (d.tabOut) leaveGroup(d.id);
+  if (d.target) { const bef = d.before && d.before.matches('.tabstrip') ? unitEl(d.before.dataset.lead) : d.before; dockUnit(d.group ? d.group.ids[0] : d.id, d.target, bef); }
   else if (d.win) { lay.floats[d.id] = Object.assign(lay.floats[d.id] || {}, { x: d.win.offsetLeft, y: d.win.offsetTop }); saveLay(); }
-  else { const wr = $('.work').getBoundingClientRect(), w = Math.max(240, Math.min(320, d.u.offsetWidth)); makeFloat(d.id, { x: e.clientX - wr.left - 40, y: e.clientY - wr.top - 12, w }); syncFromDOM(); saveLay(); }
+  else { const wr = $('.work').getBoundingClientRect(), w = Math.max(240, Math.min(320, d.u.offsetWidth)), lead = d.group ? d.group.ids[0] : d.id; makeFloat(lead, { x: e.clientX - wr.left - 40, y: e.clientY - wr.top - 12, w }); syncFromDOM(); saveLay(); }
   setTimeout(() => { window.dispatchEvent(new MouseEvent('click')); }, 0);
 }
 document.addEventListener('pointerup', e => endPanelDrag(e, false));
 document.addEventListener('pointercancel', e => endPanelDrag(e, true));
 window.addEventListener('resize', () => applyLayout());
+
+/* ---- tabs: panels that share one slot, like Clip Studio. Drag a title bar onto another panel's title bar to add it as a tab;
+   drag a tab out to dock or float it on its own; drag the strip's handle to move the whole group ---- */
+const groupOf = id => (docked() ? lay.groups || [] : defaultGroups()).find(g => g.ids.includes(id)) || null;
+const IC_FOLD = '<svg class="ic" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>', IC_TX = '<svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+function leaveGroup(id) {
+  const g = (lay.groups || []).find(x => x.ids.includes(id)); if (!g) return;
+  const lead = g.ids[0], win = unitEl(lead).closest('.fwin'), pos = win && lay.floats[lead] ? { ...lay.floats[lead] } : null;
+  g.ids = g.ids.filter(x => x !== id); if (g.active === id) g.active = g.ids[0];
+  if (g.ids.length < 2) lay.groups = lay.groups.filter(x => x !== g);
+  // the group was floating and its first panel left: keep the window for the others
+  if (id === lead && pos && g.ids.length) { delete lay.floats[lead]; const u = unitEl(id); killWin(win); bodyOf(homeOf(id)).append(u); makeFloat(g.ids[0], pos); }
+  unitEl(id).classList.remove('tab-off', 'in-tabs'); saveLay();
+}
+function joinGroup(ids, target) {
+  ids.forEach(id => leaveGroup(id));
+  lay.groups = lay.groups || []; let g = lay.groups.find(x => x.ids.includes(target)); if (!g) { g = { ids: [target], active: target }; lay.groups.push(g); }
+  const tu = unitEl(target);
+  ids.forEach(id => { const u = unitEl(id), w = u.closest('.fwin'); if (w && w !== tu.closest('.fwin')) { delete lay.floats[id]; killWin(w); } lay.hidden = lay.hidden.filter(x => x !== id); u.hidden = false; if (!g.ids.includes(id)) g.ids.push(id); });
+  g.active = ids[0]; g.folded = false; layoutGroups(); syncFromDOM(); toast(ids.length > 1 ? 'Tabs added' : `${UNITS[ids[0]][1]} added as a tab`);
+}
+function setActiveTab(g, id) { g.active = id; g.folded = false; saveLay(); layoutGroups(); refreshDocks(); requestAnimationFrame(() => { if (typeof fitWheel === 'function') fitWheel(); if (typeof wheels !== 'undefined') wheels.forEach(w => w.resize()); }); }
+function layoutGroups() {
+  $$('.tabstrip').forEach(t => t.remove());
+  $$('[data-unit].in-tabs').forEach(u => u.classList.remove('in-tabs', 'tab-off'));
+  if (!docked()) return;
+  lay.groups = (lay.groups || []).map(g => ({ ...g, ids: g.ids.filter(id => UNITS[id] && !lay.hidden.includes(id)) })).filter(g => g.ids.length >= 2);
+  for (const g of lay.groups) {
+    if (!g.ids.includes(g.active)) g.active = g.ids[0];
+    const lead = unitEl(g.ids[0]), box = lead.parentElement; if (!box) continue;
+    let prev = lead;
+    g.ids.slice(1).forEach(id => { const u = unitEl(id), w = u.closest('.fwin'); if (w && w !== lead.closest('.fwin')) { delete lay.floats[id]; killWin(w); } prev.after(u); prev = u; });
+    g.ids.forEach(id => { const u = unitEl(id); u.classList.add('in-tabs'); u.classList.toggle('tab-off', g.folded || id !== g.active); if (u.dataset.collapsed === 'true') u.dataset.collapsed = 'false'; const sh = u.querySelector(':scope > .sec-h'); if (sh) sh.setAttribute('aria-expanded', 'true'); });
+    const strip = el('div', { class: 'tabstrip', role: 'tablist', 'data-lead': g.ids[0], 'aria-label': 'Tabs: ' + g.ids.map(x => UNITS[x][1]).join(', ') });
+    strip.append(el('span', { class: 'tsgrip', title: 'Drag to move these tabs together' }));
+    g.ids.forEach(id => { const on = id === g.active, t = el('button', { class: 'ptab', role: 'tab', 'aria-selected': on, 'data-id': id, title: UNITS[id][1] + (on ? '' : ' (drag out to separate)'), 'aria-label': UNITS[id][1] });
+      t.innerHTML = `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${UNITS[id][2]}</svg>${on ? `<span>${UNITS[id][1]}</span>` : ''}`; t.onclick = () => setActiveTab(g, id); strip.append(t); });
+    strip.append(el('span', { class: 'tsfill' }));
+    const fold = el('button', { class: 'tsfold ibtn', title: g.folded ? 'Expand' : 'Minimise', 'aria-label': g.folded ? 'Expand tabs' : 'Minimise tabs', 'aria-expanded': !g.folded, onclick: () => { g.folded = !g.folded; saveLay(); layoutGroups(); refreshDocks(); } }); fold.innerHTML = IC_FOLD;
+    const x = el('button', { class: 'tsx ibtn', title: 'Close ' + UNITS[g.active][1] + ' (Window menu brings it back)', 'aria-label': 'Close ' + UNITS[g.active][1], onclick: () => hideUnit(g.active) }); x.innerHTML = IC_TX;
+    strip.append(fold, x); strip.classList.toggle('folded', !!g.folded);
+    lead.before(strip);
+  }
+}
+/* Wheel, Mixing and Color set are their own panels on desktop; on phones they go back inside the colour sheet's switcher */
+function placeColorBoxes(desk) {
+  const cb = $('#colorPanel .color-body');
+  if (desk) { $('#mixPanel .color-body').append($('#mixBox')); $('#savedPanel .color-body').append($('#savedBox')); $('#mixBox').hidden = $('#savedBox').hidden = $('#wheelBox').hidden = false; cb.querySelector(':scope > .tabs').hidden = true; }
+  else { const rec = cb.querySelector(':scope > .recent'); cb.insertBefore($('#mixBox'), rec); cb.insertBefore($('#savedBox'), rec); cb.querySelector(':scope > .tabs').hidden = false; colorTab('wheel'); }
+}
 applyLayout(true);
 
 /* ---- Window menu: show / hide each panel ---- */
@@ -5496,7 +5612,7 @@ MENU_ICONS.window = '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M
 
 /* ---- squish: drag column edges to resize columns, drag a section's bottom edge to resize it ---- */
 // each section's share of its column (like Clip Studio: dragging a divider trades height with the section below, and the column always fits the window)
-const UWEIGHT = { brushes: 220, settings: 330, sizes: 190, emotes: 330, nav: 240, color: 330, layers: 380, ref: 320, notes: 320 };
+const UWEIGHT = { mix: 330, saved: 300, brushes: 220, settings: 330, sizes: 190, emotes: 330, nav: 240, color: 330, layers: 380, ref: 320, notes: 320 };
 lay.h = lay.h || {}; lay.w = lay.w || {};
 function applySizes() {
   const desk = docked();
@@ -6212,8 +6328,12 @@ document.addEventListener('pointerup', swEnd); document.addEventListener('pointe
 /* ---- colour panel: the wheel grows and shrinks to fill whatever room the panel has, like the other panels' contents ---- */
 // Everything else in the panel keeps its size; the wheel takes the height left over (never wider than the panel).
 // If even the smallest wheel doesn't fit, the panel scrolls like Tool property does.
-{
-  const body = $('#colorPanel .color-body'), WMIN = 96, WMAX = 460;
+const fitWheel = (() => {
+  const fits = ['#colorPanel', '#mixPanel'].map(sel => fitter($(sel + ' .color-body')));
+  return () => fits.forEach(f => f());
+})();
+function fitter(body) {
+  const WMIN = 96, WMAX = 460;
   let fitQ = 0;
   function fitWheel() {
     fitQ = 0; if (!body || !body.offsetParent) return;
@@ -6234,10 +6354,25 @@ document.addEventListener('pointerup', swEnd); document.addEventListener('pointe
   }
   const queueFit = () => { if (!fitQ) fitQ = requestAnimationFrame(fitWheel); };
   $$('#wheelMain, #wheelMix').forEach(c => c.classList.add('fit'));
-  const ro = new ResizeObserver(queueFit); ro.observe(body); ro.observe(body.parentElement); $$('#colorPanel .color-body > *').forEach(k => ro.observe(k));
+  const ro = new ResizeObserver(queueFit); ro.observe(body); ro.observe(body.parentElement); [...body.children].forEach(k => ro.observe(k));
   new MutationObserver(queueFit).observe(body, { subtree: true, attributes: true, attributeFilter: ['hidden'], childList: true });
   window.addEventListener('resize', queueFit); queueFit();
-  window.fitWheel = fitWheel;
+  return queueFit;
+}
+window.fitWheel = fitWheel;
+
+/* layer button rows: when they don't all fit on one line, split into even rows (8 → 4 + 4, never 7 + 1) */
+{
+  const rows = ['#layersPanel .lflags', '#layersPanel .lfoot'].map(q => $(q));
+  const bal = () => rows.forEach(r => {
+    if (!r || !r.offsetParent) return; r.classList.remove('bal');
+    const kids = [...r.children].filter(k => k.offsetParent), n = kids.length; if (!n) return;
+    const cs = getComputedStyle(r), avail = r.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), bw = kids[0].offsetWidth + 1;
+    const per = Math.max(1, Math.floor((avail + 1) / bw)); if (per >= n) return;
+    const lines = Math.ceil(n / per), cols = Math.ceil(n / lines); r.style.setProperty('--cols', cols); r.classList.add('bal');
+  });
+  let q = 0; const later = () => { if (!q) q = requestAnimationFrame(() => { q = 0; bal(); }); };
+  new ResizeObserver(later).observe($('#layersPanel')); window.addEventListener('resize', later); later();
 }
 
 
