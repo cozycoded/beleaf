@@ -348,6 +348,18 @@ impl Gfx {
     async fn new(window: Arc<Window>) -> Gfx {
         let size = window.inner_size();
         let (w, h) = (size.width.max(800), size.height.max(600));
+        // the drawing area: the whole screen on Windows (so making the window bigger shows more), the browser window on the web
+        #[cfg(not(target_arch = "wasm32"))]
+        let (cw0, ch0) = window.current_monitor().map(|m| (m.size().width, m.size().height)).unwrap_or((w, h));
+        #[cfg(target_arch = "wasm32")]
+        let (cw0, ch0) = web_sys::window()
+            .map(|wn| {
+                let d = wn.device_pixel_ratio();
+                let iw = wn.inner_width().ok().and_then(|v| v.as_f64()).unwrap_or(1200.0);
+                let ih = wn.inner_height().ok().and_then(|v| v.as_f64()).unwrap_or(800.0);
+                ((iw * d) as u32, (ih * d) as u32)
+            })
+            .unwrap_or((w, h));
         #[cfg(target_arch = "wasm32")]
         let backends = wgpu::Backends::GL;
         #[cfg(not(target_arch = "wasm32"))]
@@ -382,7 +394,7 @@ impl Gfx {
         surface.configure(&device, &config);
 
         let maxd = device.limits().max_texture_dimension_2d;
-        let (cw, ch) = (w.min(maxd), h.min(maxd));
+        let (cw, ch) = (cw0.max(w).min(maxd), ch0.max(h).min(maxd));
         let layer = canvas_tex(&device, cw, ch, wgpu::TextureFormat::Rgba8Unorm);
         let mask_main = canvas_tex(&device, cw, ch, wgpu::TextureFormat::R8Unorm);
         let mask_dual = canvas_tex(&device, cw, ch, wgpu::TextureFormat::R8Unorm);
