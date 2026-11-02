@@ -1226,6 +1226,9 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
 .lbrow .tic .tsep{display:block;width:16px;height:2px;background:var(--line2);border-radius:2px;margin:auto}
 .lbsec select{width:100%;height:30px;background:var(--panel-2);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:0 8px}
 .lbdrop{z-index:99}
+
+/* colour panels always keep room for the scrollbar, so it appearing can't change the width (Edge/Windows scrollbars take up space) */
+#colorPanel > .color-body,.cpanel > .color-body{scrollbar-gutter:stable}
 </style>
 
 <div class="app" id="app" data-open="" data-timeline="" data-quick="on" data-dl="open" data-dr="open">
@@ -6366,7 +6369,7 @@ const fitWheel = (() => {
 })();
 function fitter(body) {
   const WMIN = 96, WMAX = 460;
-  let fitQ = 0;
+  let fitQ = 0, hist = { key: '', sizes: [] };
   function fitWheel() {
     fitQ = 0; if (!body || !body.offsetParent) return;
     const box = [...body.querySelectorAll(':scope > .cbox')].find(b => !b.hidden), cv = box && box.querySelector('canvas.wheel');
@@ -6382,7 +6385,12 @@ function fitter(body) {
       room = sc.clientHeight - (parseFloat(scs.paddingTop) || 0) - (parseFloat(scs.paddingBottom) || 0) - (content - cur) - 2;
     }
     const size = Math.round(Math.max(WMIN, Math.min(wide, WMAX, room)));
-    if (Math.abs(size - cur) > 1) { cv.style.width = cv.style.height = size + 'px'; }
+    // never flip back and forth: if this size was what we had two steps ago, settle on the smaller one until the panel itself changes size
+    const key = Math.round(sc ? sc.clientHeight : 0) + 'x' + Math.round(wide);
+    if (key !== hist.key) hist = { key, sizes: [] };
+    if (hist.sizes.length >= 2 && Math.abs(size - hist.sizes[hist.sizes.length - 2]) <= 1 && Math.abs(size - cur) > 1) { const s0 = Math.min(size, cur); cv.style.width = cv.style.height = s0 + 'px'; hist.locked = s0; return; }
+    if (hist.locked != null) return;
+    if (size > cur + 3 || size < cur - 1) { cv.style.width = cv.style.height = size + 'px'; hist.sizes.push(size); if (hist.sizes.length > 4) hist.sizes.shift(); }
   }
   const queueFit = () => { if (!fitQ) fitQ = requestAnimationFrame(fitWheel); };
   $$('#wheelMain, #wheelMix').forEach(c => c.classList.add('fit'));
