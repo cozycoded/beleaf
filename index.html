@@ -1045,8 +1045,12 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
 .min>.rgrip{display:none}
 .pop .pop-b{flex:1;min-height:0}
 .minbtn .ic,.sec-x .ic{width:14px;height:14px}
-.sec-x{position:absolute;top:6px;right:30px;width:24px;height:24px;border:0;border-radius:6px;background:transparent;color:var(--muted);display:grid;place-items:center;padding:0;z-index:2}
+.sec-x{position:absolute;top:2px;right:30px;width:22px;height:22px;border:0;border-radius:6px;background:transparent;color:var(--muted);display:grid;place-items:center;padding:0;z-index:2}
 .sec-x:hover{color:var(--fg);background:color-mix(in srgb,var(--fg) 8%,transparent)}
+.sec-h.has-x span{margin-right:24px} /* leave room so the title never runs under the × */
+.sec-x .ic{width:12px;height:12px}
+/* with a mouse, the × stays out of the way until you point at that section's header */
+@media (hover:hover){ .sec-x{opacity:0;transition:opacity .12s} [data-unit]:has(> .sec-h:hover) > .sec-x,.sec-x:hover,.sec-x:focus-visible{opacity:1} }
 .tool.held,.btool.held{outline:2px solid var(--accent);outline-offset:-2px}
 .sheet-grab{display:none}
 @media (max-width:699px){
@@ -6093,12 +6097,18 @@ $$('[data-unit]').forEach(u => {
   const ph = u.querySelector(':scope > .ph'), sh = u.querySelector(':scope > .sec-h');
   if (ph && !ph.querySelector('[data-collapse]') && !u.matches('.layers')) { /* only panels that can fold */ }
   if (ph && !ph.querySelector('[data-close]')) { const c = el('button', { class: 'ibtn close', 'data-close': '', 'aria-label': 'Close', title: 'Close (Window menu brings it back)' }); c.innerHTML = IC_X; ph.append(c); c.onclick = () => { if (docked()) hideUnit(u.dataset.unit); else app.dataset.open = ''; }; }
-  if (sh && !u.querySelector(':scope > .sec-x')) { const c = el('button', { class: 'sec-x', 'aria-label': 'Close ' + (sh.textContent || '').trim(), title: 'Close (Window menu brings it back)' }); c.innerHTML = IC_X; c.onclick = e => { e.stopPropagation(); if (docked()) hideUnit(u.dataset.unit); else app.dataset.open = ''; }; u.style.position = 'relative'; u.append(c); }
+  if (sh && !u.querySelector(':scope > .sec-x')) { const c = el('button', { class: 'sec-x', 'aria-label': 'Close ' + (sh.textContent || '').trim(), title: 'Close (Window menu brings it back)' }); c.innerHTML = IC_X; c.onclick = e => { e.stopPropagation(); if (docked()) hideUnit(u.dataset.unit); else app.dataset.open = ''; }; u.style.position = 'relative'; u.append(c); sh.classList.add('has-x'); placeSecX(u, sh, c); }
 });
 // Layers had no fold button: add one like the other panels
 { const lp = $('#layersPanel'), ph = lp.querySelector('.ph'); if (ph && !ph.querySelector('[data-collapse]')) { const b = el('button', { class: 'ibtn collapse-btn', 'data-collapse': '', 'aria-label': 'Collapse layers', title: 'Minimise' }); b.innerHTML = '<svg class="ic" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>'; ph.querySelector('[data-close]').before(b); b.onclick = () => { lp.dataset.collapsed = lp.dataset.collapsed === 'true' ? 'false' : 'true'; b.setAttribute('aria-expanded', lp.dataset.collapsed !== 'true'); dirty(false); }; } }
 $$('[data-collapse]').forEach(b => { if (!b.title) b.title = 'Minimise'; });
 
+/* the section close (×) sits on the header line, just left of the fold arrow, centred with the title */
+function placeSecX(u, sh, x) {
+  const put = () => { const chev = sh.querySelector('.chev'); if (!sh.offsetParent || !chev) return; const U = u.getBoundingClientRect(), C = chev.getBoundingClientRect(), H = sh.getBoundingClientRect();
+    x.style.top = Math.round(H.top - U.top + (H.height - x.offsetHeight) / 2) + 'px'; x.style.right = Math.round(U.right - C.left + 4) + 'px'; };
+  new ResizeObserver(put).observe(sh); put();
+}
 /* ---- phones: panels slide up from the bottom; swipe them down to close, drag the top bar up to make them taller ---- */
 const sheetH = store.get('sheetH', {});
 function sheetOf(t) { return t.closest('#brushPanel, #colorPanel, #layersPanel, #navPanel, #emotePanel, #detailWin'); }
