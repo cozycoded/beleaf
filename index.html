@@ -1115,7 +1115,7 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
 
 /* section and panel headers get the same fill as the small buttons (Import, Duplicate…), so they stand out in every theme */
 /* Clip Studio-style title bars: flat, full width, a ≡ handle on the left (they can be dragged to re-dock), normal-case title */
-.sec-h,.panel > .ph,[data-unit] > .ph{background:color-mix(in srgb,var(--panel-2) 82%,var(--fg) 12%);margin:0!important;border-radius:0!important;width:100%!important;box-sizing:border-box;border:0;border-top:1px solid color-mix(in srgb,var(--fg) 9%,transparent);border-bottom:1px solid color-mix(in srgb,#000 35%,transparent);color:var(--fg);min-height:30px;padding-left:8px!important;gap:7px}
+.sec-h,.panel > .ph,[data-unit] > .ph{background:color-mix(in srgb,var(--panel-2) 82%,var(--fg) 12%);margin:0!important;border-radius:0!important;width:100%!important;box-sizing:border-box;border:0;border-top:1px solid color-mix(in srgb,var(--fg) 9%,transparent);border-bottom:5px solid var(--hband,color-mix(in srgb,var(--panel) 62%,#000 38%));box-shadow:inset 0 -1px 0 color-mix(in srgb,#000 30%,transparent);color:var(--fg);min-height:30px;padding-left:8px!important;gap:7px}
 .sec-h > span,.panel > .ph h2,[data-unit] > .ph h2{text-transform:none!important;letter-spacing:.01em!important;font-weight:600!important;font-size:calc(12.5px*var(--fz,1))!important;color:var(--fg)!important}
 .sec-h::before,.panel > .ph::before,[data-unit] > .ph::before{content:'';flex:0 0 11px;height:9px;opacity:.55;background:linear-gradient(currentColor 0 0) top/100% 1.6px no-repeat,linear-gradient(currentColor 0 0) center/100% 1.6px no-repeat,linear-gradient(currentColor 0 0) bottom/100% 1.6px no-repeat}
 .sec-h > .ic:first-child,.panel > .ph > .ic:first-child,[data-unit] > .ph > .ic:first-child{color:var(--accent)}
@@ -2498,7 +2498,7 @@ function applyTheme() {
   T.accent = ac; accentCol = ac; bgKey = ''; T['accent-soft'] = mixc(ac, T.panel, .72); T['accent-fg'] = dark ? mixc(ac, '#FFFFFF', .45) : mixc(ac, '#000000', .35);
   T['on-accent'] = lum(ac) > .45 ? '#111111' : '#FFFFFF';
   const [r, g, b] = hexRgb(T.panel); T.float = `rgba(${r},${g},${b},.92)`;
-  const st = document.documentElement.style; for (const k in T) st.setProperty('--' + k, T[k]); st.setProperty('color-scheme', dark ? 'dark' : 'light');
+  const st = document.documentElement.style; for (const k in T) st.setProperty('--' + k, T[k]); st.setProperty('color-scheme', dark ? 'dark' : 'light'); st.setProperty('--hband', dark ? 'color-mix(in srgb,var(--panel) 62%,#000 38%)' : 'color-mix(in srgb,var(--panel) 84%,#000 16%)');
   previewCol = hexRgb(T.fg); store.set('theme', theme); if (typeof setFavicon === 'function') try { setFavicon(); } catch { } applyBox(); buildThemeUI(); if (themeReady) { buildBrushUI(); buildSettings(); } dirty(false);
 }
 function swatchBtn(h, on, pick) { return el('button', { class: 'tsw', style: 'background:' + h, 'aria-label': h, 'aria-pressed': on, onclick: () => pick(h) }); }
