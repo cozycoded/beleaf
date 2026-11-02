@@ -1122,6 +1122,15 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
 .sec-h:hover,.panel > .ph:hover,[data-unit] > .ph:hover{background:color-mix(in srgb,var(--panel-2) 74%,var(--fg) 20%)}
 .sec-h:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 @container (max-width:210px){ .dhead .dtitle{letter-spacing:.02em!important} }
+
+/* phones: the sheet's grab handle and title bar stay pinned at the top while its contents scroll */
+@media (max-width:699px){
+  .panel > .sheet-grab,#detailWin > .sheet-grab{position:sticky!important;top:0;z-index:6;background:var(--panel)}
+  .panel > .ph,.panel > .sec-h,[data-unit] > .ph{position:sticky!important;top:18px;z-index:6}
+  /* never taller than the room above the tool bar, so the grab handle and title are always on screen */
+  .panel{--sheet-max:calc(100dvh - 62px - env(safe-area-inset-bottom,0px) - 8px);max-height:var(--sheet-max)!important}
+  .panel[style*="--sheet-h"]{height:min(var(--sheet-h),var(--sheet-max))!important}
+}
 </style>
 
 <div class="app" id="app" data-open="" data-timeline="" data-quick="on" data-dl="open" data-dr="open">
@@ -6159,7 +6168,7 @@ document.addEventListener('pointerdown', e => {
 document.addEventListener('pointermove', e => {
   const s = sw; if (!s || e.pointerId !== s.id) return; const dy = e.clientY - s.y0;
   if (!s.moved && Math.abs(dy) < 8) return; s.moved = true; s.p.classList.add('sheet-drag');
-  if (dy > 0) s.p.style.transform = `translateY(${dy}px)`; else { s.p.style.transform = ''; s.p.style.setProperty('--sheet-h', Math.min(innerHeight * .92, s.h0 - dy) + 'px'); }
+  if (dy > 0) s.p.style.transform = `translateY(${dy}px)`; else { s.p.style.transform = ''; s.p.style.setProperty('--sheet-h', Math.min(innerHeight - 70, s.h0 - dy) + 'px'); }
 }, { passive: true });
 const swEnd = e => {
   const s = sw; if (!s || e.pointerId !== s.id) return; sw = null; if (!s.moved) return;
