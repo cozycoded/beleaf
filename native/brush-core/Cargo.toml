@@ -1,0 +1,7 @@
+[package]
+name = "brush-core"
+version = "0.1.0"
+edition = "2021"
+description = "beleaf's brush engine core: turns pen samples into brush dabs (spacing, pressure, stabiliser, taper, dual tip). No dependencies, runs anywhere."
+
+[dependencies]

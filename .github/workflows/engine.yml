@@ -1,0 +1,79 @@
+name: beleaf engine test
+
+# Builds the Rust brush engine experiment in native/ (the web app at the root is not touched):
+#  - tests the brush core
+#  - a Windows .exe (direct Windows Ink pen input), attached to the "engine-test" release
+#  - a browser version, published to /engine-test/ on the site
+on:
+  push:
+    branches: [main]
+    paths: ["native/**", ".github/workflows/engine.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test the brush core
+        working-directory: native
+        run: cargo test -p brush-core
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: native
+      - name: Build the Windows app
+        working-directory: native
+        run: cargo build --release -p beleaf-poc
+      - uses: actions/upload-artifact@v4
+        with:
+          name: beleaf-engine-test-windows
+          path: native/target/release/beleaf-engine-test.exe
+      - name: Attach to the engine-test release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: engine-test
+          name: beleaf engine test (Windows)
+          prerelease: true
+          files: native/target/release/beleaf-engine-test.exe
+          body: |
+            The Rust brush engine experiment. Download beleaf-engine-test.exe and run it (Windows may say "unknown publisher": More info > Run anyway).
+            Draw with your pen: the title bar shows the pressure and tilt Windows Ink reports.
+            Keys: [ and ] size, 1-6 colours, D dual tip on/off, T taper on/off, F follow direction, C clear.
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: native
+      - name: Build for the browser
+        working-directory: native
+        run: |
+          rustup target add wasm32-unknown-unknown
+          cargo build --release --target wasm32-unknown-unknown -p beleaf-poc --lib
+          V=$(cargo metadata --format-version 1 | jq -r '.packages[] | select(.name=="wasm-bindgen") | .version')
+          cargo install wasm-bindgen-cli --version "$V" --locked
+          wasm-bindgen --target web --no-typescript --out-dir out/pkg target/wasm32-unknown-unknown/release/beleaf_poc.wasm
+          cp web/index.html out/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: beleaf-engine-test-web
+          path: native/out
+      - name: Publish to the site under /engine-test/
+        run: |
+          git config user.name "beleaf build"
+          git config user.email "actions@users.noreply.github.com"
+          rm -rf engine-test && mkdir engine-test && cp -r native/out/* engine-test/
+          git add engine-test
+          git commit -m "Update the engine test build" || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main

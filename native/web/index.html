@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>beleaf engine test</title>
+<style>
+  html,body{margin:0;height:100%;background:#0f0f12;color:#e8e8ea;font-family:system-ui,sans-serif;overflow:hidden}
+  #bar{position:fixed;left:10px;top:10px;z-index:5;display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:#1a1a1dEE;border:1px solid #2e2e34;border-radius:12px;padding:8px 10px;font-size:13px;max-width:calc(100vw - 40px)}
+  #bar b{font-size:13px;margin-right:4px}
+  #bar label{display:flex;align-items:center;gap:5px}
+  #bar button{background:#2c2c31;color:#e8e8ea;border:0;border-radius:8px;padding:5px 10px;font:inherit;cursor:pointer}
+  #bar input[type=color]{width:30px;height:26px;border:0;background:none;padding:0}
+  #pen{font-family:ui-monospace,monospace;color:#9a9aa3;min-width:190px}
+  #msg{position:fixed;inset:0;display:grid;place-items:center;color:#9a9aa3;font-size:14px;pointer-events:none}
+  canvas{display:block}
+</style>
+</head>
+<body>
+<div id="bar">
+  <b>beleaf engine test</b>
+  <label>Colour <input type="color" id="col" value="#291f24"></label>
+  <label>Size <input type="range" id="size" min="2" max="160" value="28"> <span id="sz">28</span></label>
+  <label><input type="checkbox" id="dual" checked> Dual tip</label>
+  <label><input type="checkbox" id="taper" checked> Taper</label>
+  <label><input type="checkbox" id="follow" checked> Follow direction</label>
+  <button id="clear">Clear</button>
+  <span id="pen">pen: –</span>
+  <a href="../" style="color:#4c9aff">back to beleaf</a>
+</div>
+<div id="msg">Loading the Rust brush engine…</div>
+<script type="module">
+  import init, * as eng from './pkg/beleaf_poc.js';
+  await init();
+  document.getElementById('msg').remove();
+  const $ = id => document.getElementById(id);
+  const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
+  $('col').oninput = e => eng.set_color(...hex(e.target.value));
+  $('size').oninput = e => { eng.set_size(+e.target.value); $('sz').textContent = e.target.value; };
+  ['dual', 'taper', 'follow'].forEach(k => $(k).onchange = e => eng.set_flag(k, e.target.checked));
+  $('clear').onclick = () => eng.clear_canvas();
+  setInterval(() => { $('pen').textContent = 'pen: ' + eng.pen_info(); }, 150);
+</script>
+</body>
+</html>

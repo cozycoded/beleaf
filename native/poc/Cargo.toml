@@ -1,0 +1,32 @@
+[package]
+name = "beleaf-poc"
+version = "0.1.0"
+edition = "2021"
+description = "beleaf engine test: the Rust brush engine drawing on the GPU, with direct Windows Ink pen input, and in the browser."
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "beleaf-engine-test"
+path = "src/main.rs"
+
+[dependencies]
+brush-core = { path = "../brush-core" }
+winit = "0.30"
+wgpu = "23"
+bytemuck = { version = "1", features = ["derive"] }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+pollster = "0.4"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_UI_Input_Pointer", "Win32_UI_Shell", "Win32_Graphics_Gdi"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wgpu = { version = "23", features = ["webgl"] }
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+console_error_panic_hook = "0.1"
+web-sys = { version = "0.3", features = ["Window", "Document", "Element", "HtmlCanvasElement", "EventTarget", "PointerEvent", "MouseEvent", "Event", "Performance", "CssStyleDeclaration", "HtmlElement", "DomRect"] }
