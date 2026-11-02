@@ -1202,6 +1202,30 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
 [data-unit][data-collapsed="true"],.sec[data-unit]:has(> .sec-h[aria-expanded="false"]){min-height:0!important;flex:none!important;height:auto!important}
 [data-unit][data-collapsed="true"] > .ugrip,.sec[data-unit]:has(> .sec-h[aria-expanded="false"]) > .ugrip{display:none}
 .sec:has(> .sec-h[aria-expanded="false"]) > .sec-h{border-bottom-width:1px}
+
+/* ===== Layers button strips: one line each, scroll sideways when they don't fit ===== */
+.lstrip{display:flex;align-items:center;gap:1px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;padding:1px 6px 3px;flex-shrink:0;overscroll-behavior-x:contain;scroll-behavior:smooth}
+.lstrip::-webkit-scrollbar{display:none}
+.lstrip[hidden]{display:none!important}
+.lstrip .ibtn{width:var(--pib)!important;height:var(--pib)!important;flex:0 0 auto!important;border-radius:6px;padding:0;display:grid;place-items:center}
+.lstrip .ibtn .ic{width:var(--pii)!important;height:var(--pii)!important}
+.lstrip .ibtn[aria-pressed="true"]{background:var(--fg);color:var(--panel)}
+.lstrip .del{color:var(--danger)}
+.lsep{flex:0 0 1px;height:calc(var(--pib) * .58);background:var(--line2);margin:0 5px}
+.lstrip.fr{mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent)}
+.lstrip.fl{mask-image:linear-gradient(90deg,transparent,#000 26px)}
+.lstrip.fl.fr{mask-image:linear-gradient(90deg,transparent,#000 26px,#000 calc(100% - 26px),transparent)}
+#lstripTop{margin-bottom:2px;border-bottom:1px solid var(--line)}
+#lstripBot{border-top:1px solid var(--line);padding-top:4px;padding-bottom:5px}
+#layersPanel{--pib:calc(28px*var(--iz,1))!important;--pii:calc(18px*var(--iz,1))!important}
+/* editor */
+.lb-card{max-width:440px}
+.lbsec h3{margin:6px 0 4px;font-size:calc(12px*var(--fz,1));text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.lblist{display:flex;flex-direction:column;gap:1px;min-height:34px;border:1px dashed var(--line);border-radius:10px;padding:3px;margin-bottom:6px}
+.lbrow{grid-template-columns:18px 28px 1fr 26px 26px 26px 26px!important}
+.lbrow .tic .tsep{display:block;width:16px;height:2px;background:var(--line2);border-radius:2px;margin:auto}
+.lbsec select{width:100%;height:30px;background:var(--panel-2);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:0 8px}
+.lbdrop{z-index:99}
 </style>
 
 <div class="app" id="app" data-open="" data-timeline="" data-quick="on" data-dl="open" data-dr="open">
@@ -4973,7 +4997,7 @@ function buildLayers() {
   const A = layers[active], isF = A.kind === 'folder';
   $('#blend').replaceChildren(...(isF ? [['pass', 'Through']] : []).concat(BLENDS).map(([v, t]) => el('option', { value: v, text: t })));
   $('#blend').value = A.blend; $('#lOp').value = Math.round(A.opacity * 100); $('#oLOp').value = Math.round(A.opacity * 100) + '%';
-  $$('#lflags [data-flag]').forEach(b => b.setAttribute('aria-pressed', !!A[b.dataset.flag]));
+  $$('#lbtnStore [data-flag], #lflags [data-flag]').forEach(b => b.setAttribute('aria-pressed', !!A[b.dataset.flag]));
   $('#lColor').style.setProperty('--lc', lcShow(A.color) || 'transparent'); $('#lColor').title = 'Label color: ' + lcName(A.color); $('#lColor').classList.toggle('has', !!A.color);
   $('#delL').disabled = layers.length <= 1; $('#mergeL').disabled = active === 0 || isF;
   $('#upL').disabled = active === layers.length - 1; $('#downL').disabled = active === 0;
@@ -6381,6 +6405,92 @@ window.fitWheel = fitWheel;
   });
   let q = 0; const later = () => { if (!q) q = requestAnimationFrame(() => { q = 0; bal(); }); };
   new ResizeObserver(later).observe($('#layersPanel')); window.addEventListener('resize', later); later();
+}
+
+/* ================= Layers: two button strips (top and bottom) that scroll sideways, user-arranged ================= */
+// The original buttons keep all their wiring; the strips show copies that press the originals, so a button can sit
+// in either strip (or both). Right-click / long-press a strip, or Layer › Customize layer buttons…, to arrange them.
+{
+  const LP = $('#layersPanel'), store_ = $$('#layersPanel .lflags .ibtn, #layersPanel .lfoot .ibtn');
+  const REG = {}; store_.forEach(b => { const k = b.id || b.dataset.flag; REG[k] = b; });
+  const DEF = { top: ['addL', '|', 'clip', 'lockAlpha', 'locked', 'ref', 'draft', 'lColor'], bottom: ['addL', 'addA', 'addF', 'dupL', '|', 'upL', 'downL', 'mergeL', 'delL'] };
+  const clean = c => ({ top: (c && c.top || DEF.top).filter(k => k === '|' || REG[k]), bottom: (c && c.bottom || DEF.bottom).filter(k => k === '|' || REG[k]) });
+  let LB = clean(store.get('layerBtns', null));
+  const hold = el('div', { hidden: '', id: 'lbtnStore' }); LP.append(hold); hold.append(...store_); $$('#layersPanel .lflags, #layersPanel .lfoot').forEach(x => x.remove());
+  const mk = id => el('div', { class: 'lstrip', id, role: 'toolbar', 'aria-label': 'Layer buttons', title: '' });
+  const top = mk('lstripTop'), bot = mk('lstripBot'); bot.classList.add('bottom');
+  $('#layersPanel .lbar').after(top); $('#canvasRow').after(bot);
+  const nameOf = k => (REG[k].getAttribute('aria-label') || k).replace(/\s*\(.*\)$/, '');
+  function copy(k) {
+    const o = REG[k], b = el('button', { class: 'ibtn' + (o.classList.contains('del') ? ' del' : ''), 'data-k': k, title: o.title || o.getAttribute('aria-label'), 'aria-label': o.getAttribute('aria-label') });
+    b.innerHTML = o.innerHTML; if (o.hasAttribute('aria-pressed')) b.setAttribute('aria-pressed', o.getAttribute('aria-pressed'));
+    b.onclick = e => { e.stopPropagation(); o.click(); }; return b;
+  }
+  function fade(s) { const over = s.scrollWidth > s.clientWidth + 1; s.classList.toggle('fl', over && s.scrollLeft > 2); s.classList.toggle('fr', over && s.scrollLeft < s.scrollWidth - s.clientWidth - 2); }
+  function build() {
+    [[top, LB.top], [bot, LB.bottom]].forEach(([s, list]) => { s.replaceChildren(...list.map(k => k === '|' ? el('span', { class: 'lsep', 'aria-hidden': 'true' }) : copy(k))); s.hidden = !list.some(k => k !== '|'); fade(s); });
+  }
+  // keep pressed states (clip, lock…) in step with the originals
+  new MutationObserver(ms => ms.forEach(m => { const o = m.target, k = o.id || o.dataset.flag; $$(`.lstrip [data-k="${k}"]`).forEach(c => c.setAttribute('aria-pressed', o.getAttribute('aria-pressed'))); })).observe(hold, { subtree: true, attributes: true, attributeFilter: ['aria-pressed'] });
+  [top, bot].forEach(s => {
+    s.addEventListener('wheel', e => { if (s.scrollWidth <= s.clientWidth) return; e.preventDefault(); s.scrollLeft += (Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX); }, { passive: false });
+    s.addEventListener('scroll', () => fade(s), { passive: true });
+    s.addEventListener('contextmenu', e => { e.preventDefault(); openLB(); });
+    new ResizeObserver(() => fade(s)).observe(s);
+  });
+  const save = () => { store.set('layerBtns', LB); build(); if (!ed.hidden) edBuild(); };
+
+  /* the editor */
+  const ed = el('div', { class: 'modal', id: 'lbModal', hidden: '' }), card = el('div', { class: 'card lb-card', role: 'dialog', 'aria-label': 'Customize layer buttons' });
+  ed.append(card); document.body.append(ed); let bgDown = false, bgUp = false; ed.addEventListener('pointerdown', e => { bgDown = e.target === ed; }); ed.addEventListener('pointerup', e => { bgUp = e.target === ed; }); ed.addEventListener('click', e => { if (e.target === ed && bgDown && bgUp && !dg) ed.hidden = true; bgDown = bgUp = false; });
+  const UP = '<svg class="ic" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg>', DN = '<svg class="ic" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>', SW = '<svg class="ic" viewBox="0 0 24 24"><path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/></svg>', XX = '<svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  const DOTS = '<svg class="ic" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.3" fill="currentColor"/><circle cx="15" cy="6" r="1.3" fill="currentColor"/><circle cx="9" cy="12" r="1.3" fill="currentColor"/><circle cx="15" cy="12" r="1.3" fill="currentColor"/><circle cx="9" cy="18" r="1.3" fill="currentColor"/><circle cx="15" cy="18" r="1.3" fill="currentColor"/></svg>';
+  const ib = (svg, label, fn, cls = '') => { const b = el('button', { class: 'ibtn sm ' + cls, title: label, 'aria-label': label, onclick: fn }); b.innerHTML = svg; return b; };
+  function edBuild() {
+    const sec = (where, title) => {
+      const list = LB[where], other = where === 'top' ? 'bottom' : 'top';
+      const rows = list.map((k, i) => {
+        const mv = d => { const j = i + d; if (j < 0 || j >= list.length) return; [list[i], list[j]] = [list[j], list[i]]; save(); };
+        const grip = el('span', { class: 'tgrip', title: 'Drag to move' }); grip.innerHTML = DOTS;
+        const ic = el('span', { class: 'tic' }); if (k !== '|') ic.innerHTML = REG[k].innerHTML; else ic.append(el('span', { class: 'tsep' }));
+        const r = el('div', { class: 'trow lbrow' + (k === '|' ? ' sep' : ''), 'data-w': where, 'data-i': i }, grip, ic, el('span', { class: 'tname', text: k === '|' ? 'Divider' : nameOf(k) }),
+          ib(UP, 'Move left', () => mv(-1)), ib(DN, 'Move right', () => mv(1)),
+          ib(SW, where === 'top' ? 'Move to the bottom bar' : 'Move to the top bar', () => { list.splice(i, 1); LB[other].push(k); save(); }),
+          ib(XX, 'Remove', () => { list.splice(i, 1); save(); }));
+        return r;
+      });
+      const add = el('select', { 'aria-label': 'Add a button to the ' + title.toLowerCase() }, el('option', { value: '', text: '+ Add a button…' }), ...Object.keys(REG).map(k => el('option', { value: k, text: nameOf(k) })), el('option', { value: '|', text: 'Divider' }));
+      add.onchange = () => { if (add.value) { LB[where].push(add.value); save(); } };
+      return el('div', { class: 'lbsec', 'data-w': where }, el('h3', { text: title }), el('div', { class: 'lblist', 'data-w': where }, ...(rows.length ? rows : [el('p', { class: 'note', text: 'Empty: this bar is hidden. Drag buttons here or add one below.' })])), add);
+    };
+    const close = el('button', { class: 'btn primary', text: 'Done', onclick: () => ed.hidden = true }), reset = el('button', { class: 'btn', text: 'Reset', onclick: () => { LB = clean(null); save(); } });
+    card.replaceChildren(el('h2', { text: 'Customize layer buttons' }),
+      el('p', { class: 'note', text: 'Put any button in the top bar (above the layers) or the bottom bar (under them), in any order. Drag rows by their dots, even between the two bars. Both bars scroll sideways when they don’t fit. Tip: right-click a bar to come back here.' }),
+      sec('top', 'Top bar'), sec('bottom', 'Bottom bar'), el('div', { class: 'actions' }, reset, close));
+  }
+  function openLB() { edBuild(); ed.hidden = false; if (typeof closeMenu === 'function') closeMenu(); }
+  window.openLB = openLB;
+  if (typeof MENUS !== 'undefined' && MENUS.layer) MENUS.layer.push(['Customize layer buttons…', '', openLB]);
+  // drag rows within and between the two bars
+  let dg = null;
+  card.addEventListener('pointerdown', e => { const r = e.target.closest('.lbrow'); if (!r || e.button !== 0 || e.target.closest('button, select')) return; dg = { r, w: r.dataset.w, i: +r.dataset.i, y0: e.clientY, pid: e.pointerId, on: false }; if (e.target.closest('.tgrip')) e.preventDefault(); });
+  window.addEventListener('pointermove', e => {
+    const d = dg; if (!d || e.pointerId !== d.pid) return;
+    if (!d.on) { if (Math.abs(e.clientY - d.y0) < 6) return; d.on = true; d.r.classList.add('dragging'); d.line = el('div', { class: 'tdrop lbdrop' }); document.body.append(d.line); }
+    e.preventDefault();
+    const under = document.elementFromPoint(e.clientX, e.clientY), lst = under && under.closest('.lbsec'); if (!lst) return;
+    const w = lst.dataset.w, rows = [...lst.querySelectorAll('.lbrow')];
+    let to = rows.findIndex(r => { const q = r.getBoundingClientRect(); return e.clientY < q.top + q.height / 2; }); if (to < 0) to = rows.length;
+    const ref = rows[to] || rows[rows.length - 1], lr = lst.querySelector('.lblist').getBoundingClientRect(), y = ref ? (rows[to] ? ref.getBoundingClientRect().top : ref.getBoundingClientRect().bottom) : lr.top + 4;
+    Object.assign(d.line.style, { position: 'fixed', left: lr.left + 6 + 'px', width: lr.width - 12 + 'px', top: y - 1 + 'px' }); d.to = [w, to];
+  }, { passive: false });
+  const dgEnd = e => {
+    const d = dg; if (!d || (e && e.pointerId !== d.pid)) return; dg = null; if (!d.on) return; d.r.classList.remove('dragging'); d.line.remove();
+    window.addEventListener('click', ev => { ev.stopPropagation(); ev.preventDefault(); }, { capture: true, once: true }); setTimeout(() => window.dispatchEvent(new MouseEvent('click')), 0);
+    if (!d.to) return; const [w, to] = d.to, [k] = LB[d.w].splice(d.i, 1); LB[w].splice(w === d.w && to > d.i ? to - 1 : to, 0, k); save();
+  };
+  window.addEventListener('pointerup', dgEnd); window.addEventListener('pointercancel', dgEnd);
+  build();
 }
 
 
