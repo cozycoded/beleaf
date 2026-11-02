@@ -1197,6 +1197,11 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
 
 /* a folded panel shows only its title bar, whatever its rows are set to */
 .panel[data-collapsed="true"] > :not(.ph):not(.sheet-grab),#layersPanel[data-collapsed="true"] > :not(.ph):not(.sheet-grab),#colorPanel[data-collapsed="true"] > :not(.ph):not(.sheet-grab){display:none!important}
+
+/* folded sections shrink right down to their title bar */
+[data-unit][data-collapsed="true"],.sec[data-unit]:has(> .sec-h[aria-expanded="false"]){min-height:0!important;flex:none!important;height:auto!important}
+[data-unit][data-collapsed="true"] > .ugrip,.sec[data-unit]:has(> .sec-h[aria-expanded="false"]) > .ugrip{display:none}
+.sec:has(> .sec-h[aria-expanded="false"]) > .sec-h{border-bottom-width:1px}
 </style>
 
 <div class="app" id="app" data-open="" data-timeline="" data-quick="on" data-dl="open" data-dr="open">
