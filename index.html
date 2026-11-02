@@ -1194,6 +1194,9 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
 .ptab{flex-shrink:0!important}
 @container (max-width:190px){ .ptab{padding:0 3px} .tabstrip{padding-left:4px} .tsgrip{display:none} }
 @container (max-width:230px){ .ptab{padding:0 5px} .ptab[aria-selected="true"] span{display:none} }
+
+/* a folded panel shows only its title bar, whatever its rows are set to */
+.panel[data-collapsed="true"] > :not(.ph):not(.sheet-grab),#layersPanel[data-collapsed="true"] > :not(.ph):not(.sheet-grab),#colorPanel[data-collapsed="true"] > :not(.ph):not(.sheet-grab){display:none!important}
 </style>
 
 <div class="app" id="app" data-open="" data-timeline="" data-quick="on" data-dl="open" data-dr="open">
