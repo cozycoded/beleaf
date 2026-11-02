@@ -1131,6 +1131,37 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
   .panel{--sheet-max:calc(100dvh - 62px - env(safe-area-inset-bottom,0px) - 8px);max-height:var(--sheet-max)!important}
   .panel[style*="--sheet-h"]{height:min(var(--sheet-h),var(--sheet-max))!important}
 }
+
+/* ===== one icon size for panel buttons, scaled together by Accessibility › Icon size ===== */
+:root{--pib:calc(28px*var(--iz,1));--pii:calc(18px*var(--iz,1))}
+.colname[hidden],.cur-sw[hidden]{display:none!important}
+.vh{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+/* Layers, arranged like Clip Studio: mode + opacity on one line, then the layer toggles, then the action buttons, then the list */
+#layersPanel .lbar{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:2px 8px 4px}
+#layersPanel .lbar select{flex:1 1 84px;min-width:64px;height:calc(26px*var(--iz,1));background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:0 6px;font-size:calc(12px*var(--fz,1));color:var(--fg)}
+#layersPanel .lbar .lop{display:flex!important;align-items:center;gap:6px;flex:1 1 96px;min-width:80px;padding:0!important}
+#layersPanel .lbar .lop input{flex:1 1 auto;min-width:36px}
+#layersPanel .lbar .lop output{flex:0 0 auto;min-width:calc(32px*var(--fz,1));text-align:right;font-family:var(--mono);font-size:calc(11.5px*var(--fz,1))}
+#layersPanel .lflags,#layersPanel .lfoot{display:flex!important;flex-wrap:wrap!important;gap:1px!important;padding:0 6px 3px!important;justify-content:flex-start!important;border:0!important;flex-shrink:0}
+#layersPanel .lfoot{padding-bottom:4px!important;margin-bottom:2px;border-bottom:1px solid var(--line)!important}
+#layersPanel .lflags .ibtn,#layersPanel .lfoot .ibtn,.crow .ibtn,#colorPanel .crow .ibtn{width:var(--pib)!important;height:var(--pib)!important;min-width:0!important;flex:0 0 auto!important;border-radius:6px;padding:0;display:grid;place-items:center}
+#layersPanel .lflags .ic,#layersPanel .lfoot .ic,.crow .ibtn .ic{width:var(--pii)!important;height:var(--pii)!important}
+/* colour row: chips, hex box and its two buttons */
+.cchip{width:calc(24px*var(--iz,1))!important;height:calc(24px*var(--iz,1))!important}
+.crow .hex{height:var(--pib)}
+.swatches{grid-template-columns:repeat(auto-fill,minmax(calc(18px*var(--iz,1)),calc(24px*var(--iz,1))))!important;justify-content:space-between}
+.swatches .sw{width:100%;aspect-ratio:1}
+/* small panels: everything centres instead of bunching up on the left, and buttons get a bit smaller */
+@container (max-width:240px){
+  #colorPanel{--pib:calc(25px*var(--iz,1));--pii:calc(16px*var(--iz,1))}
+  .crow{justify-content:center}
+  .crow .ctrio{flex:1 0 100%;justify-content:center}
+  .swatches{justify-content:center}
+  #layersPanel .lflags,#layersPanel .lfoot{justify-content:center!important}
+}
+@container (max-width:170px){ #colorPanel{--pib:calc(23px*var(--iz,1));--pii:calc(15px*var(--iz,1))} .crow .hex{flex:1 1 52px;min-width:52px;padding:0 4px} }
+/* layer buttons shrink to keep a full row (8 across) before they ever wrap, never below 16px */
+#layersPanel{--pib:clamp(16px,calc((100cqw - 16px) / 8 - 1px),calc(28px*var(--iz,1)));--pii:clamp(11px,calc(var(--pib) * .66),calc(18px*var(--iz,1)))}
 </style>
 
 <div class="app" id="app" data-open="" data-timeline="" data-quick="on" data-dl="open" data-dr="open">
@@ -1350,8 +1381,7 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
       </section>
       <section class="panel layers" id="layersPanel" aria-label="Layers">
         <div class="ph"><h2>Layers</h2><button class="ibtn close" data-close aria-label="Close"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-        <div class="lctl"><select id="blend" aria-label="Blend mode"></select></div>
-        <div class="lop"><label for="lOp">Opacity</label><input id="lOp" type="range" min="0" max="100"><output id="oLOp"></output></div>
+        <div class="lbar"><select id="blend" aria-label="Blend mode" title="Blend mode"></select><span class="lop" title="Layer opacity"><label for="lOp" class="vh">Opacity</label><input id="lOp" type="range" min="0" max="100"><output id="oLOp"></output></span></div>
         <div class="lflags" id="lflags">
           <button class="ibtn" data-flag="clip" aria-pressed="false" aria-label="Clip to layer below" title="Clip to layer below"><svg class="ic" viewBox="0 0 24 24"><rect x="4" y="9" width="11" height="11" rx="2"/><path d="M9 4h9a2 2 0 012 2v9"/></svg></button>
           <button class="ibtn" data-flag="lockAlpha" aria-pressed="false" aria-label="Lock transparent pixels" title="Lock transparent pixels"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/><path d="M13 3h8v8M3 13h8v8" stroke-dasharray="2 2"/></svg></button>
@@ -1360,8 +1390,6 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
           <button class="ibtn" data-flag="draft" aria-pressed="false" aria-label="Draft layer (left out of export and fill)" title="Draft layer (left out of export and fill)"><svg class="ic" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z"/><path d="M8 13h6M8 17h4" stroke-dasharray="2 2"/></svg></button>
           <button class="ibtn lcolor" id="lColor" aria-label="Layer label color" title="Label color (colors the layer row)"><svg class="ic" viewBox="0 0 24 24"><path d="M4 4h9l7 7-9 9-7-7V4z"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/></svg></button>
         </div>
-        <div class="scroll" style="flex:1"><ul class="llist" id="llist"></ul></div>
-        <div class="canvasrow" id="canvasRow"><label class="cswitch" title="Show or hide the background colour"><input type="checkbox" id="cbgOn"><i></i></label><span id="cbgLabel">Canvas color</span><button class="cbgsw" id="cbgSw" aria-label="Change the background colour" title="Change the background colour"></button></div>
         <div class="lfoot">
           <button class="ibtn" id="addL" aria-label="New layer (Ctrl+Shift+N)" title="New layer (Ctrl+Shift+N)"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
           <button class="ibtn" id="addA" aria-label="New animation layer" title="New animation layer"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 5v14M17 5v14"/></svg></button>
@@ -1372,6 +1400,8 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
           <button class="ibtn" id="mergeL" aria-label="Merge down (Ctrl+E)" title="Merge down (Ctrl+E)"><svg class="ic" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg></button>
           <button class="ibtn del" id="delL" aria-label="Delete layer" title="Delete layer"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button>
         </div>
+        <div class="scroll" style="flex:1"><ul class="llist" id="llist"></ul></div>
+        <div class="canvasrow" id="canvasRow"><label class="cswitch" title="Show or hide the background colour"><input type="checkbox" id="cbgOn"><i></i></label><span id="cbgLabel">Canvas color</span><button class="cbgsw" id="cbgSw" aria-label="Change the background colour" title="Change the background colour"></button></div>
       </section>
       </div>
     </div>
