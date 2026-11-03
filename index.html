@@ -1417,6 +1417,65 @@ button.logo[aria-expanded="true"]{box-shadow:0 0 0 2px var(--accent)}
 .ml-opt b{font-size:13px}.ml-opt small{font-size:11.5px;color:var(--muted);line-height:1.35}
 .ml-pic{color:var(--fg2);display:grid;place-items:center;flex-shrink:0}
 .app[data-mlay="L-rails"] .mrail-c{left:auto;right:66px;top:10px}
+
+/* ===== Appearance: categories on the side ===== */
+#themeModal .card.apcard{max-width:860px;width:100%;height:min(88vh,760px);max-height:88vh;overflow:hidden;display:flex;flex-direction:column;gap:12px}
+.apwrap{flex:1;min-height:0;display:grid;grid-template-columns:176px minmax(0,1fr);gap:14px}
+.apnav{display:flex;flex-direction:column;gap:2px;background:var(--panel-2);border-radius:12px;padding:6px;overflow-y:auto;margin:0;min-height:0}
+.apnav button{display:flex;align-items:center;gap:10px;border:0;background:transparent;color:var(--fg2);text-align:left;padding:9px 10px;border-radius:8px;font-size:calc(13px*var(--fz,1));font-weight:500;line-height:1.2}
+.apnav button .ic{width:calc(18px*var(--iz,1));height:calc(18px*var(--iz,1));flex-shrink:0}
+.apnav button:hover{background:color-mix(in srgb,var(--fg) 7%,transparent);color:var(--fg)}
+.apnav button[aria-selected="true"]{background:var(--accent);color:var(--on-accent);font-weight:600}
+.apwrap .apbody{margin:0;padding:0 4px 0 0;overflow-y:auto;min-height:0}
+#apPhone,#apPen,#apPomo{display:flex;flex-direction:column;gap:12px}
+#apPhone[hidden],#apPen[hidden],#apPomo[hidden]{display:none}
+#apPhone .ml-opts{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+#apPhone .ml-sec h3{margin:0}
+#apPen .penpad canvas{max-width:100%}
+.aphead{margin:0 0 2px;font-size:calc(15px*var(--fz,1))}
+.apnote{margin:0;font-size:calc(12.5px*var(--fz,1));line-height:1.45;color:var(--fg2);background:color-mix(in srgb,var(--accent) 9%,var(--panel-2));border-left:3px solid var(--accent);border-radius:8px;padding:9px 11px}
+.apchoices .uith i{background:var(--c)}
+.apchoices .uith.custom i{background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red)}
+.apchoices .uith.custom.on i{background:var(--c);box-shadow:0 0 0 2px var(--panel-2),0 0 0 3.5px transparent,0 0 0 1px rgba(128,128,128,.4)}
+.tsw.custom.on{background:radial-gradient(circle,var(--c) 0 52%,transparent 54%),conic-gradient(red,yellow,lime,cyan,blue,magenta,red)}
+@media (max-width:600px){
+  #themeModal{padding:8px}
+  #themeModal .card.apcard{height:calc(100dvh - 16px);max-height:none;padding:14px 12px 10px}
+  .apwrap{grid-template-columns:74px minmax(0,1fr);gap:8px}
+  .apnav{padding:4px}
+  .apnav button{flex-direction:column;gap:4px;padding:9px 2px;text-align:center;font-size:calc(10.5px*var(--fz,1))}
+  .apnav button .ic{width:calc(22px*var(--iz,1));height:calc(22px*var(--iz,1))}
+  .apcard>.actions{margin:0 -12px;padding-left:12px;padding-right:12px;flex-wrap:wrap;gap:6px}
+  .apsaved{display:none}
+  .apcard .uithemes{grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
+}
+/* New canvas: the Custom size card, like the size buttons */
+.pcustom{grid-column:1/-1;padding:0!important;gap:0!important}
+.pcustom .pc-h{display:flex;flex-direction:column;align-items:flex-start;gap:2px;border:0;background:transparent;color:inherit;text-align:left;padding:6px 9px;border-radius:8px;width:100%}
+.pcustom .pc-h b{font-size:calc(12.5px*var(--fz,1))}
+.pcustom .pc-h small{font-family:var(--mono);color:var(--muted);font-size:calc(10.5px*var(--fz,1))}
+.pcustom .nsize{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto;align-items:end;gap:6px;padding:0 9px 9px}
+.pcustom .nsize[hidden]{display:none}
+.pcustom .nsize .f{display:flex;flex-direction:column;gap:4px;font-size:calc(11.5px*var(--fz,1));color:var(--fg2);min-width:0}
+.pcustom .nsize input{width:100%;box-sizing:border-box;height:34px;background:var(--panel);border:1px solid var(--line2);border-radius:7px;padding:0 8px;font:500 calc(13px*var(--fz,1)) var(--mono);color:var(--fg);min-width:0}
+.pcustom .nsize .ibtn{margin-bottom:2px}
+.pcustom .nunit{margin-bottom:9px}
+/* emote sheet: colour swatches that open the colour wheel */
+.shcol{display:flex;flex-direction:column;gap:5px;color:var(--fg2);font-size:calc(12px*var(--fz,1));min-width:0}
+.shcolrow{display:flex;align-items:center;gap:8px;min-height:34px}
+.shcolrow .cbgsw{width:calc(44px*var(--iz,1));height:calc(30px*var(--iz,1))}
+/* canvas rotation chip: tap to straighten */
+.rotchip{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:6;display:flex;align-items:center;gap:6px;padding:5px 12px 5px 9px;border-radius:999px;border:1px solid var(--line2);background:var(--float);color:var(--fg);font:600 calc(12px*var(--fz,1)) var(--ui);box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.rotchip .ic{width:calc(16px*var(--iz,1));height:calc(16px*var(--iz,1))}
+.rotchip[hidden]{display:none}
+/* updates window */
+.upd-card{max-width:420px}
+.upd-row{display:flex;justify-content:space-between;gap:12px;font-size:calc(13px*var(--fz,1));padding:6px 0;border-bottom:1px solid var(--line)}
+.upd-row span{color:var(--muted)}.upd-row b{font-family:var(--mono);font-weight:600}
+.upd-status{margin:4px 0 0;font-size:calc(13.5px*var(--fz,1));font-weight:600}
+.upd-status.new{color:var(--accent-fg)}
+.dockbody{display:flex;flex-direction:column;gap:12px;min-width:0}
+#apPomo .pomo-face{width:min(200px,50vw)}
 </style>
 
 <div class="app" id="app" data-open="" data-timeline="" data-quick="on" data-dl="open" data-dr="open">
@@ -1717,7 +1776,8 @@ button.logo[aria-expanded="true"]{box-shadow:0 0 0 2px var(--accent)}
   <div class="ncols">
     <div class="nleft">
       <div class="presets" id="presets"></div>
-      <div class="nsize"><label class="f">Width<input type="number" id="nW" min="16" max="4096"></label><button class="ibtn sm" id="nSwap" type="button" title="Swap width and height" aria-label="Swap width and height"><svg class="ic" viewBox="0 0 24 24"><path d="M7 7h12l-3-3M17 17H5l3 3"/></svg></button><label class="f">Height<input type="number" id="nH" min="16" max="4096"></label><span class="nunit">px</span></div>
+      <div class="preset pcustom" id="nCustom" aria-pressed="false"><button class="pc-h" id="nCustomBtn" type="button"><b>Custom</b><small id="nCustomInfo">Your own size</small></button>
+        <div class="nsize" id="nSizeRow" hidden><label class="f">Width<input type="number" id="nW" min="16" max="4096" inputmode="numeric"></label><button class="ibtn sm" id="nSwap" type="button" title="Swap width and height" aria-label="Swap width and height"><svg class="ic" viewBox="0 0 24 24"><path d="M7 7h12l-3-3M17 17H5l3 3"/></svg></button><label class="f">Height<input type="number" id="nH" min="16" max="4096" inputmode="numeric"></label><span class="nunit">px</span></div></div>
       <div class="nopts">
         <div class="npaper"><label class="cswitch" title="Off = see-through background"><input type="checkbox" id="npOn"><i></i></label><span class="nplabel">Canvas color</span><button class="cbgsw" id="npSw" aria-label="Choose the new canvas colour" title="Choose the colour"></button><span class="nphex" id="npHex"></span></div>
         <label class="check wide">Start with an animation layer<input id="nAnim" type="checkbox"></label>
@@ -1735,8 +1795,8 @@ button.logo[aria-expanded="true"]{box-shadow:0 0 0 2px var(--accent)}
     <label class="f">Box size (px)<input type="number" id="shBox" min="28" max="1000" step="1"></label>
     <label class="f">Columns<input type="number" id="shCols" min="1" max="24"></label>
     <label class="f">Rows<input type="number" id="shRows" min="1" max="40"></label>
-    <label class="f">Background<input type="color" id="shBg"></label>
-    <label class="f">Boxes<input type="color" id="shBoxCol"></label>
+    <div class="f shcol"><span>Boxes</span><span class="shcolrow"><button class="cbgsw" id="shBoxSw" type="button" aria-label="Choose the box colour" title="Choose the box colour"></button><span class="nphex" id="shBoxHex"></span></span><input type="hidden" id="shBoxCol"></div>
+    <div class="f shcol"><span>Background</span><span class="shcolrow"><button class="cbgsw" id="shBgSw" type="button" aria-label="Choose the background colour" title="Choose the colour between the boxes"></button><span class="nphex" id="shBgHex"></span></span><input type="hidden" id="shBg"></div>
     <label class="check wide" id="shScaleRow">Scale my drawings to the new box size<input id="shScale" type="checkbox" checked></label>
     <label class="check wide" id="shAnimRow">Start with an animation layer<input id="shAnim" type="checkbox"></label>
   </div>
@@ -1804,16 +1864,8 @@ button.logo[aria-expanded="true"]{box-shadow:0 0 0 2px var(--accent)}
   <div class="actions"><button class="btn" id="keysCsp" title="Switch to Clip Studio Paint's default keys">Clip Studio keys</button><button class="btn" id="keysReset">Reset all</button><button class="btn" id="keysExport">Copy code</button><button class="btn" id="keysImportBtn">Load code</button><button class="btn" id="keysShare">Save file…</button><button class="btn" id="keysOpen">Open file…</button><button class="btn primary" data-dismiss>Done</button></div>
 </div></div>
 <div class="modal" id="themeModal" hidden><div class="card apcard" role="dialog" aria-label="Appearance">
-  <h2>Appearance</h2>
-  <div class="tabs aptabs" id="apTabs" role="tablist"><button role="tab" data-t="theme" aria-selected="true">Theme</button><button role="tab" data-t="a11y" aria-selected="false">Accessibility</button></div>
-  <div class="apbody">
-  <div id="apTheme"><details class="apsec" data-sec="canvas" open><summary><span><b>Canvas</b><small>Emote boxes and the area around them</small></span><svg class="ic chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></summary><div class="apsec-b">
-      <div class="field"><span class="flabel">Emote box colour</span><div class="swrow" id="boxSwatches"></div></div>
-      <div class="field"><span class="flabel">Area around the canvas</span><div class="seg" role="radiogroup" id="stageMode"><button role="radio" data-stage="auto" aria-checked="true">Follows the boxes</button><button role="radio" data-stage="darker" aria-checked="false">Darker</button><button role="radio" data-stage="lighter" aria-checked="false">Lighter</button></div>
-      <p class="hint">The gaps between emotes and the area behind the canvas follow the box colour: dark boxes sit on near-black, white boxes on soft light grey.</p></div></div></details><details class="apsec" data-sec="appcol" open><summary><span><b>App colours</b><small>Theme and accent for menus and panels</small></span><svg class="ic chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></summary><div class="apsec-b">
-      <div class="field"><span class="flabel">App theme</span><div class="uithemes" id="uiThemes"></div></div>
-      <div class="field"><span class="flabel">Accent</span><div class="swrow" id="acSwatches"></div>
-      <p class="hint">The accent colours buttons, sliders, highlights and the logo’s sparkles.</p></div></div></details><details class="apsec" data-sec="tshare"><summary><span><b>Share</b><small>Send your theme to friends or load theirs</small></span><svg class="ic chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></summary><div class="apsec-b"><div class="field"><div class="apbtns"><button class="btn" id="thShare">Share this theme…</button><button class="btn" id="thImport">Import a theme…</button></div><p class="hint">Makes a picture card of your theme with the colours tucked inside. Friends open it with Import, or drop it on the canvas.</p></div></div></details></div>
+  <h2 id="apHead">Appearance</h2>
+  <div class="apwrap"><nav class="apnav" id="apTabs" role="tablist" aria-orientation="vertical" aria-label="Appearance sections"><button role="tab" data-t="theme" aria-selected="true"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 100 18c1.2 0 1.7-1 1.2-1.9-.6-1.1.2-2.3 1.4-2.3H17a4 4 0 004-4c0-5.2-4-9.8-9-9.8z"/><circle cx="7.5" cy="11" r="1.1"/><circle cx="10.5" cy="7" r="1.1"/><circle cx="15" cy="7.5" r="1.1"/></svg><span>Theme</span></button><button role="tab" data-t="a11y" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="4.5" r="2"/><path d="M5 8l7 2 7-2M12 10v5l-3 6M12 15l3 6"/></svg><span>Accessibility</span></button><button role="tab" data-t="phone" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18h2"/></svg><span>Phone layout</span></button><button role="tab" data-t="pen" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l4-1 11-11-3-3L5 16l-1 4z"/><path d="M14 7l3 3"/></svg><span>Pen and tablet</span></button><button role="tab" data-t="pomo" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9.5 2.5h5"/></svg><span>Focus timer</span></button></nav><div class="apbody"><div id="apTheme" role="tabpanel"><details class="apsec" data-sec="appcol" open><summary><span><b>App colours</b><small>Theme and accent for menus and panels</small></span><svg class="ic chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></summary><div class="apsec-b"><div class="field"><span class="flabel">App theme</span><div class="uithemes" id="uiThemes"></div></div><div class="field"><span class="flabel">Accent</span><div class="swrow" id="acSwatches"></div><p class="hint">The accent colours buttons, sliders, highlights and the logo’s sparkles.</p></div></div></details><details class="apsec" data-sec="canvas" open><summary><span><b>Canvas</b><small>Regular canvases</small></span><svg class="ic chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></summary><div class="apsec-b"><div class="field"><span class="flabel">Canvas colour</span><div class="uithemes apchoices" id="paperChoices" role="radiogroup" aria-label="Canvas colour"></div></div><div class="field"><span class="flabel">Area around the canvas</span><div class="uithemes apchoices" id="stageCChoices" role="radiogroup" aria-label="Area around the canvas"></div></div><p class="apnote">Every new canvas starts with this colour, unless you pick a different one when you make it. The area around the canvas stays the way you set it.</p></div></details><details class="apsec" data-sec="sheetcol" open><summary><span><b>Emote sheet canvas</b><small>Emote boxes and the area around them</small></span><svg class="ic chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></summary><div class="apsec-b"><div class="field"><span class="flabel">Emote box colour</span><div class="swrow" id="boxSwatches"></div></div><div class="field"><span class="flabel">Area around the canvas</span><div class="uithemes apchoices" id="stageSChoices" role="radiogroup" aria-label="Area around the emote sheet"></div></div><p class="apnote">Every new emote sheet starts with this box colour (the gaps between boxes follow it), unless you pick a different one when you make it. The area around the sheet stays the way you set it.</p><p class="hint">To change the canvas or sheet you already have open, use the colour swatch at the bottom of the Layers panel.</p></div></details><details class="apsec" data-sec="tshare"><summary><span><b>Share</b><small>Send your theme to friends or load theirs</small></span><svg class="ic chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></summary><div class="apsec-b"><div class="field"><div class="apbtns"><button class="btn" id="thShare">Share this theme…</button><button class="btn" id="thImport">Import a theme…</button></div><p class="hint">Makes a picture card of your theme with the colours tucked inside. Friends open it with Import, or drop it on the canvas.</p></div></div></details></div>
   <div id="apA11y" hidden><details class="apsec" data-sec="text" open><summary><span><b>Text and icons</b><small>Font, sizes and spacing</small></span><svg class="ic chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></summary><div class="apsec-b">
       <div class="field"><span class="flabel">Preview</span><div class="aprev" aria-label="Preview of your text and icon settings"><p class="aprev-t">The quick brown fox jumps over the lazy dog.</p><p class="aprev-s">Il1 O0 bd pq 0123456789</p><div class="aprev-i" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><path d="M4 20l4-1 11-11-3-3L5 16l-1 4z"/></svg><svg class="ic" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/></svg><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/></svg></div></div></div>
       <div class="field"><span class="flabel">Reading font</span><div class="fdrop" id="aFontDrop"></div>
@@ -1830,9 +1882,9 @@ button.logo[aria-expanded="true"]{box-shadow:0 0 0 2px var(--accent)}
       <div class="achecks">
       <label class="check wide"><span>Higher contrast<small>Brighter text and stronger outlines.</small></span><input id="a_contrast" type="checkbox"></label>
       <label class="check wide"><span>Reduce motion<small>Turns off sliding and fading.</small></span><input id="a_motion" type="checkbox"></label>
-      <label class="check wide"><span>Strong focus outlines<small>A clear ring around whatever the keyboard is on.</small></span><input id="a_focus" type="checkbox"></label></div></div></details></div><details class="apsec" data-sec="ashare"><summary><span><b>Share</b><small>Move these settings to another device</small></span><svg class="ic chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></summary><div class="apsec-b"><div class="field"><div class="apbtns"><button class="btn" id="aExport">Export accessibility settings…</button><button class="btn" id="aImport">Import…</button></div><p class="hint">To bring everything at once (theme, shortcuts, brushes, layout too), use File › Export all settings.</p></div></div></details>
-  </div>
-  <div class="actions"><span class="apsaved">Saved on this device</span><button class="btn" id="themeReset">Reset theme</button><button class="btn" id="aReset" hidden>Reset accessibility</button><button class="btn primary" data-dismiss>Done</button></div>
+      <label class="check wide"><span>Strong focus outlines<small>A clear ring around whatever the keyboard is on.</small></span><input id="a_focus" type="checkbox"></label></div></div></details><details class="apsec" data-sec="ashare"><summary><span><b>Share</b><small>Move these settings to another device</small></span><svg class="ic chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></summary><div class="apsec-b"><div class="field"><div class="apbtns"><button class="btn" id="aExport">Export accessibility settings…</button><button class="btn" id="aImport">Import…</button></div><p class="hint">To bring everything at once (theme, shortcuts, brushes, layout too), use File › Export all settings.</p></div></div></details></div>
+  <div id="apPhone" role="tabpanel" hidden></div><div id="apPen" role="tabpanel" hidden></div><div id="apPomo" role="tabpanel" hidden></div></div></div>
+  <div class="actions"><span class="apsaved">Saved on this device</span><button class="btn" id="themeReset">Reset theme</button><button class="btn" id="aReset" hidden>Reset accessibility</button><button class="btn" id="apPenReset" hidden>Reset pen settings</button><button class="btn primary" data-dismiss>Done</button></div>
 </div></div>
 <div class="modal" id="nameModal" hidden><div class="card" role="dialog" aria-label="Name"><h2 id="nameTitle">Name</h2><input class="tinput" id="nameInput" maxlength="40"><div class="actions"><button class="btn" data-dismiss>Cancel</button><button class="btn primary" id="nameOk">Save</button></div></div></div>
 <div class="modal" id="confirmModal" hidden><div class="card" role="dialog" aria-label="Confirm"><h2 id="confirmTitle">Are you sure?</h2><p id="confirmText"></p><div class="actions"><button class="btn" data-dismiss>Cancel</button><button class="btn primary danger" id="confirmOk">Delete</button></div></div></div>
@@ -1868,7 +1920,7 @@ button.logo[aria-expanded="true"]{box-shadow:0 0 0 2px var(--accent)}
   <div class="pop-b">
     <canvas class="wheel" id="cbgWheel" aria-label="Background colour wheel"></canvas>
     <div class="crow"><span class="cbgnow" id="cbgNow"></span><input class="hex" id="cbgHex" aria-label="Background colour hex" spellcheck="false" maxlength="7"><button class="ibtn sm" id="cbgPick" aria-label="Pick from anywhere on screen" title="Pick a colour from anywhere on your screen (any monitor)"><svg class="ic" viewBox="0 0 24 24"><path d="M19.4 4.6a2.1 2.1 0 00-3 0l-2.3 2.3-1-1-1.4 1.4 1 1L5 16v3h3l7.7-7.7 1 1 1.4-1.4-1-1 2.3-2.3a2.1 2.1 0 000-3z"/></svg></button></div>
-    <label class="check wide"><span id="cbgOnLabel">Show the canvas color</span><input type="checkbox" id="cbgOn2"></label>
+    <label class="check wide" id="cbgOnRow"><span id="cbgOnLabel">Show the canvas color</span><input type="checkbox" id="cbgOn2"></label>
     <p class="hint" id="cbgHint"></p>
     <div class="popdone"><button class="btn primary" id="cbgDone" type="button">Done</button></div>
   </div>
@@ -2790,14 +2842,19 @@ const BOX_PRESETS = ['#303030', '#1E1E1E', '#000000', '#5A5A5E', '#BDBDC2', '#FF
 const UI_THEMES = [['Midnight', '#141416', '#4C9AFF'], ['Charcoal', '#38383C', '#6EA0E6'], ['Graphite', '#1C232B', '#5CC8A8'], ['Plum', '#2A1840', '#C08BF2'], ['Forest', '#123A26', '#7CD67A'], ['Ocean', '#0E2B45', '#4FB3E8'], ['Rosé', '#3A1828', '#F08BB0'], ['Ember', '#3A200E', '#F2A65A'], ['Candy', '#3A1438', '#FF7AD9'], ['Paper', '#EEE7DA', '#D9734E'], ['Cloud', '#DFE7F4', '#4C7BE0'], ['Peach', '#F6DCCB', '#E07A5F'], ['Mint', '#D5F0E2', '#2E9E74'], ['Lilac', '#E7DDF6', '#8B5CF6']];
 function hexHsl(hex) { let [r, g, b] = hexRgb(hex).map(v => v / 255); const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn; let h = 0, s = 0; if (d) { s = d / (1 - Math.abs(2 * l - 1)); h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; if (h < 0) h += 360; } return [h, s, l]; }
 function hslHex(h, s, l) { l = Math.max(0, Math.min(1, l)); s = Math.max(0, Math.min(1, s)); const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = l - c / 2; const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x]; return toHex((r + m) * 255, (g + m) * 255, (b + m) * 255); }
-if (!theme.ui) theme.ui = theme.bg || '#141416'; if (!theme.box) theme.box = '#303030';
+if (!theme.ui) theme.ui = theme.bg || '#141416';
+// defaults for new work (Appearance › Canvas and › Emote sheet canvas); each canvas or sheet keeps its own colour once made
+if (!theme.v2) { theme.v2 = 1; theme.box = store.get('newSheetBox', '#FFFFFF'); theme.paper = (store.get('newPaper', {}).col || '#FFFFFF').toUpperCase(); theme.stageC = 'dark'; }
+if (!theme.box) theme.box = '#FFFFFF'; if (!theme.paper) theme.paper = '#FFFFFF'; if (!theme.stageC) theme.stageC = 'dark'; if (!theme.stage) theme.stage = 'auto';
 const gutterFor = box => lum(box) < .45 ? mixc(box, '#000000', .38) : mixc(box, '#000000', .14);
-function stageFor(g) { const d = lum(g) < .3; return theme.stage === 'lighter' ? mixc(g, '#FFFFFF', d ? .12 : .45) : mixc(g, '#000000', d ? (theme.stage === 'darker' ? .8 : .5) : (theme.stage === 'darker' ? .32 : .12)); }
-function refreshStage() { stageColor = stageFor(DOC.sheet ? sheetGut(DOC.sheet) : gutterFor(theme.box)); document.documentElement.style.setProperty('--stage', stageColor); dirty(false); }
-function applyBox() {
-  if (DOC.sheet) { DOC.sheet.boxCol = theme.box; DOC.sheet.bg = gutterFor(theme.box); }
-  stageColor = stageFor(DOC.sheet ? DOC.sheet.bg : gutterFor(theme.box)); document.documentElement.style.setProperty('--stage', stageColor); ver++; dirty(false); if (typeof queueThumbs === 'function') queueThumbs(100);
-}
+const STAGE_C = { dark: '#0F0F10', grey: '#505054', light: '#D6D6DA' };
+const isHex = v => /^#[0-9a-f]{6}$/i.test(v || '');
+// emote sheets: the area around follows the gaps between boxes (darker or lighter), or a colour of your own
+function stageFor(g, mode = theme.stage) { if (isHex(mode)) return mode; const d = lum(g) < .3; return mode === 'lighter' ? mixc(g, '#FFFFFF', d ? .12 : .45) : mixc(g, '#000000', d ? (mode === 'darker' ? .8 : .5) : (mode === 'darker' ? .32 : .12)); }
+// regular canvases: dark, grey, light or a colour of your own
+const stageNow = () => DOC.sheet ? stageFor(sheetGut(DOC.sheet)) : (isHex(theme.stageC) ? theme.stageC : STAGE_C[theme.stageC] || STAGE_C.dark);
+function refreshStage() { stageColor = stageNow(); document.documentElement.style.setProperty('--stage', stageColor); dirty(false); }
+function applyBox() { stageColor = stageNow(); document.documentElement.style.setProperty('--stage', stageColor); ver++; dirty(false); }
 function applyTheme() {
   const bg = theme.ui, dark = lum(bg) < .3, ac = theme.accent, [h, s, l] = hexHsl(bg), S = k => hslHex(h, s * k, 0), L = (dl, ks = 1) => hslHex(h, s * ks, l + dl);
   // every surface keeps the theme's hue, so a green theme is green everywhere
@@ -2810,16 +2867,37 @@ function applyTheme() {
   previewCol = hexRgb(T.fg); store.set('theme', theme); if (typeof setFavicon === 'function') try { setFavicon(); } catch { } applyBox(); buildThemeUI(); if (themeReady) { buildBrushUI(); buildSettings(); } dirty(false);
 }
 function swatchBtn(h, on, pick) { return el('button', { class: 'tsw', style: 'background:' + h, 'aria-label': h, 'aria-pressed': on, onclick: () => pick(h) }); }
-function customBtn(val, pick) { const i = el('input', { type: 'color', value: val, 'aria-label': 'Custom color' }); i.oninput = () => pick(i.value.toUpperCase()); return el('span', { class: 'tsw custom', title: 'Custom color' }, i); }
-function buildThemeUI() {
-  $('#boxSwatches').replaceChildren(...BOX_PRESETS.map(h => swatchBtn(h, theme.box === h, v => { theme.box = v; applyTheme(); })), customBtn(theme.box, v => { theme.box = v; applyTheme(); }));
-  $('#uiThemes').replaceChildren(...UI_THEMES.map(([n, u, a]) => el('button', { class: 'uith', 'aria-pressed': theme.ui === u && theme.accent === a, style: `--u:${u};--a:${a}`, onclick: () => { theme.ui = u; theme.accent = a; applyTheme(); } }, el('i'), el('span', { text: n }))),
-    (() => { const custom = !UI_THEMES.some(([, u]) => u === theme.ui), i = el('input', { type: 'color', value: theme.ui, 'aria-label': 'Your own app colour' }); i.oninput = () => { theme.ui = i.value.toUpperCase(); applyTheme(); }; return el('label', { class: 'uith custom', 'aria-pressed': custom, title: 'Pick your own app colour' }, el('i', { style: custom ? `background:linear-gradient(135deg,${theme.ui} 0 55%,${theme.accent} 55%)` : '' }), el('span', { text: 'Custom…' }), i); })());
-  $('#acSwatches').replaceChildren(...AC_PRESETS.map(h => swatchBtn(h, theme.accent === h, v => { theme.accent = v; applyTheme(); })), customBtn(theme.accent, v => { theme.accent = v; applyTheme(); }));
-  $$('#stageMode button').forEach(b => b.setAttribute('aria-checked', b.dataset.stage === theme.stage));
+// "Custom" opens the same colour wheel window as the canvas colour (with the hex box and the screen colour picker)
+function customBtn(key, title, val, on, pick) { const b = el('button', { class: 'tsw custom' + (on ? ' on' : ''), style: `--c:${val}`, title: title + ': pick your own', 'aria-label': title + ': pick your own colour', 'aria-pressed': on, 'data-colorpop': key }); b.onclick = () => openThemeColor(key, title, () => val, pick, b); return b; }
+function choiceBtn(name, col, on, pick) { return el('button', { class: 'uith', role: 'radio', 'aria-checked': on, 'aria-pressed': on, style: `--c:${col}`, onclick: pick }, el('i'), el('span', { text: name })); }
+function customChoice(key, title, val, on, pick) { const b = el('button', { class: 'uith custom' + (on ? ' on' : ''), role: 'radio', 'aria-checked': on, 'aria-pressed': on, style: `--c:${val}`, 'data-colorpop': key, title: 'Pick your own colour' }, el('i'), el('span', { text: 'Custom…' })); b.onclick = () => openThemeColor(key, title, () => val, pick, b); return b; }
+// one colour window for every theme colour; it keeps working while the Appearance window rebuilds its buttons
+const themeColGet = k => ({ ui: theme.ui, accent: theme.accent, box: theme.box, paper: theme.paper, stageC: isHex(theme.stageC) ? theme.stageC : null, stageS: isHex(theme.stage) ? theme.stage : null })[k];
+const THEME_HINT = { ui: 'Menus and panels take on this colour.', accent: 'Buttons, sliders, highlights and the logo’s sparkles.', paper: 'New canvases start with this colour.', box: 'New emote sheets start with this box colour.', stageC: 'Shown around regular canvases.', stageS: 'Shown around emote sheets.' };
+const themeTargets = {};
+function openThemeColor(key, title, get, set, anchor) {
+  if (typeof openColorPop !== 'function') return;
+  const T = themeTargets[key] || (themeTargets[key] = { key: 'th-' + key, noOn: true, title: () => title, on: () => true, setOn() { }, onLabel: () => '', hint: () => THEME_HINT[key] || '', anchor: () => $(`[data-colorpop="${key}"]`) || anchor });
+  T.col = () => themeColGet(key) || T.start; T.start = get(); T.set = h => set(h.toUpperCase());
+  openColorPop(T);
 }
-$$('#stageMode button').forEach(b => b.onclick = () => { theme.stage = b.dataset.stage; applyTheme(); });
-$('#themeReset').onclick = () => { theme = { ui: '#141416', box: '#303030', accent: '#4C9AFF', stage: 'auto' }; applyTheme(); };
+function buildThemeUI() {
+  const customUi = !UI_THEMES.some(([, u, a]) => u === theme.ui && a === theme.accent);
+  $('#uiThemes').replaceChildren(...UI_THEMES.map(([n, u, a]) => el('button', { class: 'uith', 'aria-pressed': theme.ui === u && theme.accent === a, style: `--u:${u};--a:${a}`, onclick: () => { theme.ui = u; theme.accent = a; applyTheme(); } }, el('i'), el('span', { text: n }))),
+    (() => { const b = el('button', { class: 'uith custom', 'aria-pressed': customUi, title: 'Pick your own app colour', 'data-colorpop': 'ui' }, el('i', { style: customUi ? `background:linear-gradient(135deg,${theme.ui} 0 55%,${theme.accent} 55%)` : '' }), el('span', { text: 'Custom…' })); b.onclick = () => openThemeColor('ui', 'App colour', () => theme.ui, v => { theme.ui = v; applyTheme(); }, b); return b; })());
+  const acCustom = !AC_PRESETS.includes(theme.accent);
+  $('#acSwatches').replaceChildren(...AC_PRESETS.map(h => swatchBtn(h, theme.accent === h, v => { theme.accent = v; applyTheme(); })), customBtn('accent', 'Accent colour', theme.accent, acCustom, v => { theme.accent = v; applyTheme(); }));
+  // Canvas: what new canvases start with, and the area around regular canvases
+  const PAPERS = [['White', '#FFFFFF'], ['Grey', '#808080']], paperCustom = !PAPERS.some(([, h]) => h === theme.paper);
+  $('#paperChoices').replaceChildren(...PAPERS.map(([n, h]) => choiceBtn(n, h, theme.paper === h, () => { theme.paper = h; applyTheme(); })), customChoice('paper', 'Canvas colour', theme.paper, paperCustom, v => { theme.paper = v; applyTheme(); }));
+  $('#stageCChoices').replaceChildren(...[['Dark', 'dark'], ['Grey', 'grey'], ['Light', 'light']].map(([n, k]) => choiceBtn(n, STAGE_C[k], theme.stageC === k, () => { theme.stageC = k; applyTheme(); })), customChoice('stageC', 'Area around the canvas', isHex(theme.stageC) ? theme.stageC : STAGE_C.dark, isHex(theme.stageC), v => { theme.stageC = v; applyTheme(); }));
+  // Emote sheet canvas: the box colour new sheets start with, and the area around sheets
+  $('#boxSwatches').replaceChildren(...BOX_PRESETS.map(h => swatchBtn(h, theme.box === h, v => { theme.box = v; applyTheme(); })), customBtn('box', 'Emote box colour', theme.box, !BOX_PRESETS.includes(theme.box), v => { theme.box = v; applyTheme(); }));
+  const g = gutterFor(theme.box);
+  $('#stageSChoices').replaceChildren(...[['Follows the boxes', 'auto'], ['Darker', 'darker'], ['Lighter', 'lighter']].map(([n, k]) => choiceBtn(n, stageFor(g, k), theme.stage === k, () => { theme.stage = k; applyTheme(); })), customChoice('stageS', 'Area around the sheet', isHex(theme.stage) ? theme.stage : stageFor(g, 'auto'), isHex(theme.stage), v => { theme.stage = v; applyTheme(); }));
+  try { if (String(popT && popT.key).startsWith('th-') && !$('#cbgPop').hidden) popSync(); } catch { } // (the colour window loads later on startup)
+}
+$('#themeReset').onclick = () => { theme = { v2: 1, ui: '#141416', box: '#FFFFFF', paper: '#FFFFFF', accent: '#4C9AFF', stage: 'auto', stageC: 'dark' }; applyTheme(); };
 $('#themeBtn').onclick = () => { $('#themeModal').hidden = false; };
 
 
@@ -3002,7 +3080,14 @@ function stageBackground() {
     x.fillStyle = checker; x.fillRect(0, 0, DOC.w, DOC.h); if (DOC.paper && DOC.paper.on) { x.fillStyle = DOC.paper.col; x.fillRect(0, 0, DOC.w, DOC.h); } }
   x.restore(); bgKey = key; bgFresh = true; return bgC;
 }
-let lastZoomTxt = '';
+let lastZoomTxt = '', lastRot = 0;
+// a small "tap to straighten" chip shows whenever the canvas is turned
+function rotChip() {
+  lastRot = V.r; let c = $('#rotChip');
+  if (!c) { c = el('button', { class: 'rotchip', id: 'rotChip', type: 'button', title: 'Straighten the canvas (Reset rotation)', hidden: '' }); c.onclick = () => { rotateTo(0); toast('Canvas straightened'); }; ['pointerdown', 'pointerup'].forEach(t => c.addEventListener(t, e => e.stopPropagation())); $('#stage').append(c); }
+  let d = Math.round(((V.r * 180 / Math.PI) % 360 + 540) % 360 - 180); c.hidden = d === 0;
+  if (d) c.innerHTML = `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg><span>${d}° · Straighten</span>`;
+}
 function render() {
   needs = false;
   let t0 = performance.now();
@@ -3032,6 +3117,7 @@ function render() {
   }
   if (part) x.restore();
   const zt = Math.round(V.s * 100) + '%'; if (zt !== lastZoomTxt) { $('#zoomOut').value = zt; lastZoomTxt = zt; }
+  if (V.r !== lastRot) rotChip();
   // the navigator is a second full redraw: skip it mid-stroke and only redo it when something changed
   if (!stroking) drawNav();
   PERF.time('screen', performance.now() - t0);
@@ -3206,14 +3292,22 @@ const pressureOf = e => { const real = e.pressure > 0 && e.pressure !== .5; if (
 const azOf = e => { if (e.pointerType === 'touch') return null; if (e.azimuthAngle != null && (e.tiltX || e.tiltY || e.altitudeAngle < 1.5)) return e.azimuthAngle; if (e.tiltX || e.tiltY) return Math.atan2(e.tiltY, e.tiltX); return null; };
 let viewRect = null; const vrReset = () => { viewRect = null; }; addEventListener('resize', vrReset); addEventListener('scroll', vrReset, true); new ResizeObserver(vrReset).observe(view);
 function local(e) { const r = viewRect || (viewRect = view.getBoundingClientRect()); return [e.clientX - r.left, e.clientY - r.top]; }
-function startGesture() { const [a, b] = [...pts.values()]; gesture = { a0: [...a], b0: [...b], V0: { ...V } }; }
+function startGesture() { const [a, b] = [...pts.values()]; gesture = { a0: [...a], b0: [...b], V0: { ...V }, rotOn: false }; }
 function updateGesture() {
   const [a, b] = [...pts.values()], g = gesture;
   const m0 = [(g.a0[0] + g.b0[0]) / 2, (g.a0[1] + g.b0[1]) / 2], m1 = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
   const d0 = Math.hypot(g.b0[0] - g.a0[0], g.b0[1] - g.a0[1]) || 1, d1 = Math.hypot(b[0] - a[0], b[1] - a[1]);
   const rot = Math.atan2(b[1] - a[1], b[0] - a[0]) - Math.atan2(g.b0[1] - g.a0[1], g.b0[0] - g.a0[0]);
   Object.assign(V, g.V0); const [px, py] = toDoc(m0[0], m0[1]);
-  V.s = Math.max(.05, Math.min(32, g.V0.s * d1 / d0)); V.r = g.V0.r + (Math.abs(rot * 180 / Math.PI) < 6 ? 0 : rot);
+  V.s = Math.max(.05, Math.min(32, g.V0.s * d1 / d0));
+  // zooming alone never turns the canvas: turning starts only once your fingers twist past 10°
+  let tw = rot; while (tw > Math.PI) tw -= 2 * Math.PI; while (tw < -Math.PI) tw += 2 * Math.PI;
+  const D = Math.PI / 180; if (!g.rotOn && Math.abs(tw) > 10 * D) g.rotOn = true;
+  // (it catches up with your fingers over the next 20°, so it never jumps)
+  let r = g.V0.r + (g.rotOn ? tw - Math.sign(tw) * 10 * D * Math.max(0, 1 - (Math.abs(tw) - 10 * D) / (20 * D)) : 0);
+  // and it clicks to straight (0°, 90°, 180°, 270°) when you turn it close, so getting it level again is easy
+  if (g.rotOn) { const q = Math.PI / 2, n = Math.round(r / q) * q; if (Math.abs(r - n) < 8 * Math.PI / 180) { if (!g.snapped) { g.snapped = true; try { navigator.vibrate && navigator.vibrate(8); } catch { } } r = n; } else g.snapped = false; }
+  V.r = r;
   const [sx, sy] = toScreen(px, py); V.tx += m1[0] - sx; V.ty += m1[1] - sy; interacting(); dirty(false);
 }
 view.addEventListener('pointerdown', e => {
@@ -3250,7 +3344,7 @@ view.addEventListener('pointermove', e => {
   if (e.pointerType === 'touch' && pts.has(e.pointerId)) { pts.set(e.pointerId, p); if (gesture && pts.size === 2) { updateGesture(); return; } }
   if (panDrag) { V.tx = panDrag.tx + p[0] - panDrag.x; V.ty = panDrag.ty + p[1] - panDrag.y; interacting(); dirty(false); return; }
   if (zdrag) { const ns = zdrag.s * Math.exp(-(p[1] - zdrag.y) / 160); if (Math.abs(p[1] - zdrag.y) > 4) zdrag.moved = true; zoomAt(ns / V.s, zdrag.x, zdrag.y); return; }
-  if (rdrag) { const a = Math.atan2(p[1] - VH / 2, p[0] - VW / 2); rotateTo((rdrag.r0 + a - rdrag.a0) * 180 / Math.PI); return; }
+  if (rdrag) { const a = Math.atan2(p[1] - VH / 2, p[0] - VW / 2); let d = (rdrag.r0 + a - rdrag.a0) * 180 / Math.PI; const n = Math.round(d / 90) * 90; if (Math.abs(d - n) < 5) d = n; rotateTo(d); return; }
   if (xform && xform.drag) { xfMove(p, e); return; }
   if (selOp) { const [dx, dy] = toDoc(p[0], p[1]); selMove(dx, dy, e); return; }
   if (liqOp) { const [dx, dy] = toDoc(p[0], p[1]); liqMove(dx, dy); if (e.pointerType !== 'touch') hover = p; return; }
@@ -3927,10 +4021,10 @@ function sheetInfo() {
   $('#shInfo').classList.toggle('warn', bad || px > 14e6); $('#shGo').disabled = bad;
 }
 function openSheet(mode) {
-  // new sheets start with white boxes (or the box colour you used last time) so they look like a clean page
-  sheetMode = mode; const nb = store.get('newSheetBox', '#FFFFFF'), s = mode === 'new' || !DOC.sheet ? { cols: 5, rows: 3, box: 224, bg: gutterFor(nb), boxCol: nb } : DOC.sheet;
+  // new sheets start with your default box colour (beleaf › Appearance › Emote sheet canvas); a colour picked here is just for this sheet
+  sheetMode = mode; const nb = theme.box || '#FFFFFF', s = mode === 'new' || !DOC.sheet ? { cols: 5, rows: 3, box: 224, bg: gutterFor(nb), boxCol: nb } : DOC.sheet;
   $('#shTitle').textContent = mode === 'new' ? 'New emote sheet' : 'Emote sheet';
-  $('#shCols').value = s.cols; $('#shRows').value = s.rows; $('#shBox').value = s.box; $('#shBg').value = s.bg; $('#shBoxCol').value = s.boxCol; $('#shBoxCol').oninput = () => { $('#shBg').value = gutterFor($('#shBoxCol').value.toUpperCase()).toLowerCase(); };
+  $('#shCols').value = s.cols; $('#shRows').value = s.rows; $('#shBox').value = s.box; $('#shBg').value = s.bg; $('#shBoxCol').value = s.boxCol; $('#shBoxCol').oninput = () => { $('#shBg').value = gutterFor($('#shBoxCol').value.toUpperCase()); };
   $('#shScaleRow').hidden = mode === 'new' || !DOC.sheet; $('#shAnimRow').hidden = mode !== 'new';
   $('#shNote').textContent = mode === 'new' ? 'Opens in a new tab. Your other canvases stay open and saved.' : 'Changing the sheet clears undo history. Drawings move with their boxes.';
   $('#shGo').textContent = mode === 'new' ? 'Create sheet' : 'Apply';
@@ -3940,7 +4034,7 @@ $$('#shBoxSeg button').forEach(b => b.onclick = () => { if (b.dataset.box !== 'c
 ['#shBox', '#shCols', '#shRows'].forEach(s => $(s).addEventListener('input', sheetInfo));
 $('#shGo').onclick = () => {
   const o = sheetVals(); $('#sheetModal').hidden = true;
-  if (sheetMode === 'new') { store.set('newSheetBox', o.boxCol); newTab(); newSheet(o, $('#shAnim').checked); buildTabs(); saveNow(true); toast(`New sheet: ${o.cols * o.rows} emote boxes at ${o.box} × ${o.box}`); }
+  if (sheetMode === 'new') { newTab(); newSheet(o, $('#shAnim').checked); buildTabs(); saveNow(true); toast(`New sheet: ${o.cols * o.rows} emote boxes at ${o.box} × ${o.box}`); }
   else { const was = DOC.sheet && DOC.sheet.box; reshapeSheet(o, $('#shScale').checked); toast(was && was !== o.box ? `Boxes are now ${o.box} × ${o.box}` : 'Sheet updated'); }
 };
 
@@ -4213,7 +4307,10 @@ document.addEventListener('input', e => { if (e.target.type === 'range') paintRa
 setTimeout(() => $$('input[type=range]').forEach(paintRange), 0);
 
 /* ---- Pen and tablet window ---- */
-function openPen() { closeMenu(); $('#penModal').hidden = false; $('#penGamma').value = Math.round(pressGamma * 100); $('#pgO').value = pressGamma === 1 ? 'normal' : pressGamma < 1 ? 'lighter' : 'firmer'; $('#penOnlyCk').checked = penOnly.checked; $('#speedPressCk').checked = speedPress; $('#lowLatCk').checked = store.get('lowLatency', true) !== false; penPadClear(); }
+// the pen settings live in one block that moves between its own window and Appearance › Pen and tablet
+const penBody = el('div', { id: 'penBody', class: 'dockbody' }); { const card = $('#penModal .card'); [...card.children].filter(c => c.tagName !== 'H2' && !c.classList.contains('actions')).forEach(c => penBody.append(c)); card.insertBefore(penBody, card.querySelector('.actions')); }
+function openPen() { closeMenu(); const card = $('#penModal .card'); if (penBody.parentNode !== card) card.insertBefore(penBody, card.querySelector('.actions')); $('#penModal').hidden = false; penSetup(); }
+function penSetup() { $('#penGamma').value = Math.round(pressGamma * 100); $('#pgO').value = pressGamma === 1 ? 'normal' : pressGamma < 1 ? 'lighter' : 'firmer'; $('#penOnlyCk').checked = penOnly.checked; $('#speedPressCk').checked = speedPress; $('#lowLatCk').checked = store.get('lowLatency', true) !== false; penPadClear(); }
 $('#speedPressCk').onchange = e => { speedPress = e.target.checked; store.set('speedPress', speedPress); toast(speedPress ? 'Speed now acts as pressure when the pen sends none' : 'Speed pressure off'); };
 const penPad = $('#penPad'), ppx = penPad.getContext('2d'); let ppLast = null;
 function penPadClear() { ppx.clearRect(0, 0, penPad.width, penPad.height); }
@@ -4228,7 +4325,8 @@ penPad.addEventListener('pointermove', e => {
 penPad.addEventListener('pointerup', () => ppLast = null);
 $('#penGamma').oninput = e => { pressGamma = +e.target.value / 100; store.set('pressGamma', pressGamma); $('#pgO').value = pressGamma === 1 ? 'normal' : pressGamma < 1 ? 'lighter' : 'firmer'; };
 $('#penOnlyCk').onchange = e => { penOnly.checked = e.target.checked; store.set('penOnly', penOnly.checked); };
-$('#penReset').onclick = () => { pressGamma = 1; store.set('pressGamma', 1); penOnly.checked = false; store.set('penOnly', false); openPen(); };
+$('#penReset').onclick = () => { pressGamma = 1; store.set('pressGamma', 1); penOnly.checked = false; store.set('penOnly', false); penSetup(); toast('Pen settings reset'); };
+$('#apPenReset').onclick = () => $('#penReset').click();
 penOnly.checked = store.get('penOnly', false);
 // favicon: the beleaf leaf, its sparkles follow the accent colour
 function setFavicon() {
@@ -5638,9 +5736,19 @@ async function recentItems() {
 const recentMenu = () => openProjects(); recentMenu.sub = recentItems;
 const PRESETS = [['Small square', 512, 512], ['Square post', 1080, 1080], ['Illustration', 1600, 1200], ['Widescreen', 1920, 1080], ['Phone wallpaper', 1080, 1920], ['Portrait page', 1240, 1754]];
 function openNew() {
-  $('#presets').replaceChildren(...PRESETS.map(([n, w, h]) => { const b = el('button', { class: 'preset' }, el('b', { text: n }), el('small', { text: `${w} × ${h}` })); b.onclick = () => { $('#nW').value = w; $('#nH').value = h; $$('.preset').forEach(x => x.setAttribute('aria-pressed', x === b)); $('#nW').dispatchEvent(new Event('input')); }; return b; }));
+  $('#presets').replaceChildren(...PRESETS.map(([n, w, h]) => { const b = el('button', { class: 'preset', 'data-w': w, 'data-h': h }, el('b', { text: n }), el('small', { text: `${w} × ${h}` })); b.onclick = () => { $('#nW').value = w; $('#nH').value = h; nPick(b); $('#nW').dispatchEvent(new Event('input')); }; return b; }), $('#nCustom'));
   $('#nW').value = DOC.w; $('#nH').value = DOC.h; $('#newModal').hidden = false; closeMenu(); buildNewPaper();
+  // the current canvas size: its button if it's one of the sizes, otherwise Custom
+  nPick($$('#presets .preset[data-w]').find(b => +b.dataset.w === DOC.w && +b.dataset.h === DOC.h) || $('#nCustom'));
 }
+// one size button is chosen at a time; Custom opens the width and height boxes
+function nPick(b) {
+  const custom = b === $('#nCustom'); $$('#presets .preset').forEach(x => x.setAttribute('aria-pressed', x === b));
+  $('#nSizeRow').hidden = !custom; nCustomInfo();
+}
+function nCustomInfo() { $('#nCustomInfo').textContent = $('#nSizeRow').hidden ? 'Your own size' : `${+$('#nW').value || 512} × ${+$('#nH').value || 512}`; }
+$('#nCustomBtn').onclick = () => { const was = !$('#nSizeRow').hidden; nPick($('#nCustom')); if (!was) setTimeout(() => { $('#nW').focus(); $('#nW').select(); }, 0); };
+['#nW', '#nH'].forEach(q => $(q).addEventListener('input', nCustomInfo));
 $('#nSwap').onclick = () => { const w = $('#nW').value; $('#nW').value = $('#nH').value; $('#nH').value = w; $('#nW').dispatchEvent(new Event('input')); };
 $('#nGo').onclick = () => { newTab(); const w = Math.max(16, Math.min(4096, +$('#nW').value || 512)), h = Math.max(16, Math.min(4096, +$('#nH').value || 512)); newDocument(w, h, $('#nAnim').checked); $('#newModal').hidden = true; buildTabs(); saveNow(true); toast(`New canvas ${w} × ${h}`); };
 // the start screen sits over an empty placeholder canvas until you make or open something
@@ -6104,7 +6212,16 @@ $$('.apsec').forEach(dt => { if (dt.dataset.sec in apOpen) dt.open = apOpen[dt.d
 ['cvdUi', 'colName', 'contrast', 'motion', 'focus'].forEach(k => { $('#a_' + k).onchange = e => { a11y[k] = e.target.checked; applyA11y(); }; });
 $('#aReset').onclick = () => { a11y = Object.assign({}, A11Y_DEF); applyA11y(); buildA11y(); toast('Accessibility settings reset'); };
 $('#cvdBadge button').onclick = () => { a11y.cvdView = 'none'; applyA11y(); if (!$('#themeModal').hidden) buildA11y(); };
-function apTab(t) { $$('#apTabs button').forEach(x => x.setAttribute('aria-selected', x.dataset.t === t)); $('#apTheme').hidden = t !== 'theme'; $('#apA11y').hidden = t !== 'a11y'; $('#themeReset').hidden = t !== 'theme'; $('#aReset').hidden = t !== 'a11y'; if (t === 'a11y') buildA11y(); }
+// Appearance: sections down the side (theme, accessibility, phone layout, pen and tablet, focus timer)
+const AP_TABS = { theme: '#apTheme', a11y: '#apA11y', phone: '#apPhone', pen: '#apPen', pomo: '#apPomo' };
+function apTab(t) {
+  if (!AP_TABS[t]) t = 'theme';
+  $$('#apTabs button').forEach(x => x.setAttribute('aria-selected', x.dataset.t === t)); for (const k in AP_TABS) $(AP_TABS[k]).hidden = k !== t;
+  $('#themeReset').hidden = t !== 'theme'; $('#aReset').hidden = t !== 'a11y'; $('#apPenReset').hidden = t !== 'pen';
+  if (t === 'a11y') buildA11y(); if (typeof apTabHook === 'function') apTabHook(t); $('#themeModal .apbody').scrollTop = 0;
+}
+// arrow keys move between the side tabs
+$('#apTabs').addEventListener('keydown', e => { const k = Object.keys(AP_TABS), i = k.indexOf($('#apTabs [aria-selected="true"]').dataset.t), d = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0; if (!d) return; e.preventDefault(); const n = k[(i + d + k.length) % k.length]; apTab(n); $(`#apTabs [data-t="${n}"]`).focus(); });
 $$('#apTabs button').forEach(b => b.onclick = () => apTab(b.dataset.t));
 function openA11y() { apTab('a11y'); $('#themeModal').hidden = false; }
 function cycleCvd() { const i = CVD.findIndex(x => x[0] === a11y.cvdView); a11y.cvdView = CVD[(i + 1) % CVD.length][0]; applyA11y(); const c = CVD.find(x => x[0] === a11y.cvdView); toast(a11y.cvdView === 'none' ? 'Colour-blind preview off' : `Previewing ${c[1]} (${c[2]})`); }
@@ -6191,7 +6308,7 @@ function tipsOf(b) { const names = new Set(); JSON.stringify(b, (k, v) => { if (
 function brushData(b) { const c = JSON.parse(JSON.stringify(b)); delete c._def; return { brush: c, tips: tipsOf(b) }; }
 async function payloadFor(kind) {
   const base = { app: 'beLEAF', v: 1, kind };
-  if (kind === 'theme') return { ...base, name: theme.name || 'My theme', data: { ui: theme.ui, box: theme.box, accent: theme.accent, stage: theme.stage } };
+  if (kind === 'theme') return { ...base, name: theme.name || 'My theme', data: { ui: theme.ui, box: theme.box, accent: theme.accent, stage: theme.stage, paper: theme.paper, stageC: theme.stageC } };
   if (kind === 'a11y') return { ...base, data: { ...a11y } };
   if (kind === 'keys') return { ...base, data: keyOver };
   if (kind === 'brush') { const b = cur(); return { ...base, name: b.name, data: brushData(b) }; }
@@ -6208,7 +6325,7 @@ async function applyPayload(o) {
   if (o.kind === 'projfile') { await openProjectBytes(o.bytes, o.name); return; }
   if (!o || o.app !== 'beLEAF') throw new Error('That isn’t a beleaf code');
   const d = o.data || {};
-  if (o.kind === 'theme') { const keep = { ...theme }; Object.assign(theme, { ui: d.ui || theme.ui, box: d.box || theme.box, accent: d.accent || theme.accent, stage: d.stage || theme.stage, name: o.name }); applyTheme(); toastUndo(`Theme “${o.name || 'shared theme'}” applied`, () => { Object.keys(theme).forEach(k => delete theme[k]); Object.assign(theme, keep); applyTheme(); }); }
+  if (o.kind === 'theme') { const keep = { ...theme }; Object.assign(theme, { ui: d.ui || theme.ui, box: d.box || theme.box, accent: d.accent || theme.accent, stage: d.stage || theme.stage, paper: d.paper || theme.paper, stageC: d.stageC || theme.stageC, name: o.name }); applyTheme(); toastUndo(`Theme “${o.name || 'shared theme'}” applied`, () => { Object.keys(theme).forEach(k => delete theme[k]); Object.assign(theme, keep); applyTheme(); }); }
   else if (o.kind === 'a11y') { a11y = Object.assign({}, A11Y_DEF, d); applyA11y(); if (!$('#apA11y').hidden) buildA11y(); toast('Accessibility settings loaded'); }
   else if (o.kind === 'keys') { const clean = {}; for (const id in d) if (ACT[id] && Array.isArray(d[id])) clean[id] = d[id].filter(s => typeof s === 'string').slice(0, 6); keyOver = clean; store.set('keys', keyOver); rebuildKeymap(); keysChanged(); toast('Shortcuts loaded'); }
   else if (o.kind === 'brush') { const b = await addBrush(d); toast(`Brush “${b.name}” added to ${b.cat}`); }
@@ -6388,10 +6505,10 @@ function pomoChime(up) {
 let flashT = 0; function pomoFlash() { const c = $('#pomoChip'); if (!c) return; c.classList.add('ding'); clearTimeout(flashT); flashT = setTimeout(() => c.classList.remove('ding'), 4000); }
 function pomoPaint() {
   const left = pomoLeft(), frac = 1 - left / pomoLen(pomo.mode), chip = $('#pomoChip'), active = pomo.running || left < pomoLen(pomo.mode);
-  const txt = mmss(left); if (chip._t === txt + active + pomo.running && $('#pomoModal').hidden) return; chip._t = txt + active + pomo.running; // only touch the page when the shown time changes
+  const txt = mmss(left); if (chip._t === txt + active + pomo.running && !pomoVis()) return; chip._t = txt + active + pomo.running; // only touch the page when the shown time changes
   chip.hidden = !active; chip.dataset.mode = pomo.mode; chip.querySelector('b').textContent = txt; chip.style.setProperty('--pf', Math.max(0, Math.min(1, frac)));
   chip.title = `${POMO_MODES[pomo.mode]}: ${mmss(left)} left${pomo.running ? '' : ' (paused)'}. Click for the focus timer.`; chip.classList.toggle('paused', !pomo.running);
-  if ($('#pomoModal').hidden) return;
+  if (!pomoVis()) return;
   $('#pomoTime').textContent = mmss(left); $('#pomoLabel').textContent = POMO_MODES[pomo.mode] + (pomo.running ? '' : left < pomoLen(pomo.mode) ? ' · paused' : '');
   $('#pomoRing').style.strokeDashoffset = String(100 - Math.max(0, Math.min(1, frac)) * 100);
   $('#pomoGo').textContent = pomo.running ? 'Pause' : left < pomoLen(pomo.mode) ? 'Resume' : 'Start';
@@ -6399,8 +6516,13 @@ function pomoPaint() {
   const dots = Math.max(pomoCfg.every, pomo.done); $('#pomoDots').replaceChildren(...Array.from({ length: Math.min(dots, 12) }, (_, i) => el('i', { class: i < pomo.done ? 'on' : '' })));
   $('#pomoDone').textContent = pomo.done === 1 ? '1 focus session today' : `${pomo.done} focus sessions today`;
 }
+// the timer lives in one block that moves between its own window and Appearance › Focus timer
+const pomoBody = el('div', { id: 'pomoBody', class: 'dockbody' }); { const card = $('#pomoModal .card'); [...card.children].filter(c => c.tagName !== 'H2' && !c.classList.contains('actions')).forEach(c => pomoBody.append(c)); card.insertBefore(pomoBody, card.querySelector('.actions')); }
+function pomoVis() { return !$('#pomoModal').hidden || (!$('#themeModal').hidden && !$('#apPomo').hidden); }
 function openPomo() {
-  closeMenu(); $('#pomoModal').hidden = false;
+  closeMenu(); const card = $('#pomoModal .card'); if (pomoBody.parentNode !== card) card.insertBefore(pomoBody, card.querySelector('.actions')); $('#pomoModal').hidden = false; pomoFill();
+}
+function pomoFill() {
   [['pFocus', 'focus'], ['pShort', 'short'], ['pLong', 'long'], ['pEvery', 'every']].forEach(([id, k]) => $('#' + id).value = pomoCfg[k]);
   $('#pAuto').checked = pomoCfg.autoNext; $('#pSound').checked = pomoCfg.sound; pomoPaint();
 }
@@ -6415,7 +6537,7 @@ $$('#pomoModes button').forEach(b => b.onclick = () => pomoSet(b.dataset.m, fals
 $('#pAuto').onchange = e => { pomoCfg.autoNext = e.target.checked; store.set('pomoCfg', pomoCfg); };
 $('#pSound').onchange = e => { pomoCfg.sound = e.target.checked; store.set('pomoCfg', pomoCfg); if (e.target.checked) pomoChime(true); };
 $('#pomoChip').onclick = openPomo;
-setInterval(() => { if (pomo.running && pomoLeft() <= 0) pomoFinish(false); if (pomo.running || !$('#pomoModal').hidden) pomoPaint(); }, 500);
+setInterval(() => { if (pomo.running && pomoLeft() <= 0) pomoFinish(false); if (pomo.running || pomoVis()) pomoPaint(); }, 500);
 pomoPaint();
 
 /* ================= canvas colour, floating windows, screen colour picker, size preview ================= */
@@ -6470,7 +6592,7 @@ const cbgCol = () => cbgIsSheet() ? DOC.sheet.boxCol : (DOC.paper ? DOC.paper.co
 const cbgOn = () => cbgIsSheet() ? !DOC.sheet.white : !!(DOC.paper && DOC.paper.on);
 function cbgSet(hex) {
   hex = hex.toUpperCase();
-  if (cbgIsSheet()) { const s = DOC.sheet; s.boxCol = hex; s.bg = gutterFor(hex); s.white = false; theme.box = hex; store.set('theme', theme); refreshStage(); queueThumbs(150); }
+  if (cbgIsSheet()) { const s = DOC.sheet; s.boxCol = hex; s.bg = gutterFor(hex); s.white = false; refreshStage(); queueThumbs(150); }
   else { DOC.paper = Object.assign(DOC.paper || {}, { col: hex, on: true }); DOC.paperLast = hex; }
   ver++; dirty(false); cbgSync();
 }
@@ -6491,7 +6613,7 @@ function openColorPop(T) { if (!$('#cbgPop').hidden && popT === T) { cbgPop.clos
 function popSync() {
   const T = popT, col = T.col(), on = T.on();
   $('#cbgTitle').textContent = T.title(); $('#cbgOnLabel').textContent = T.onLabel(); $('#cbgHint').textContent = T.hint();
-  $('#cbgOn2').checked = on; $('#cbgNow').style.background = col;
+  $('#cbgOnRow').hidden = !!T.noOn; $('#cbgOn2').checked = on; $('#cbgNow').style.background = col;
   if (document.activeElement !== $('#cbgHex')) $('#cbgHex').value = col;
   if (hsvToHex(cbgModel.h, cbgModel.s, cbgModel.v) !== col) Object.assign(cbgModel, hexToHsv(col));
   if (!$('#cbgPop').hidden) cbgWheel.draw();
@@ -6505,12 +6627,12 @@ function cbgSync() {
 }
 $('#cbgSw').onclick = () => openColorPop(DOC_TARGET);
 cbgPop.onopen = () => { popSync(); cbgSync(); requestAnimationFrame(() => cbgWheel.resize()); };
-cbgPop.onclose = () => { cbgSync(); if (typeof npSync === 'function') npSync(); };
+cbgPop.onclose = () => { cbgSync(); if (typeof npSync === 'function') npSync(); if (typeof shColSync === 'function') shColSync(); };
 // the colour pop-up closes when you click or tap anywhere outside it (changes are already applied), or with Done
 $('#cbgDone').onclick = () => cbgPop.close();
 document.addEventListener('pointerdown', e => {
   const w = $('#cbgPop'); if (w.hidden || w.classList.contains('pickhide') || view.classList.contains('picking')) return;
-  if (w.contains(e.target) || e.target.closest('#cbgSw, #npSw, #shBoxSw, [data-colorpop]')) return; // its own swatch buttons toggle it themselves
+  if (w.contains(e.target) || e.target.closest('#cbgSw, #npSw, #shBoxSw, #shBgSw, [data-colorpop]')) return; // its own swatch buttons toggle it themselves
   cbgPop.close();
 }, true);
 $('#cbgOn').onchange = e => cbgSetOn(e.target.checked);
@@ -6553,22 +6675,39 @@ $$('#sizeBg button').forEach(b => b.onclick = () => { $$('#sizeBg button').forEa
 { const v = store.get('sizeBg', 'dark'); $('#sizeList').dataset.bg = v; $$('#sizeBg button').forEach(x => x.setAttribute('aria-checked', x.dataset.bg === v)); }
 
 /* ---- canvas colour for new canvases: pick it before you start (no surprise white flash) ---- */
-let newPaper = Object.assign({ on: true, col: '#FFFFFF' }, store.get('newPaper', {}));
+// starts from your default (Appearance › Canvas › Canvas colour) each time; a colour picked here is just for this canvas
+let newPaper = { on: store.get('newPaper', {}).on !== false, col: theme.paper || '#FFFFFF' };
 const NEW_TARGET = { key: 'new', title: () => 'New canvas color', col: () => newPaper.col, on: () => newPaper.on, anchor: () => $('#npSw'),
-  set: h => { newPaper.col = h.toUpperCase(); newPaper.on = true; store.set('newPaper', newPaper); npSync(); },
-  setOn: on => { newPaper.on = on; store.set('newPaper', newPaper); npSync(); },
-  onLabel: () => 'Start with this colour (off = see-through)', hint: () => 'You can change it any time at the bottom of the Layers panel.' };
+  set: h => { newPaper.col = h.toUpperCase(); newPaper.on = true; store.set('newPaper', { on: true }); npSync(); },
+  setOn: on => { newPaper.on = on; store.set('newPaper', { on }); npSync(); },
+  onLabel: () => 'Start with this colour (off = see-through)', hint: () => 'Just for this canvas. Your default is in beleaf › Appearance › Canvas. You can change it later at the bottom of the Layers panel.' };
 function npSync() {
   const sw = $('#npSw'); sw.style.background = newPaper.col; sw.classList.toggle('off', !newPaper.on); sw.setAttribute('aria-pressed', !$('#cbgPop').hidden && popT === NEW_TARGET);
   $('#npOn').checked = newPaper.on; $('#npHex').textContent = newPaper.on ? newPaper.col : 'See-through';
   if (popT === NEW_TARGET) popSync();
   if (typeof nPreview === 'function' && !$('#newModal').hidden) nPreview();
 }
-function buildNewPaper() { npSync(); requestAnimationFrame(nPreview); }
+function buildNewPaper() { newPaper.col = theme.paper || '#FFFFFF'; npSync(); requestAnimationFrame(nPreview); }
 $('#npSw').onclick = () => openColorPop(NEW_TARGET);
 $('#npOn').onchange = e => NEW_TARGET.setOn(e.target.checked);
 // the New canvas window closing also closes its colour window
 new MutationObserver(() => { if ($('#newModal').hidden && popT === NEW_TARGET && !$('#cbgPop').hidden) { cbgPop.close(); popT = DOC_TARGET; } }).observe($('#newModal'), { attributes: true, attributeFilter: ['hidden'] });
+
+/* ---- emote sheet window: box and background colours use the same colour wheel window ---- */
+const shColTarget = (id, title, hint) => ({ key: 'sh-' + id, noOn: true, title: () => title, col: () => ($('#' + id).value || '#FFFFFF').toUpperCase(), on: () => true, setOn() { }, onLabel: () => '', hint: () => hint,
+  anchor: () => $(id === 'shBoxCol' ? '#shBoxSw' : '#shBgSw'), set: h => { $('#' + id).value = h.toUpperCase(); $('#' + id).dispatchEvent(new Event('input')); shColSync(); } });
+const SH_BOX_T = shColTarget('shBoxCol', 'Emote box colour', 'Just for this sheet. New sheets start with your default from beleaf › Appearance › Emote sheet canvas. The background follows it.');
+const SH_BG_T = shColTarget('shBg', 'Sheet background', 'The colour between and around the boxes on this sheet.');
+function shColSync() {
+  [['shBoxCol', '#shBoxSw', '#shBoxHex', SH_BOX_T], ['shBg', '#shBgSw', '#shBgHex', SH_BG_T]].forEach(([id, sw, hx, T]) => { const v = ($('#' + id).value || '#FFFFFF').toUpperCase(); $(sw).style.background = v; $(hx).textContent = v; $(sw).setAttribute('aria-pressed', !$('#cbgPop').hidden && popT === T); });
+  if (popT === SH_BOX_T || popT === SH_BG_T) popSync();
+}
+$('#shBoxSw').onclick = () => { openColorPop(SH_BOX_T); shColSync(); };
+$('#shBgSw').onclick = () => { openColorPop(SH_BG_T); shColSync(); };
+['#shBoxCol', '#shBg'].forEach(s => $(s).addEventListener('input', () => shColSync()));
+new MutationObserver(() => { if ($('#sheetModal').hidden) { if (popT === SH_BOX_T || popT === SH_BG_T) { if (!$('#cbgPop').hidden) cbgPop.close(); popT = DOC_TARGET; } } else shColSync(); }).observe($('#sheetModal'), { attributes: true, attributeFilter: ['hidden'] });
+// theme colours: the colour window closes with the Appearance window
+new MutationObserver(() => { if ($('#themeModal').hidden && String(popT.key).startsWith('th-')) { if (!$('#cbgPop').hidden) cbgPop.close(); popT = DOC_TARGET; } }).observe($('#themeModal'), { attributes: true, attributeFilter: ['hidden'] });
 
 /* ---- start screen ---- */
 $('#ssCanvas').onclick = () => openNew();
@@ -6841,7 +6980,7 @@ window.fitWheel = fitWheel;
 
 /* ================= beleaf menu (the logo): customise, settings, about ================= */
 MENU_ICONS.app = '<path d="M5.2 19.4C3.6 12.6 7.8 5.6 18.8 4.2 19.8 14.2 13.4 20.6 5.2 19.4Z"/><path d="M3.4 21.2L7 17.6C10.4 14.2 13.6 10.2 16.4 6.4"/>';
-MENUS.app = [['About beleaf…', '', () => openAbout()], '-',
+MENUS.app = [['About beleaf…', '', () => openAbout()], ['Check for updates…', '', () => openUpdates()], '-',
   ['Preferences…', '@app.prefs', () => openPrefs()], ['Shortcut settings…', '@app.keys', () => openKeys()], ['Command bar settings…', '', () => openCBSettings()], ['Quick Access settings…', '', () => openQASettings()], '-',
   '#Customise',
   ['Appearance (themes and colours)…', '', () => { apTab('theme'); $('#themeModal').hidden = false; }], ['Accessibility…', '@app.a11y', openA11y],
@@ -6859,11 +6998,59 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.02-1508' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
-      el('div', { class: 'actions' }, el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.03-0026' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
+
+/* ================= updates: is there a newer beleaf online? get it with one button ================= */
+const BELEAF_BUILD = '2026.11.03-0026';
+const updBase = () => location.href.split('#')[0].split('?')[0];
+let updLatest = null, updAt = 0, updToasted = '';
+async function checkUpdate() {
+  // asks the website for its newest page directly (past the offline copy) and reads its version
+  const r = await fetch(updBase() + '?fresh=' + Date.now(), { cache: 'no-store' }); if (!r.ok) throw new Error('HTTP ' + r.status);
+  const m = (await r.text()).match(new RegExp('BELEAF' + "_BUILD = '([0-9.\\-]+)'")); updAt = Date.now();
+  updLatest = m ? m[1] : null; return updLatest && updLatest > BELEAF_BUILD ? updLatest : null;
+}
+async function applyUpdate(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Updating…'; }
+  try { await saveNow(true); } catch { }
+  try { const ok = await fetch(updBase() + '?fresh=' + Date.now(), { cache: 'no-store' }); if (!ok.ok) throw 0; }
+  catch { toast('Can’t reach the internet right now. beleaf will update the next time you’re online.'); if (btn) { btn.disabled = false; btn.textContent = 'Try again'; } return; }
+  // throw away the offline copy so the reload gets the newest version (your drawings and settings are kept: they're stored separately)
+  try { const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration(); if (reg) await reg.update().catch(() => { }); } catch { }
+  try { const ks = await caches.keys(); await Promise.all(ks.filter(k => k.startsWith('beleaf-') && !k.endsWith('-fonts')).map(k => caches.delete(k))); } catch { }
+  try { await fetch(updBase(), { cache: 'reload' }); } catch { }
+  location.reload();
+}
+function openUpdates() {
+  closeMenu(); let m = $('#updModal');
+  if (!m) { m = el('div', { class: 'modal', id: 'updModal', hidden: '' }); document.body.append(m); m.addEventListener('click', e => { if (e.target === m) m.hidden = true; }); }
+  const st = el('p', { class: 'upd-status', text: 'Checking for a newer version…' }), latest = el('b', { text: '…' });
+  const go = el('button', { class: 'btn primary', text: 'Update now', hidden: '', onclick: () => applyUpdate(go) });
+  const again = el('button', { class: 'btn', text: 'Check again', onclick: () => run() });
+  const fresh = el('button', { class: 'btn', text: 'Reload fresh copy', title: 'Like a hard refresh: reloads beleaf straight from the website', onclick: () => applyUpdate(fresh) });
+  m.replaceChildren(el('div', { class: 'card upd-card', role: 'dialog', 'aria-label': 'Updates' }, el('h2', { text: 'Updates' }),
+    el('div', {}, el('div', { class: 'upd-row' }, el('span', { text: 'This version' }), el('b', { text: BELEAF_BUILD })), el('div', { class: 'upd-row' }, el('span', { text: 'Newest online' }), latest)), st,
+    el('p', { class: 'note', text: 'Updating reloads beleaf. Your drawings, projects and settings are saved first and stay on this device. “Reload fresh copy” does the same as a hard refresh, even when you’re up to date.' }),
+    el('div', { class: 'actions' }, fresh, again, go, el('button', { class: 'btn', text: 'Close', onclick: () => m.hidden = true }))));
+  m.hidden = false;
+  async function run() {
+    st.textContent = 'Checking for a newer version…'; st.classList.remove('new'); go.hidden = true; latest.textContent = '…';
+    try { const n = await checkUpdate(); latest.textContent = updLatest || 'unknown'; if (n) { st.textContent = 'A newer beleaf is ready.'; st.classList.add('new'); go.hidden = false; go.focus(); } else st.textContent = 'You’re up to date.'; }
+    catch { latest.textContent = 'can’t check'; st.textContent = 'Can’t reach the internet right now, so beleaf can’t check. Try again when you’re online.'; }
+  }
+  run();
+}
+// a quiet look for updates shortly after opening, and when you come back to beleaf after a while
+async function quietUpdateCheck() {
+  if (!navigator.onLine || Date.now() - updAt < 30 * 60e3) return;
+  try { const n = await checkUpdate(); if (n && n !== updToasted) { updToasted = n; toast('A newer beleaf is ready.'); const t = $('#toast'); if (t) { t.append(' ', el('button', { class: 'toast-undo', text: 'Update', onclick: () => { t.hidden = true; openUpdates(); } })); clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 10000); } } } catch { }
+}
+setTimeout(quietUpdateCheck, 20000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) quietUpdateCheck(); });
 
 /* ================= Preferences: categories on the left, settings on the right (like Clip Studio) ================= */
 const savePref = () => store.set('prefs', PREF);
@@ -6882,7 +7069,7 @@ function openPrefs(cat) {
     'Pen and tablet': () => [grp('Pen', link('Pen pressure and tablet', 'Pressure curve, Windows Ink, tablet buttons and a pen test pad.', 'Open…', openPen),
         chk('Low-latency drawing', 'Draws straight to the screen for a snappier pen. Takes effect after reloading beleaf.', () => store.get('lowLatency', false), v => { store.set('lowLatency', v); const c = $('#lowLatCk'); if (c) c.checked = v; toast('Reload beleaf to apply'); }))],
     'Shortcuts': () => [grp('Keyboard', link('Shortcut settings', 'Primary and sub keys for every tool and command, shared tool keys.', 'Open…', () => openKeys()))],
-    'Interface': () => [grp('Look', link('Appearance', 'App theme, accent colour, emote box colour.', 'Open…', () => { apTab('theme'); $('#themeModal').hidden = false; }), link('Accessibility', 'Reading fonts, text and icon size, colour-blind preview, contrast, motion.', 'Open…', openA11y)),
+    'Interface': () => [grp('Look', link('Appearance', 'App colours, canvas and emote sheet colours, phone layout, pen and tablet, focus timer.', 'Open…', () => { apTab('theme'); $('#themeModal').hidden = false; }), link('Accessibility', 'Reading fonts, text and icon size, colour-blind preview, contrast, motion.', 'Open…', openA11y)),
       grp('Bars and panels', chk('Show the command bar', 'A row of buttons above the canvas.', () => cbShown(), v => { if (cbShown() !== v) toggleCB(); }), link('Command bar buttons', '', 'Customise…', () => openCBSettings()),
         chk('Show Quick Access', 'A small floating list of your favourite commands.', () => qaShown(), v => { if (qaShown() !== v) toggleQA(); }), link('Quick Access commands', '', 'Customise…', () => openQASettings()),
         link('Layer buttons', 'What sits in the bars above and below the layer list.', 'Customise…', () => openLB()), link('Phone layout', 'How panels appear on phones, upright and sideways.', 'Choose…', () => openMobileLayout()))],
@@ -7073,16 +7260,25 @@ function mPic(orient, k) {
   if (!P && k === 'rails') ex = `<rect x="84" y="14" width="9" height="34" rx="3" fill="${pan}"/><circle cx="22" cy="14" r="6" fill="none" stroke="${acc}" stroke-width="2.5"/><rect x="2" y="2" width="10" height="56" fill="${pan}" opacity=".6"/>`;
   return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true">${scr}${paper}${ex}</svg>`;
 }
+// the layout choices, built into its own window or into Appearance › Phone layout
+function mlayBuild(host, again) {
+  const sec = (orient, title, sub) => el('div', { class: 'ml-sec' }, el('h3', { text: title }), el('p', { class: 'note', text: sub }), el('div', { class: 'ml-opts', role: 'radiogroup', 'aria-label': title }, ...MOPTS[orient].map(([k, name, desc]) => {
+    const b = el('button', { class: 'ml-opt', role: 'radio', 'aria-checked': MLAY[orient] === k, onclick: () => { MLAY[orient] = k; store.set('mobileLayout', MLAY); applyLayout(true); placeMTabs(); buildRails(); again(); toast(`${orient === 'portrait' ? 'Upright' : 'Sideways'}: ${name}`); } });
+    const pic = el('span', { class: 'ml-pic' }); pic.innerHTML = mPic(orient, k); b.append(pic, el('b', { text: name }), el('small', { text: desc })); return b; })));
+  return [el('p', { class: 'note', text: 'How panels appear on a phone. You can pick one layout for holding it upright and another for sideways; beleaf switches when you turn it.' }),
+    sec('portrait', 'Upright', 'Phone held normally'), sec('landscape', 'Sideways', 'Phone turned on its side')];
+}
 function openMobileLayout() {
   closeMenu(); let m = $('#mlayModal'); if (!m) { m = el('div', { class: 'modal', id: 'mlayModal', hidden: '' }); document.body.append(m); m.addEventListener('click', e => { if (e.target === m) m.hidden = true; }); }
-  const sec = (orient, title, sub) => el('div', { class: 'ml-sec' }, el('h3', { text: title }), el('p', { class: 'note', text: sub }), el('div', { class: 'ml-opts', role: 'radiogroup', 'aria-label': title }, ...MOPTS[orient].map(([k, name, desc]) => {
-    const b = el('button', { class: 'ml-opt', role: 'radio', 'aria-checked': MLAY[orient] === k, onclick: () => { MLAY[orient] = k; store.set('mobileLayout', MLAY); applyLayout(true); placeMTabs(); buildRails(); openMobileLayout(); toast(`${orient === 'portrait' ? 'Upright' : 'Sideways'}: ${name}`); } });
-    const pic = el('span', { class: 'ml-pic' }); pic.innerHTML = mPic(orient, k); b.append(pic, el('b', { text: name }), el('small', { text: desc })); return b; })));
-  m.replaceChildren(el('div', { class: 'card ml-card', role: 'dialog', 'aria-label': 'Phone layout' }, el('h2', { text: 'Phone layout' }),
-    el('p', { class: 'note', text: 'How panels appear on a phone. You can pick one layout for holding it upright and another for sideways; beleaf switches when you turn it.' }),
-    sec('portrait', 'Upright', 'Phone held normally'), sec('landscape', 'Sideways', 'Phone turned on its side'),
+  m.replaceChildren(el('div', { class: 'card ml-card', role: 'dialog', 'aria-label': 'Phone layout' }, el('h2', { text: 'Phone layout' }), ...mlayBuild(m, openMobileLayout),
     el('div', { class: 'actions' }, el('button', { class: 'btn primary', text: 'Done', onclick: () => m.hidden = true }))));
   m.hidden = false;
+}
+// Appearance side tabs that show settings from elsewhere: phone layout, pen and tablet, focus timer
+function apTabHook(t) {
+  if (t === 'phone') { const h = $('#apPhone'), go = () => h.replaceChildren(el('h3', { class: 'aphead', text: 'Phone layout' }), ...mlayBuild(h, go)); go(); }
+  if (t === 'pen') { $('#apPen').replaceChildren(el('h3', { class: 'aphead', text: 'Pen and tablet' }), penBody); penSetup(); }
+  if (t === 'pomo') { $('#apPomo').replaceChildren(el('h3', { class: 'aphead', text: 'Focus timer' }), pomoBody); pomoFill(); }
 }
 placeMTabs(); buildRails();
 
@@ -7146,7 +7342,7 @@ applyTheme(); themeReady = true; newDocument(512, 512, false); setPlaceholder(tr
   }
   await loadBrushLib(); buildSettings();
 })();
-window.__nib = { get brush() { return brush; }, get layers() { return layers; }, get DOC() { return DOC; }, get tabs() { return tabs; }, projectFileBlob, openProjectBytes, mixDabPaint, wetBlend, setMixMode: m => { mixMode = m; }, PERF, redraw: () => dirty(false), openPomo, get pomo() { return pomo; }, openShare, openImport, decodeFile, decodeCode, makeCard, payloadFor, applyPayload, readStrip, pngReadText, get BR() { return BRUSHES; }, openA11y, applyA11y, colorName, get a11y() { return a11y; }, hidLayout, hidRead, saveNow, get saveBusy() { return saveBusy; }, keymapGet: k => keymap.get(k), toScreen, boxAt, boxRect, focusBox, get sel() { return sel; }, get xform() { return xform; }, keymap: () => keymap, runAction, setSelMode, applyXform,  encodeGIF, encodeAPNG, renderFrames, anim, DOC, BRUSHES, get eng() { return eng; }, setBrush: n => { brush = BRUSHES.find(b => b.name === n); setTool('brush'); buildBrushUI(); }, get layers() { return layers; }, set active(v) { active = v; buildLayers(); } };
+window.__nib = { tipOf: (s, h) => tipOf(s, h), get brush() { return brush; }, get layers() { return layers; }, get DOC() { return DOC; }, get tabs() { return tabs; }, projectFileBlob, openProjectBytes, mixDabPaint, wetBlend, setMixMode: m => { mixMode = m; }, PERF, redraw: () => dirty(false), openPomo, get pomo() { return pomo; }, openShare, openImport, decodeFile, decodeCode, makeCard, payloadFor, applyPayload, readStrip, pngReadText, get BR() { return BRUSHES; }, openA11y, applyA11y, colorName, get a11y() { return a11y; }, hidLayout, hidRead, saveNow, get saveBusy() { return saveBusy; }, keymapGet: k => keymap.get(k), toScreen, boxAt, boxRect, focusBox, get sel() { return sel; }, get xform() { return xform; }, keymap: () => keymap, runAction, setSelMode, applyXform,  encodeGIF, encodeAPNG, renderFrames, anim, DOC, BRUSHES, get eng() { return eng; }, setBrush: n => { brush = BRUSHES.find(b => b.name === n); setTool('brush'); buildBrushUI(); }, get layers() { return layers; }, set active(v) { active = v; buildLayers(); } };
 })();
 
 </script>
