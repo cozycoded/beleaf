@@ -9,7 +9,7 @@
 //! colour × main × dual × paper texture into the canvas.
 #![cfg(target_arch = "wasm32")]
 
-use brush_core::{Brush, Dab, Dual, Jitter, Stroke};
+use brush_core::{Brush, ColorJitter, Dab, Dual, Jitter, Spray, Stroke, TiltSize};
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 use wgpu::util::DeviceExt;
@@ -61,6 +61,32 @@ struct TexP {
     density: f32,
     scale: f32,
 }
+#[derive(Deserialize, Default)]
+#[serde(default)]
+struct SprayP {
+    on: bool,
+    particle: f32,
+    count: f32,
+    #[serde(rename = "randomAngle")]
+    random_angle: bool,
+}
+#[derive(Deserialize, Default)]
+#[serde(default)]
+struct TiltP {
+    on: bool,
+    min: f32,
+    max: f32,
+    curve: Vec<[f32; 2]>,
+}
+#[derive(Deserialize, Default)]
+#[serde(default)]
+struct ColJ {
+    hue: f32,
+    sat: f32,
+    val: f32,
+    #[serde(rename = "perStroke")]
+    per_stroke: bool,
+}
 #[derive(Deserialize)]
 #[serde(default)]
 struct Params {
@@ -81,10 +107,21 @@ struct Params {
     jitter: JitterP,
     dual: DualP,
     tex: TexP,
+    spray: SprayP,
+    #[serde(rename = "tiltDyn")]
+    tilt_dyn: TiltP,
+    #[serde(rename = "tiltOp")]
+    tilt_op: TiltP,
+    #[serde(rename = "tiltRound")]
+    tilt_round: f32,
+    #[serde(rename = "angleTilt")]
+    angle_tilt: bool,
+    #[serde(rename = "colorJitter")]
+    color_jitter: ColJ,
 }
 impl Default for Params {
     fn default() -> Self {
-        Params { size: 10.0, spacing: 8.0, flow: 100.0, angle: 0.0, follow: false, stab: 0.0, roundness: 100.0, build: false, aa: 2.0, size_dyn: Dyn::default(), op_dyn: Dyn::default(), taper: Taper::default(), jitter: JitterP::default(), dual: DualP::default(), tex: TexP::default() }
+        Params { size: 10.0, spacing: 8.0, flow: 100.0, angle: 0.0, follow: false, stab: 0.0, roundness: 100.0, build: false, aa: 2.0, size_dyn: Dyn::default(), op_dyn: Dyn::default(), taper: Taper::default(), jitter: JitterP::default(), dual: DualP::default(), tex: TexP::default(), spray: SprayP::default(), tilt_dyn: TiltP::default(), tilt_op: TiltP::default(), tilt_round: 0.0, angle_tilt: false, color_jitter: ColJ::default() }
     }
 }
 impl Params {
@@ -111,6 +148,15 @@ impl Params {
             } else {
                 None
             },
+            spray: if self.spray.on { Some(Spray { particle: self.spray.particle, count: self.spray.count.round().max(1.0) as u32, random_angle: self.spray.random_angle }) } else { None },
+            tilt_size: if self.tilt_dyn.on { Some(TiltSize { min: self.tilt_dyn.min, max: self.tilt_dyn.max, curve: self.tilt_dyn.curve.clone() }) } else { None },
+            tilt_op: if self.tilt_op.on { Some(self.tilt_op.min.clamp(0.0, 100.0)) } else { None },
+            tilt_round: self.tilt_round,
+            angle_tilt: self.angle_tilt,
+            color_jitter: {
+                let j = &self.color_jitter;
+                if j.hue != 0.0 || j.sat != 0.0 || j.val != 0.0 { Some(ColorJitter { hue: j.hue, sat: j.sat, val: j.val, per_stroke: j.per_stroke }) } else { None }
+            },
         }
     }
 }
@@ -122,9 +168,9 @@ struct U { canvas: vec2<f32>, aspect: f32, binary: f32, };
 @group(0) @binding(0) var<uniform> u: U;
 @group(0) @binding(1) var tip: texture_2d<f32>;
 @group(0) @binding(2) var smp: sampler;
-struct VO { @builtin(position) pos: vec4<f32>, @location(0) uv: vec2<f32>, @location(1) a: f32, };
+struct VO { @builtin(position) pos: vec4<f32>, @location(0) uv: vec2<f32>, @location(1) a: f32, @location(2) col: vec3<f32>, };
 @vertex
-fn vs(@builtin(vertex_index) vi: u32, @location(0) p: vec2<f32>, @location(1) size: f32, @location(2) ang: f32, @location(3) alpha: f32, @location(4) rnd: f32) -> VO {
+fn vs(@builtin(vertex_index) vi: u32, @location(0) p: vec2<f32>, @location(1) size: f32, @location(2) ang: f32, @location(3) alpha: f32, @location(4) rnd: f32, @location(5) col: vec3<f32>) -> VO {
   var c = array<vec2<f32>, 4>(vec2<f32>(-0.5, -0.5), vec2<f32>(0.5, -0.5), vec2<f32>(-0.5, 0.5), vec2<f32>(0.5, 0.5));
   let q = c[vi];
   var sw = size;
@@ -140,14 +186,24 @@ fn vs(@builtin(vertex_index) vi: u32, @location(0) p: vec2<f32>, @location(1) si
   o.pos = vec4<f32>(px.x / u.canvas.x * 2.0 - 1.0, 1.0 - px.y / u.canvas.y * 2.0, 0.0, 1.0);
   o.uv = q + vec2<f32>(0.5, 0.5);
   o.a = alpha;
+  o.col = col;
   return o;
+}
+fn cover(i: VO) -> f32 {
+  var t = textureSample(tip, smp, i.uv).r;
+  if (u.binary > 0.5) { t = step(0.5, t); }
+  return t * i.a;
 }
 @fragment
 fn fs(i: VO) -> @location(0) vec4<f32> {
-  var t = textureSample(tip, smp, i.uv).r;
-  if (u.binary > 0.5) { t = step(0.5, t); }
-  let v = t * i.a;
+  let v = cover(i);
   return vec4<f32>(v, v, v, v);
+}
+// per-dab colour (colour jitter): premultiplied colour laid over, un-premultiplied when composed
+@fragment
+fn fs_col(i: VO) -> @location(0) vec4<f32> {
+  let v = cover(i);
+  return vec4<f32>(i.col * v, v);
 }
 "#;
 
@@ -159,6 +215,7 @@ struct U { color: vec4<f32>, tex: vec4<f32>, };
 @group(0) @binding(3) var paper: texture_2d<f32>;
 @group(0) @binding(4) var smp: sampler;
 @group(0) @binding(5) var rep: sampler;
+@group(0) @binding(6) var cols: texture_2d<f32>;
 struct VO { @builtin(position) pos: vec4<f32>, @location(0) uv: vec2<f32>, };
 @vertex
 fn vs(@builtin(vertex_index) vi: u32) -> VO {
@@ -175,7 +232,13 @@ fn fs(i: VO) -> @location(0) vec4<f32> {
   // paper texture: tex.x = on, tex.y = density, tex.z = scale
   let g = textureSample(paper, rep, i.pos.xy / (256.0 * max(0.25, u.tex.z)));
   a = a * mix(1.0, 1.0 - u.tex.y * (1.0 - g.r), u.tex.x);
-  return vec4<f32>(u.color.rgb * a, a);
+  var rgb = u.color.rgb;
+  // tex.w = 1: every dab has its own colour, kept in `cols`
+  if (u.tex.w > 0.5) {
+    let c = textureSample(cols, smp, i.uv);
+    if (c.a > 0.002) { rgb = c.rgb / c.a; }
+  }
+  return vec4<f32>(rgb * a, a);
 }
 "#;
 
@@ -187,12 +250,15 @@ struct Inst {
     angle: f32,
     alpha: f32,
     round: f32,
+    col: [f32; 3],
 }
 
 const MAX_BLEND: wgpu::BlendState = wgpu::BlendState {
     color: wgpu::BlendComponent { src_factor: wgpu::BlendFactor::One, dst_factor: wgpu::BlendFactor::One, operation: wgpu::BlendOperation::Max },
     alpha: wgpu::BlendComponent { src_factor: wgpu::BlendFactor::One, dst_factor: wgpu::BlendFactor::One, operation: wgpu::BlendOperation::Max },
 };
+// colour layer: premultiplied colour over what's there
+const COL_BLEND: wgpu::BlendState = wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING;
 // build-up: each dab adds on top (like the dual tip in beleaf)
 const OVER_BLEND: wgpu::BlendState = wgpu::BlendState {
     color: wgpu::BlendComponent { src_factor: wgpu::BlendFactor::One, dst_factor: wgpu::BlendFactor::OneMinusSrc, operation: wgpu::BlendOperation::Add },
@@ -254,13 +320,16 @@ fn make_tip(device: &wgpu::Device, queue: &wgpu::Queue, w: u32, h: u32, src: &[u
 }
 
 fn r8(device: &wgpu::Device, w: u32, h: u32, usage: wgpu::TextureUsages) -> wgpu::Texture {
+    tex2d(device, w, h, usage, wgpu::TextureFormat::R8Unorm)
+}
+fn tex2d(device: &wgpu::Device, w: u32, h: u32, usage: wgpu::TextureUsages, format: wgpu::TextureFormat) -> wgpu::Texture {
     device.create_texture(&wgpu::TextureDescriptor {
         label: None,
         size: wgpu::Extent3d { width: w, height: h, depth_or_array_layers: 1 },
         mip_level_count: 1,
         sample_count: 1,
         dimension: wgpu::TextureDimension::D2,
-        format: wgpu::TextureFormat::R8Unorm,
+        format,
         usage,
         view_formats: &[],
     })
@@ -288,9 +357,12 @@ pub struct GpuEngine {
     comp_layout: wgpu::BindGroupLayout,
     pipe_max: wgpu::RenderPipeline,
     pipe_over: wgpu::RenderPipeline,
+    pipe_col: wgpu::RenderPipeline,
     comp_pipe: wgpu::RenderPipeline,
     mask_main: wgpu::Texture,
     mask_dual: wgpu::Texture,
+    cols: wgpu::Texture,
+    per_dab_col: bool,
     paper: wgpu::Texture,
     tips: [Option<TipTex>; 2],
     ub_dab: [wgpu::Buffer; 2],
@@ -347,16 +419,16 @@ impl GpuEngine {
         let entry_ub = wgpu::BindGroupLayoutEntry { binding: 0, visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT, ty: wgpu::BindingType::Buffer { ty: wgpu::BufferBindingType::Uniform, has_dynamic_offset: false, min_binding_size: None }, count: None };
         let entry_smp = |b: u32| wgpu::BindGroupLayoutEntry { binding: b, visibility: wgpu::ShaderStages::FRAGMENT, ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering), count: None };
         let dab_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor { label: None, entries: &[entry_ub, entry_tex(1), entry_smp(2)] });
-        let comp_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor { label: None, entries: &[entry_ub, entry_tex(1), entry_tex(2), entry_tex(3), entry_smp(4), entry_smp(5)] });
+        let comp_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor { label: None, entries: &[entry_ub, entry_tex(1), entry_tex(2), entry_tex(3), entry_smp(4), entry_smp(5), entry_tex(6)] });
         let dab_mod = device.create_shader_module(wgpu::ShaderModuleDescriptor { label: Some("dab"), source: wgpu::ShaderSource::Wgsl(DAB_WGSL.into()) });
         let comp_mod = device.create_shader_module(wgpu::ShaderModuleDescriptor { label: Some("comp"), source: wgpu::ShaderSource::Wgsl(COMP_WGSL.into()) });
-        let mk = |layout: &wgpu::BindGroupLayout, module: &wgpu::ShaderModule, buffers: &[wgpu::VertexBufferLayout], fmt: wgpu::TextureFormat, blend: wgpu::BlendState| {
+        let mk = |layout: &wgpu::BindGroupLayout, module: &wgpu::ShaderModule, fs: &str, buffers: &[wgpu::VertexBufferLayout], fmt: wgpu::TextureFormat, blend: wgpu::BlendState| {
             let pl = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor { label: None, bind_group_layouts: &[layout], push_constant_ranges: &[] });
             device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                 label: None,
                 layout: Some(&pl),
                 vertex: wgpu::VertexState { module, entry_point: Some("vs"), compilation_options: Default::default(), buffers },
-                fragment: Some(wgpu::FragmentState { module, entry_point: Some("fs"), compilation_options: Default::default(), targets: &[Some(wgpu::ColorTargetState { format: fmt, blend: Some(blend), write_mask: wgpu::ColorWrites::ALL })] }),
+                fragment: Some(wgpu::FragmentState { module, entry_point: Some(fs), compilation_options: Default::default(), targets: &[Some(wgpu::ColorTargetState { format: fmt, blend: Some(blend), write_mask: wgpu::ColorWrites::ALL })] }),
                 primitive: wgpu::PrimitiveState { topology: wgpu::PrimitiveTopology::TriangleStrip, ..Default::default() },
                 depth_stencil: None,
                 multisample: wgpu::MultisampleState::default(),
@@ -367,20 +439,22 @@ impl GpuEngine {
         let inst = wgpu::VertexBufferLayout {
             array_stride: std::mem::size_of::<Inst>() as u64,
             step_mode: wgpu::VertexStepMode::Instance,
-            attributes: &wgpu::vertex_attr_array![0 => Float32x2, 1 => Float32, 2 => Float32, 3 => Float32, 4 => Float32],
+            attributes: &wgpu::vertex_attr_array![0 => Float32x2, 1 => Float32, 2 => Float32, 3 => Float32, 4 => Float32, 5 => Float32x3],
         };
-        let pipe_max = mk(&dab_layout, &dab_mod, &[inst.clone()], wgpu::TextureFormat::R8Unorm, MAX_BLEND);
-        let pipe_over = mk(&dab_layout, &dab_mod, &[inst], wgpu::TextureFormat::R8Unorm, OVER_BLEND);
-        let comp_pipe = mk(&comp_layout, &comp_mod, &[], format, wgpu::BlendState::REPLACE);
+        let pipe_max = mk(&dab_layout, &dab_mod, "fs", &[inst.clone()], wgpu::TextureFormat::R8Unorm, MAX_BLEND);
+        let pipe_over = mk(&dab_layout, &dab_mod, "fs", &[inst.clone()], wgpu::TextureFormat::R8Unorm, OVER_BLEND);
+        let pipe_col = mk(&dab_layout, &dab_mod, "fs_col", &[inst], wgpu::TextureFormat::Rgba8Unorm, COL_BLEND);
+        let comp_pipe = mk(&comp_layout, &comp_mod, "fs", &[], format, wgpu::BlendState::REPLACE);
 
         let usage = wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING;
         let mask_main = r8(&device, w, h, usage);
         let mask_dual = r8(&device, w, h, usage);
+        let cols = tex2d(&device, w, h, usage, wgpu::TextureFormat::Rgba8Unorm);
         let paper = r8(&device, 256, 256, wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST);
         let ub = |n: usize| device.create_buffer(&wgpu::BufferDescriptor { label: None, size: (n * 4) as u64, usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST, mapped_at_creation: false });
         let ub_dab = [ub(4), ub(4)];
         let ub_comp = ub(8);
-        let comp_bg = Self::comp_bind(&device, &comp_layout, &ub_comp, &mask_main, &mask_dual, &paper, &smp, &rep);
+        let comp_bg = Self::comp_bind(&device, &comp_layout, &ub_comp, &mask_main, &mask_dual, &paper, &cols, &smp, &rep);
         let mut e = GpuEngine {
             surface,
             device,
@@ -392,9 +466,12 @@ impl GpuEngine {
             comp_layout,
             pipe_max,
             pipe_over,
+            pipe_col,
             comp_pipe,
             mask_main,
             mask_dual,
+            cols,
+            per_dab_col: false,
             paper,
             tips: [None, None],
             ub_dab,
@@ -415,8 +492,8 @@ impl GpuEngine {
         Ok(e)
     }
 
-    fn comp_bind(device: &wgpu::Device, layout: &wgpu::BindGroupLayout, ub: &wgpu::Buffer, m1: &wgpu::Texture, m2: &wgpu::Texture, paper: &wgpu::Texture, smp: &wgpu::Sampler, rep: &wgpu::Sampler) -> wgpu::BindGroup {
-        let (v1, v2, v3) = (m1.create_view(&Default::default()), m2.create_view(&Default::default()), paper.create_view(&Default::default()));
+    fn comp_bind(device: &wgpu::Device, layout: &wgpu::BindGroupLayout, ub: &wgpu::Buffer, m1: &wgpu::Texture, m2: &wgpu::Texture, paper: &wgpu::Texture, cols: &wgpu::Texture, smp: &wgpu::Sampler, rep: &wgpu::Sampler) -> wgpu::BindGroup {
+        let (v1, v2, v3, v4) = (m1.create_view(&Default::default()), m2.create_view(&Default::default()), paper.create_view(&Default::default()), cols.create_view(&Default::default()));
         device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: None,
             layout,
@@ -427,6 +504,7 @@ impl GpuEngine {
                 wgpu::BindGroupEntry { binding: 3, resource: wgpu::BindingResource::TextureView(&v3) },
                 wgpu::BindGroupEntry { binding: 4, resource: wgpu::BindingResource::Sampler(smp) },
                 wgpu::BindGroupEntry { binding: 5, resource: wgpu::BindingResource::Sampler(rep) },
+                wgpu::BindGroupEntry { binding: 6, resource: wgpu::BindingResource::TextureView(&v4) },
             ],
         })
     }
@@ -442,7 +520,8 @@ impl GpuEngine {
         let usage = wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING;
         self.mask_main = r8(&self.device, w, h, usage);
         self.mask_dual = r8(&self.device, w, h, usage);
-        self.comp_bg = Self::comp_bind(&self.device, &self.comp_layout, &self.ub_comp, &self.mask_main, &self.mask_dual, &self.paper, &self.smp, &self.rep);
+        self.cols = tex2d(&self.device, w, h, usage, wgpu::TextureFormat::Rgba8Unorm);
+        self.comp_bg = Self::comp_bind(&self.device, &self.comp_layout, &self.ub_comp, &self.mask_main, &self.mask_dual, &self.paper, &self.cols, &self.smp, &self.rep);
         self.reset();
     }
 
@@ -478,25 +557,31 @@ impl GpuEngine {
         self.dual_on = brush.dual.is_some() && self.tips[1].is_some();
         self.build = p.build;
         self.binary = p.aa == 0.0;
-        self.tex = [if p.tex.on { 1.0 } else { 0.0 }, p.tex.density / 100.0, p.tex.scale / 100.0, 0.0];
-        self.color = [r, g, b, 1.0];
+        self.per_dab_col = brush.color_jitter.as_ref().is_some_and(|j| !j.per_stroke);
+        self.tex = [if p.tex.on { 1.0 } else { 0.0 }, p.tex.density / 100.0, p.tex.scale / 100.0, if self.per_dab_col { 1.0 } else { 0.0 }];
         self.seed = self.seed.wrapping_mul(1664525).wrapping_add(1013904223);
         let mut brush = brush;
         if !self.dual_on {
             brush.dual = None;
         }
-        self.stroke = Some(Stroke::new(brush, self.seed));
+        let mut stroke = Stroke::new(brush, self.seed);
+        stroke.set_color([r, g, b]);
+        let c = stroke.color();
+        self.color = [c[0], c[1], c[2], 1.0];
+        self.stroke = Some(stroke);
         let mut enc = self.device.create_command_encoder(&Default::default());
         clear(&mut enc, &self.mask_main.create_view(&Default::default()), 0.0);
+        clear(&mut enc, &self.cols.create_view(&Default::default()), 0.0);
         clear(&mut enc, &self.mask_dual.create_view(&Default::default()), if self.dual_on { 0.0 } else { 1.0 });
         self.queue.submit([enc.finish()]);
         true
     }
 
-    /// One pen sample (document px, pressure 0..1, time ms). Drawn on the next flush.
-    pub fn add(&mut self, x: f32, y: f32, p: f32, t: f64) {
+    /// One pen sample (document px, pressure 0..1, tilt 0 flat..1 upright, azimuth radians, time ms).
+    /// Tilt and azimuth are undefined when the pen doesn't report them. Drawn on the next flush.
+    pub fn add(&mut self, x: f32, y: f32, p: f32, tilt: Option<f32>, az: Option<f32>, t: f64) {
         if let Some(s) = self.stroke.as_mut() {
-            let new = s.add(x, y, p, t);
+            let new = s.add_pen(x, y, p, tilt.filter(|v| v.is_finite()), az.filter(|v| v.is_finite()), t);
             for d in &new {
                 if !d.dual {
                     self.dirty = grow(self.dirty, d);
@@ -518,7 +603,7 @@ impl GpuEngine {
             let inst: Vec<Inst> = dabs
                 .iter()
                 .filter(|d| d.dual == dual && d.size > 0.3 && d.alpha > 0.0)
-                .map(|d| Inst { pos: [d.x, d.y], size: d.size, angle: d.angle, alpha: d.alpha * if d.size < 1.5 { d.size / 1.5 } else { 1.0 }, round: d.round })
+                .map(|d| Inst { pos: [d.x, d.y], size: d.size, angle: d.angle, alpha: d.alpha * if d.size < 1.5 { d.size / 1.5 } else { 1.0 }, round: d.round, col: d.col })
                 .collect();
             if inst.is_empty() {
                 continue;
@@ -547,6 +632,21 @@ impl GpuEngine {
             rp.set_bind_group(0, &bg, &[]);
             rp.set_vertex_buffer(0, buf.slice(..));
             rp.draw(0..4, 0..inst.len() as u32);
+            drop(rp);
+            if !dual && self.per_dab_col {
+                let view = self.cols.create_view(&Default::default());
+                let mut rp = enc.begin_render_pass(&wgpu::RenderPassDescriptor {
+                    label: None,
+                    color_attachments: &[Some(wgpu::RenderPassColorAttachment { view: &view, resolve_target: None, ops: wgpu::Operations { load: wgpu::LoadOp::Load, store: wgpu::StoreOp::Store } })],
+                    depth_stencil_attachment: None,
+                    timestamp_writes: None,
+                    occlusion_query_set: None,
+                });
+                rp.set_pipeline(&self.pipe_col);
+                rp.set_bind_group(0, &bg, &[]);
+                rp.set_vertex_buffer(0, buf.slice(..));
+                rp.draw(0..4, 0..inst.len() as u32);
+            }
         }
     }
 
@@ -602,6 +702,7 @@ impl GpuEngine {
         let mut enc = self.device.create_command_encoder(&Default::default());
         clear(&mut enc, &self.mask_main.create_view(&Default::default()), 0.0);
         clear(&mut enc, &self.mask_dual.create_view(&Default::default()), if self.dual_on { 0.0 } else { 1.0 });
+        clear(&mut enc, &self.cols.create_view(&Default::default()), 0.0);
         self.draw(&mut enc, &all);
         self.compose(enc);
     }

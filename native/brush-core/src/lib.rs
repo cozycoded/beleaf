@@ -58,6 +58,62 @@ pub struct Brush {
     /// slow strokes get a shorter taper (Clip Studio's "by speed")
     pub taper_by_speed: bool,
     pub dual: Option<Dual>,
+    /// many small particles per dab instead of one stamp
+    pub spray: Option<Spray>,
+    /// pen tilt → size (Clip Studio "tilt" on brush size)
+    pub tilt_size: Option<TiltSize>,
+    /// opacity at a flat pen, % (None = tilt doesn't change opacity)
+    pub tilt_op: Option<f32>,
+    /// a flatter pen squashes the tip, % strength (0 = off)
+    pub tilt_round: f32,
+    /// the tip turns with the pen's direction (azimuth)
+    pub angle_tilt: bool,
+    /// random colour changes, per stroke or per dab
+    pub color_jitter: Option<ColorJitter>,
+}
+
+#[derive(Clone, Debug)]
+pub struct Spray {
+    /// particle size as % of the brush size
+    pub particle: f32,
+    pub count: u32,
+    pub random_angle: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct TiltSize {
+    /// size % at the ends of the curve (min at curve 0, max at curve 1)
+    pub min: f32,
+    pub max: f32,
+    pub curve: Vec<[f32; 2]>,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct ColorJitter {
+    /// hue: 100 = up to ±180°; sat/val in % points
+    pub hue: f32,
+    pub sat: f32,
+    pub val: f32,
+    pub per_stroke: bool,
+}
+
+pub fn rgb2hsv(c: [f32; 3]) -> [f32; 3] {
+    let (r, g, b) = (c[0], c[1], c[2]);
+    let mx = r.max(g).max(b);
+    let mn = r.min(g).min(b);
+    let d = mx - mn;
+    let mut h = 0.0;
+    if d > 0.0 {
+        h = if mx == r { ((g - b) / d + 6.0) % 6.0 } else if mx == g { (b - r) / d + 2.0 } else { (r - g) / d + 4.0 };
+    }
+    [h * 60.0, if mx > 0.0 { d / mx } else { 0.0 }, mx]
+}
+pub fn hsv2rgb(h: f32, s: f32, v: f32) -> [f32; 3] {
+    let f = |n: f32| {
+        let k = (n + h / 60.0) % 6.0;
+        v - v * s * k.min(4.0 - k).clamp(0.0, 1.0)
+    };
+    [f(5.0), f(3.0), f(1.0)]
 }
 
 impl Brush {
@@ -81,6 +137,36 @@ impl Brush {
             taper_ratio: Some(30.0),
             taper_by_speed: true,
             dual: Some(Dual { size: 119.0, spacing: 37.158_46, spray: true, count: 10, area: 81.0, random_angle: true }),
+            ..Brush::plain(size)
+        }
+    }
+
+    /// A plain round brush with nothing switched on.
+    pub fn plain(size: f32) -> Brush {
+        Brush {
+            size,
+            spacing: 8.0,
+            flow: 100.0,
+            angle: 0.0,
+            follow: false,
+            stab: 0.0,
+            size_min: None,
+            op_min: None,
+            size_curve: Vec::new(),
+            op_curve: Vec::new(),
+            roundness: 100.0,
+            jitter: Jitter::default(),
+            taper_in: 0.0,
+            taper_out: 0.0,
+            taper_ratio: None,
+            taper_by_speed: false,
+            dual: None,
+            spray: None,
+            tilt_size: None,
+            tilt_op: None,
+            tilt_round: 0.0,
+            angle_tilt: false,
+            color_jitter: None,
         }
     }
 }
@@ -137,6 +223,8 @@ pub struct Dab {
     pub ti: f32,
     /// roundness 0..1 (squashes the tip across its height)
     pub round: f32,
+    /// colour 0..1 (the stroke colour, or a jittered one)
+    pub col: [f32; 3],
 }
 
 #[derive(Clone, Copy)]
@@ -144,6 +232,8 @@ struct Pt {
     x: f32,
     y: f32,
     p: f32,
+    /// pen tilt 0 (flat) .. 1 (upright), if the pen reports it
+    tilt: Option<f32>,
 }
 
 /// Small, fast, deterministic random numbers (so a stroke redrawn at the end looks the same).
@@ -174,6 +264,9 @@ pub struct Stroke {
     pending: Option<Pt>,
     rng: Rng,
     dabs: Vec<Dab>,
+    col: [f32; 3],
+    /// last pen direction (azimuth, radians)
+    az: Option<f32>,
 }
 
 
@@ -193,22 +286,51 @@ impl Stroke {
             pending: None,
             rng: Rng(seed | 1),
             dabs: Vec::new(),
+            col: [0.0; 3],
+            az: None,
         }
     }
 
-    /// Size multiplier from pressure.
-    fn size_factor(&self, p: f32) -> f32 {
-        match self.b.size_min {
-            Some(m) => (m + (100.0 - m) * eval_curve(&self.b.size_curve, p)) / 100.0,
-            None => 1.0,
+    /// Sets the stroke colour (0..1). Call before the first `add`; per-stroke colour jitter is applied here.
+    pub fn set_color(&mut self, c: [f32; 3]) {
+        self.col = c;
+        if self.b.color_jitter.as_ref().is_some_and(|j| j.per_stroke) {
+            self.col = self.jitter_color(c);
         }
     }
-    /// Opacity multiplier from pressure.
-    fn op_factor(&self, p: f32) -> f32 {
-        match self.b.op_min {
+    fn jitter_color(&mut self, c: [f32; 3]) -> [f32; 3] {
+        let Some(j) = self.b.color_jitter.clone() else { return c };
+        if j.hue == 0.0 && j.sat == 0.0 && j.val == 0.0 {
+            return c;
+        }
+        let [h, s, v] = rgb2hsv(c);
+        let h = (h + (self.rng.next() * 2.0 - 1.0) * j.hue * 1.8 + 360.0).rem_euclid(360.0);
+        let s = (s + (self.rng.next() * 2.0 - 1.0) * j.sat / 100.0).clamp(0.0, 1.0);
+        let v = (v + (self.rng.next() * 2.0 - 1.0) * j.val / 100.0).clamp(0.0, 1.0);
+        hsv2rgb(h, s, v)
+    }
+
+    /// Size multiplier from pressure (and tilt).
+    fn size_factor(&self, p: f32, tilt: Option<f32>) -> f32 {
+        let mut f = match self.b.size_min {
+            Some(m) => (m + (100.0 - m) * eval_curve(&self.b.size_curve, p)) / 100.0,
+            None => 1.0,
+        };
+        if let (Some(ts), Some(t)) = (&self.b.tilt_size, tilt) {
+            f *= (ts.min + (ts.max - ts.min) * eval_curve(&ts.curve, t)) / 100.0;
+        }
+        f
+    }
+    /// Opacity multiplier from pressure (and tilt).
+    fn op_factor(&self, p: f32, tilt: Option<f32>) -> f32 {
+        let mut f = match self.b.op_min {
             Some(m) => (m + (100.0 - m) * eval_curve(&self.b.op_curve, p)) / 100.0,
             None => 1.0,
+        };
+        if let (Some(m), Some(t)) = (self.b.tilt_op, tilt) {
+            f *= (m + (100.0 - m) * t) / 100.0;
         }
+        f
     }
     /// A taper length, shortened for slow strokes when the brush asks for it.
     fn taper_len(&self, len: f32) -> f32 {
@@ -237,32 +359,58 @@ impl Stroke {
             return;
         }
         let ti = self.taper_in_at(self.dist);
-        let size = self.b.size * self.size_factor(pt.p) * ti;
-        let alpha = (self.b.flow / 100.0) * self.op_factor(pt.p);
+        let size = self.b.size * self.size_factor(pt.p, pt.tilt) * ti;
+        let alpha = (self.b.flow / 100.0) * self.op_factor(pt.p, pt.tilt);
         let mut ang = self.b.angle;
         if self.b.follow {
             ang += self.heading.unwrap_or(0.0);
         }
-        let j = self.b.jitter.clone();
-        let (mut s, mut v, mut a, mut r, mut x, mut y) = (size, alpha, ang, self.b.roundness / 100.0, pt.x, pt.y);
-        if j.size > 0.0 { s *= 1.0 - self.rng.next() * j.size / 100.0; }
-        if j.opacity > 0.0 { v *= 1.0 - self.rng.next() * j.opacity / 100.0; }
-        if j.angle > 0.0 { a += (self.rng.next() * 2.0 - 1.0) * j.angle * 1.8; }
-        if j.round > 0.0 { r *= 1.0 - self.rng.next() * j.round / 100.0; }
-        if j.scatter > 0.0 {
-            let ra = (self.rng.next() * 2.0 - 1.0) * j.scatter / 100.0 * size;
-            let th = self.heading.unwrap_or(0.0) * PI / 180.0 + PI / 2.0;
-            x += th.cos() * ra;
-            y += th.sin() * ra;
+        if self.b.angle_tilt {
+            if let Some(az) = self.az {
+                ang += az * 180.0 / PI - 90.0;
+            }
         }
-        let d = Dab { x, y, size: s, angle: a * PI / 180.0, alpha: v, dual: false, dist: self.dist, ti, round: r };
-        self.dabs.push(d);
-        out.push(d);
+        let mut round = self.b.roundness / 100.0;
+        if let Some(t) = pt.tilt {
+            if self.b.tilt_round > 0.0 {
+                round *= 1.0 - self.b.tilt_round / 100.0 * (1.0 - t) * 0.85;
+            }
+        }
+        let col = if self.b.color_jitter.as_ref().is_some_and(|j| !j.per_stroke) { self.jitter_color(self.col) } else { self.col };
+        let j = self.b.jitter.clone();
+        let spray = self.b.spray.clone();
+        let n = spray.as_ref().map_or(1, |s| s.count.max(1));
+        for _ in 0..n {
+            let (mut s, mut v, mut a, mut r, mut x, mut y) = (size, alpha, ang, round, pt.x, pt.y);
+            if j.size > 0.0 { s *= 1.0 - self.rng.next() * j.size / 100.0; }
+            if j.opacity > 0.0 { v *= 1.0 - self.rng.next() * j.opacity / 100.0; }
+            if j.angle > 0.0 { a += (self.rng.next() * 2.0 - 1.0) * j.angle * 1.8; }
+            if j.round > 0.0 { r *= 1.0 - self.rng.next() * j.round / 100.0; }
+            if let Some(sp) = &spray {
+                // particles land anywhere inside the brush circle
+                let ra = self.rng.next().sqrt() * size / 2.0;
+                let th = self.rng.next() * 2.0 * PI;
+                x += th.cos() * ra;
+                y += th.sin() * ra;
+                s = size * sp.particle / 100.0 * if j.size > 0.0 { 1.0 - self.rng.next() * j.size / 100.0 } else { 1.0 };
+                if sp.random_angle {
+                    a = self.rng.next() * 360.0;
+                }
+            } else if j.scatter > 0.0 {
+                let ra = (self.rng.next() * 2.0 - 1.0) * j.scatter / 100.0 * size;
+                let th = self.heading.unwrap_or(0.0) * PI / 180.0 + PI / 2.0;
+                x += th.cos() * ra;
+                y += th.sin() * ra;
+            }
+            let d = Dab { x, y, size: s, angle: a * PI / 180.0, alpha: v, dual: false, dist: self.dist, ti, round: r, col };
+            self.dabs.push(d);
+            out.push(d);
+        }
     }
 
     fn emit_dual(&mut self, pt: Pt, out: &mut Vec<Dab>) {
         let Some(dl) = self.b.dual.clone() else { return };
-        let main = self.b.size * self.size_factor(pt.p);
+        let main = self.b.size * self.size_factor(pt.p, pt.tilt);
         let base = main * dl.size / 100.0;
         let n = if dl.spray { dl.count.max(1) } else { 1 };
         for _ in 0..n {
@@ -274,7 +422,7 @@ impl Stroke {
                 x += th.cos() * r;
                 y += th.sin() * r;
             }
-            let d = Dab { x, y, size: base, angle: a, alpha: 1.0, dual: true, dist: self.dist, ti: 1.0, round: 1.0 };
+            let d = Dab { x, y, size: base, angle: a, alpha: 1.0, dual: true, dist: self.dist, ti: 1.0, round: 1.0, col: self.col };
             self.dabs.push(d);
             out.push(d);
         }
@@ -282,12 +430,20 @@ impl Stroke {
 
     /// Feed one pen sample (canvas px, pressure 0..1, time in ms). Returns the new dabs to draw.
     pub fn add(&mut self, x: f32, y: f32, p: f32, t_ms: f64) -> Vec<Dab> {
+        self.add_pen(x, y, p, None, None, t_ms)
+    }
+
+    /// Like `add`, with the pen's tilt (0 flat .. 1 upright) and azimuth (radians) when it reports them.
+    pub fn add_pen(&mut self, x: f32, y: f32, p: f32, tilt: Option<f32>, az: Option<f32>, t_ms: f64) -> Vec<Dab> {
         let mut out = Vec::new();
+        if az.is_some() {
+            self.az = az;
+        }
         // stabiliser: follow the pen with a little lag
         let k = if self.b.stab > 0.0 { (self.b.stab / 25.0).powf(0.8).min(0.94) } else { 0.0 };
         let cur = match self.smooth {
-            None => Pt { x, y, p },
-            Some(s) => Pt { x: s.x * k + x * (1.0 - k), y: s.y * k + y * (1.0 - k), p: s.p * k * 0.6 + p * (1.0 - k * 0.6) },
+            None => Pt { x, y, p, tilt },
+            Some(s) => Pt { x: s.x * k + x * (1.0 - k), y: s.y * k + y * (1.0 - k), p: s.p * k * 0.6 + p * (1.0 - k * 0.6), tilt },
         };
         self.smooth = Some(cur);
 
@@ -296,7 +452,7 @@ impl Stroke {
             self.t_last = Some(t_ms);
             self.emit(cur, &mut out);
             self.emit_dual(cur, &mut out);
-            let s0 = (self.b.size * self.size_factor(cur.p)).max(0.5);
+            let s0 = (self.b.size * self.size_factor(cur.p, tilt)).max(0.5);
             self.next_dab = (s0 * (self.b.spacing / 100.0).max(0.01)).max(0.3);
             if let Some(dl) = &self.b.dual {
                 self.next_dual = (s0 * dl.size / 100.0 * (dl.spacing / 100.0).max(0.01)).max(0.3);
@@ -334,7 +490,7 @@ impl Stroke {
         let mut t = 0.0;
         loop {
             let pp = last.p + (cur.p - last.p) * t / d;
-            let size = (self.b.size * self.size_factor(pp)).max(0.5);
+            let size = (self.b.size * self.size_factor(pp, tilt)).max(0.5);
             let step = (size * (self.b.spacing / 100.0).max(0.01)).max(0.3);
             let need = self.next_dab - self.dist;
             if t + need > d {
@@ -344,13 +500,13 @@ impl Stroke {
             self.dist += need;
             self.next_dab = self.dist + step;
             let f = t / d;
-            self.emit(Pt { x: last.x + dx * f, y: last.y + dy * f, p: last.p + (cur.p - last.p) * f }, &mut out);
+            self.emit(Pt { x: last.x + dx * f, y: last.y + dy * f, p: last.p + (cur.p - last.p) * f, tilt }, &mut out);
         }
         // dual tip on its own spacing
         if let Some(dl) = self.b.dual.clone() {
             let base = self.dist - t;
             loop {
-                let size = (self.b.size * self.size_factor(cur.p) * dl.size / 100.0).max(0.5);
+                let size = (self.b.size * self.size_factor(cur.p, tilt) * dl.size / 100.0).max(0.5);
                 let step = (size * (dl.spacing / 100.0).max(0.01)).max(0.3);
                 let at = self.next_dual - base;
                 if at > d {
@@ -359,7 +515,7 @@ impl Stroke {
                 let td = at.max(0.0);
                 self.next_dual = base + td + step;
                 let f = td / d;
-                self.emit_dual(Pt { x: last.x + dx * f, y: last.y + dy * f, p: last.p + (cur.p - last.p) * f }, &mut out);
+                self.emit_dual(Pt { x: last.x + dx * f, y: last.y + dy * f, p: last.p + (cur.p - last.p) * f, tilt }, &mut out);
             }
         }
         self.dist = self.dist - t + d;
@@ -396,6 +552,11 @@ impl Stroke {
                 Dab { size: d.size * f, ..*d }
             })
             .collect()
+    }
+
+    /// The stroke colour after per-stroke jitter.
+    pub fn color(&self) -> [f32; 3] {
+        self.col
     }
 
     pub fn length(&self) -> f32 {
@@ -487,5 +648,65 @@ mod tests {
         let (live, _) = circle(Brush::textured_acrylic(24.0), 40.0, 1.0, 0.7, 4.0);
         let dual = live.iter().filter(|d| d.dual).count();
         assert!(dual > 20, "{dual} dual stamps");
+    }
+
+    fn line(b: Brush, tilt: Option<f32>, az: Option<f32>) -> Vec<Dab> {
+        let mut s = Stroke::new(b, 11);
+        s.set_color([1.0, 0.0, 0.0]);
+        for i in 0..=60 {
+            s.add_pen(i as f32 * 3.0, 50.0, 1.0, tilt, az, i as f64 * 8.0);
+        }
+        s.finish()
+    }
+
+    #[test]
+    fn spray_makes_small_particles_inside_the_brush() {
+        let mut b = Brush::plain(40.0);
+        b.spray = Some(Spray { particle: 10.0, count: 6, random_angle: true });
+        let d = line(b, None, None);
+        assert!(d.len() > 6 * 20);
+        assert!(d.iter().all(|d| d.size <= 4.01 && (d.y - 50.0).abs() <= 20.01));
+    }
+
+    #[test]
+    fn tilt_changes_size_opacity_and_roundness() {
+        let mut b = Brush::plain(20.0);
+        b.tilt_size = Some(TiltSize { min: 100.0, max: 200.0, curve: vec![[0.0, 1.0], [1.0, 0.0]] });
+        b.tilt_op = Some(30.0);
+        b.tilt_round = 100.0;
+        let flat = line(b.clone(), Some(0.0), None);
+        let up = line(b, Some(1.0), None);
+        assert!((flat[3].size - 40.0).abs() < 0.5 && (up[3].size - 20.0).abs() < 0.5);
+        assert!((flat[3].alpha - 0.3).abs() < 0.01 && (up[3].alpha - 1.0).abs() < 0.01);
+        assert!((flat[3].round - 0.15).abs() < 0.01 && (up[3].round - 1.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn angle_follows_the_pen_direction() {
+        let mut b = Brush::plain(20.0);
+        b.angle_tilt = true;
+        let d = line(b, Some(0.5), Some(PI));
+        assert!((d[2].angle - PI / 2.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn colour_jitter_per_dab_and_per_stroke() {
+        let mut b = Brush::plain(20.0);
+        b.color_jitter = Some(ColorJitter { hue: 20.0, sat: 0.0, val: 0.0, per_stroke: false });
+        let d = line(b.clone(), None, None);
+        let differ = d.windows(2).filter(|w| w[0].col != w[1].col).count();
+        assert!(differ > d.len() / 2);
+        b.color_jitter.as_mut().unwrap().per_stroke = true;
+        let d = line(b, None, None);
+        assert!(d.windows(2).all(|w| w[0].col == w[1].col) && d[0].col != [1.0, 0.0, 0.0]);
+    }
+
+    #[test]
+    fn hsv_round_trips() {
+        for c in [[1.0, 0.0, 0.0], [0.2, 0.6, 0.9], [0.5, 0.5, 0.5]] {
+            let [h, s, v] = rgb2hsv(c);
+            let back = hsv2rgb(h, s, v);
+            for i in 0..3 { assert!((back[i] - c[i]).abs() < 1e-4, "{c:?} -> {back:?}"); }
+        }
     }
 }

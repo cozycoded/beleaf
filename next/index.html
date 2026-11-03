@@ -2555,9 +2555,6 @@ const rustReady = (async () => {
 function rustWhyNot(b) {
   if (!RUST) return RUST_ERR ? 'not available here' : 'still loading';
   if (b.mix > 0 || b.blendOnly) return 'paint mixing';
-  const cj = b.colorJitter; if (cj && (cj.hue || cj.sat || cj.val)) return 'colour jitter';
-  if (b.spray && b.spray.on) return 'spray';
-  if ((b.tiltDyn && b.tiltDyn.on) || (b.tiltOp && b.tiltOp.on) || b.tiltRound || b.angleTilt) return 'pen tilt effects';
   return '';
 }
 const tipBytes = t => { const d = t.data, o = new Uint8Array(t.w * t.h); for (let i = 0; i < o.length; i++) { const v = d[i]; o[i] = v <= 0 ? 0 : v >= 1 ? 255 : Math.round(v * 255); } return o; };
@@ -2581,7 +2578,9 @@ class HybridEngine {
         if (tx && R.tex !== b.texture.name) { const o = new Uint8Array(65536); for (let i = 0; i < 65536; i++) o[i] = Math.round(Math.max(0, Math.min(1, tx[i])) * 255); R.g.set_texture(o); R.tex = b.texture.name; }
         const p = { size: b.size, spacing: b.spacing, flow: b.flow, angle: b.angle || 0, follow: !!b.follow, stab: b.stab || 0, roundness: b.roundness ?? 100, build: !!b.build, aa: b.aa ?? 2,
           sizeDyn: b.sizeDyn || { on: false }, opDyn: b.opDyn || { on: false }, taper: b.taper || {}, jitter: b.jitter || {}, dual: dual ? b.dual : { on: false },
-          tex: { on: !!tx, density: tx ? b.texture.density : 0, scale: tx ? b.texture.scale : 100 } };
+          tex: { on: !!tx, density: tx ? b.texture.density : 0, scale: tx ? b.texture.scale : 100 },
+          spray: b.spray || { on: false }, tiltDyn: b.tiltDyn || { on: false }, tiltOp: b.tiltOp || { on: false }, tiltRound: b.tiltRound || 0, angleTilt: !!b.angleTilt,
+          colorJitter: b.colorJitter || {} };
         const c = opts.color || [0, 0, 0];
         if (R.g.begin(JSON.stringify(p), c[0] / 255, c[1] / 255, c[2] / 255)) { this.gpu = true; ENGINE_USED.last = 'rust'; ENGINE_USED.why = ''; return; }
       } catch (e) { console.warn('Rust engine stroke failed, using the old one:', e); }
@@ -2589,7 +2588,7 @@ class HybridEngine {
     if (opts && opts.gpu && why && ENGINE_USED.why !== why && RUST) { ENGINE_USED.why = why; if (typeof toast === 'function') toast(`This brush uses the old engine (${why} isn’t in the Rust engine yet)`); }
     ENGINE_USED.last = 'js'; this.js.begin(b, opts);
   }
-  add(x, y, p, tilt, az) { if (this.gpu) RUST.g.add(x, y, p, performance.now()); else this.js.add(x, y, p, tilt, az); }
+  add(x, y, p, tilt, az) { if (this.gpu) RUST.g.add(x, y, p, tilt ?? undefined, az ?? undefined, performance.now()); else this.js.add(x, y, p, tilt, az); }
   end() { if (this.gpu) RUST.g.end(); else this.js.end(); }
   flush() {
     if (!this.gpu) return this.js.flush();
