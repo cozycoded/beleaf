@@ -51,7 +51,7 @@ pub struct PenInfo {
     pub pressure: f32,
     pub tilt_x: i32,
     pub tilt_y: i32,
-    pub source: u8, // 0 none, 1 Windows Ink pen, 2 mouse, 3 browser pointer
+    pub source: u8, // 0 none, 1 Windows Ink pen, 2 mouse, 3 browser pointer, 4 Wintab pen
     pub samples: u32,
 }
 pub static PEN: Mutex<PenInfo> = Mutex::new(PenInfo { pressure: 0.0, tilt_x: 0, tilt_y: 0, source: 0, samples: 0 });
@@ -615,6 +615,8 @@ impl App {
                 clear_pass(&mut enc, &g.layer.create_view(&Default::default()), 1.0);
             }
         }
+        #[cfg(windows)]
+        wintab::poll();
         let samples: Vec<Sample> = std::mem::take(&mut *INPUT.lock().unwrap());
         let mut fresh: Vec<Dab> = Vec::new();
         for s in samples {
@@ -657,10 +659,14 @@ impl App {
             if let Some(w) = &st.window {
                 let p = *PEN.lock().unwrap();
                 let s = SETTINGS.lock().unwrap();
-                let src = ["no input yet", "Windows Ink pen", "mouse", "pointer"][p.source as usize];
+                let src = ["no input yet", "Windows Ink pen", "mouse", "pointer", "Wintab pen"][p.source as usize];
+                #[cfg(windows)]
+                let mode = wintab::status();
+                #[cfg(not(windows))]
+                let mode = String::new();
                 w.set_title(&format!(
-                    "beleaf engine test · size {:.0} ([ ]) · opacity {:.0}% (- =) · pressure→opacity {} (O) · {} · pressure {:.2} · tilt {} / {} · dual {} (D) · taper {} (T) · C clears · 1-6 colours",
-                    s.size, s.opacity * 100.0, if s.press_op { "on" } else { "off" }, src, p.pressure, p.tilt_x, p.tilt_y, if s.dual { "on" } else { "off" }, if s.taper { "on" } else { "off" }
+                    "beleaf engine test · {} · size {:.0} ([ ]) · opacity {:.0}% (- =) · pressure→opacity {} (O) · {} · pressure {:.2} · tilt {} / {} · dual {} (D) · taper {} (T) · C clears · 1-6 colours",
+                    mode, s.size, s.opacity * 100.0, if s.press_op { "on" } else { "off" }, src, p.pressure, p.tilt_x, p.tilt_y, if s.dual { "on" } else { "off" }, if s.taper { "on" } else { "off" }
                 ));
             }
         }
@@ -678,6 +684,8 @@ fn key(c: &str) {
         "t" | "T" => s.taper = !s.taper,
         "f" | "F" => s.follow = !s.follow,
         "c" | "C" => s.clear = true,
+        #[cfg(windows)]
+        "w" | "W" => { drop(s); wintab::toggle(); return; }
         "-" => s.opacity = (s.opacity - 0.1).max(0.05),
         "=" | "+" => s.opacity = (s.opacity + 0.1).min(1.0),
         "o" | "O" => s.press_op = !s.press_op,
@@ -792,6 +800,7 @@ mod winpen {
             if let RawWindowHandle::Win32(w) = h.as_raw() {
                 let hwnd = w.hwnd.get() as HWND;
                 SetWindowSubclass(hwnd, Some(proc_), 0xBEEF, 0);
+                super::wintab::remember(hwnd as isize);
             }
         }
     }
@@ -803,6 +812,10 @@ mod winpen {
             let id = (wp & 0xFFFF) as u32;
             let mut ty: POINTER_INPUT_TYPE = 0;
             if GetPointerType(id, &mut ty) != 0 && ty == PT_PEN {
+                // in Wintab mode the pen is read through Wintab instead: swallow Windows Ink's copy so nothing draws twice
+                if super::wintab::active() {
+                    return 0;
+                }
                 let mut one: POINTER_PEN_INFO = std::mem::zeroed();
                 if GetPointerPenInfo(id, &mut one) != 0 {
                     // every sample Windows collected since the last message, oldest first
@@ -851,6 +864,231 @@ mod winpen {
             }
         }
         DefSubclassProc(hwnd, msg, wp, lp)
+    }
+}
+
+/* ---------------- Wintab: the older tablet-driver pen interface (Wacom, Huion, XP-Pen…) ---------------- */
+// Some tablets feel better or only report everything through Wintab, which is why Clip Studio offers it next to
+// Windows Ink ("Tablet PC"). Browsers can't use it; a native app can. Press W to switch.
+#[cfg(windows)]
+mod wintab {
+    use super::*;
+    use std::ffi::c_void;
+    use std::sync::atomic::{AtomicBool, AtomicIsize, Ordering};
+    use windows_sys::Win32::Foundation::{HWND, POINT};
+    use windows_sys::Win32::Graphics::Gdi::ClientToScreen;
+    use windows_sys::Win32::System::LibraryLoader::{GetProcAddress, LoadLibraryW};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{GetSystemMetrics, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN};
+
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    struct LogContext {
+        name: [u16; 40],
+        options: u32,
+        status: u32,
+        locks: u32,
+        msg_base: u32,
+        device: u32,
+        pkt_rate: u32,
+        pkt_data: u32,
+        pkt_mode: u32,
+        move_mask: u32,
+        btn_dn_mask: u32,
+        btn_up_mask: u32,
+        in_org: [i32; 3],
+        in_ext: [i32; 3],
+        out_org: [i32; 3],
+        out_ext: [i32; 3],
+        sens: [u32; 3],
+        sys_mode: i32,
+        sys_org_x: i32,
+        sys_org_y: i32,
+        sys_ext_x: i32,
+        sys_ext_y: i32,
+        sys_sens_x: u32,
+        sys_sens_y: u32,
+    }
+    #[repr(C)]
+    #[derive(Clone, Copy, Default)]
+    struct Axis {
+        min: i32,
+        max: i32,
+        units: u32,
+        resolution: u32,
+    }
+    // the packet fields come in Wintab's fixed order for the bits we ask for (PK_STATUS | PK_TIME | PK_BUTTONS | PK_X | PK_Y | PK_NORMAL_PRESSURE | PK_ORIENTATION)
+    #[repr(C)]
+    #[derive(Clone, Copy, Default)]
+    struct Packet {
+        status: u32,
+        time: u32,
+        buttons: u32,
+        x: i32,
+        y: i32,
+        pressure: u32,
+        azimuth: i32,
+        altitude: i32,
+        twist: i32,
+    }
+    const PK_STATUS: u32 = 0x2;
+    const PK_TIME: u32 = 0x4;
+    const PK_BUTTONS: u32 = 0x40;
+    const PK_X: u32 = 0x80;
+    const PK_Y: u32 = 0x100;
+    const PK_NORMAL_PRESSURE: u32 = 0x400;
+    const PK_ORIENTATION: u32 = 0x1000;
+    const WTI_DEFSYSCTX: u32 = 4;
+    const WTI_DEVICES: u32 = 100;
+    const DVC_NPRESSURE: u32 = 15;
+    const CXO_SYSTEM: u32 = 0x1;
+    /// output in 1/8 px so strokes keep sub-pixel precision
+    const SUB: i32 = 8;
+
+    type FInfo = unsafe extern "system" fn(u32, u32, *mut c_void) -> u32;
+    type FOpen = unsafe extern "system" fn(HWND, *mut LogContext, i32) -> isize;
+    type FPackets = unsafe extern "system" fn(isize, i32, *mut c_void) -> i32;
+    type FQueue = unsafe extern "system" fn(isize, i32) -> i32;
+    type FEnable = unsafe extern "system" fn(isize, i32) -> i32;
+
+    struct Tab {
+        packets: FPackets,
+        enable: FEnable,
+        ctx: isize,
+        pmax: f32,
+    }
+    static HWND_: AtomicIsize = AtomicIsize::new(0);
+    static ON: AtomicBool = AtomicBool::new(false);
+    static TAB: Mutex<Option<Tab>> = Mutex::new(None);
+    static ERR: Mutex<String> = Mutex::new(String::new());
+    static DOWN: AtomicBool = AtomicBool::new(false);
+
+    pub fn remember(hwnd: isize) {
+        HWND_.store(hwnd, Ordering::Relaxed);
+    }
+    pub fn active() -> bool {
+        ON.load(Ordering::Relaxed)
+    }
+    pub fn status() -> String {
+        if active() {
+            "pen: Wintab (W switches)".into()
+        } else {
+            let e = ERR.lock().unwrap();
+            if e.is_empty() { "pen: Windows Ink (W for Wintab)".into() } else { format!("pen: Windows Ink · Wintab: {}", e) }
+        }
+    }
+
+    unsafe fn open() -> Result<Tab, String> {
+        let name: Vec<u16> = "wintab32.dll\0".encode_utf16().collect();
+        let lib = LoadLibraryW(name.as_ptr());
+        if lib.is_null() {
+            return Err("no tablet driver with Wintab found".into());
+        }
+        let get = |n: &[u8]| GetProcAddress(lib, n.as_ptr()).ok_or_else(|| "the Wintab driver is missing a function".to_string());
+        let info: FInfo = std::mem::transmute(get(b"WTInfoW\0")?);
+        let openf: FOpen = std::mem::transmute(get(b"WTOpenW\0")?);
+        let packets: FPackets = std::mem::transmute(get(b"WTPacketsGet\0")?);
+        let queue: FQueue = std::mem::transmute(get(b"WTQueueSizeSet\0")?);
+        let enable: FEnable = std::mem::transmute(get(b"WTEnable\0")?);
+        let mut lc: LogContext = std::mem::zeroed();
+        if info(WTI_DEFSYSCTX, 0, &mut lc as *mut _ as *mut c_void) == 0 {
+            return Err("no tablet connected".into());
+        }
+        let data = PK_STATUS | PK_TIME | PK_BUTTONS | PK_X | PK_Y | PK_NORMAL_PRESSURE | PK_ORIENTATION;
+        lc.options |= CXO_SYSTEM;
+        lc.pkt_data = data;
+        lc.pkt_mode = 0;
+        lc.move_mask = data;
+        lc.btn_up_mask = lc.btn_dn_mask;
+        // map the tablet to the whole desktop, top-down, in 1/8 px
+        lc.out_org[0] = GetSystemMetrics(SM_XVIRTUALSCREEN) * SUB;
+        lc.out_org[1] = GetSystemMetrics(SM_YVIRTUALSCREEN) * SUB;
+        lc.out_ext[0] = GetSystemMetrics(SM_CXVIRTUALSCREEN) * SUB;
+        lc.out_ext[1] = -GetSystemMetrics(SM_CYVIRTUALSCREEN) * SUB;
+        let mut ax = Axis::default();
+        info(WTI_DEVICES, DVC_NPRESSURE, &mut ax as *mut _ as *mut c_void);
+        let pmax = if ax.max > 0 { ax.max as f32 } else { 1023.0 };
+        let hwnd = HWND_.load(Ordering::Relaxed) as HWND;
+        let ctx = openf(hwnd, &mut lc, 1);
+        if ctx == 0 {
+            return Err("the tablet driver refused the connection".into());
+        }
+        queue(ctx, 256);
+        Ok(Tab { packets, enable, ctx, pmax })
+    }
+
+    pub fn toggle() {
+        let mut t = TAB.lock().unwrap();
+        if active() {
+            if let Some(tab) = t.as_ref() {
+                unsafe { (tab.enable)(tab.ctx, 0) };
+            }
+            ON.store(false, Ordering::Relaxed);
+            return;
+        }
+        if t.is_none() {
+            match unsafe { open() } {
+                Ok(tab) => *t = Some(tab),
+                Err(e) => {
+                    *ERR.lock().unwrap() = e;
+                    return;
+                }
+            }
+        }
+        if let Some(tab) = t.as_ref() {
+            unsafe { (tab.enable)(tab.ctx, 1) };
+            ON.store(true, Ordering::Relaxed);
+            ERR.lock().unwrap().clear();
+        }
+    }
+
+    /// Read every packet since the last frame and turn it into samples.
+    pub fn poll() {
+        if !active() {
+            return;
+        }
+        let t = TAB.lock().unwrap();
+        let Some(tab) = t.as_ref() else { return };
+        let hwnd = HWND_.load(Ordering::Relaxed) as HWND;
+        let mut origin = POINT { x: 0, y: 0 };
+        unsafe { ClientToScreen(hwnd, &mut origin) };
+        let mut buf = [Packet::default(); 128];
+        loop {
+            let n = unsafe { (tab.packets)(tab.ctx, 128, buf.as_mut_ptr() as *mut c_void) };
+            if n <= 0 {
+                break;
+            }
+            for pk in &buf[..n as usize] {
+                let x = pk.x as f32 / SUB as f32 - origin.x as f32;
+                let y = pk.y as f32 / SUB as f32 - origin.y as f32;
+                let pressure = (pk.pressure as f32 / tab.pmax).clamp(0.0, 1.0);
+                let contact = pressure > 0.0;
+                {
+                    let mut p = PEN.lock().unwrap();
+                    p.pressure = pressure;
+                    // altitude 900 = upright; show tilt roughly like Windows Ink's x/y degrees
+                    let tilt = (90.0 - pk.altitude as f32 / 10.0).max(0.0);
+                    let az = pk.azimuth as f32 / 10.0 * std::f32::consts::PI / 180.0;
+                    p.tilt_x = (tilt * az.sin()) as i32;
+                    p.tilt_y = (-tilt * az.cos()) as i32;
+                    p.source = 4;
+                    p.samples = p.samples.wrapping_add(1);
+                }
+                let was = DOWN.load(Ordering::Relaxed);
+                let kind = match (contact, was) {
+                    (true, false) => Some(Kind::Down),
+                    (true, true) => Some(Kind::Move),
+                    (false, true) => Some(Kind::Up),
+                    _ => None,
+                };
+                DOWN.store(contact, Ordering::Relaxed);
+                if let Some(kind) = kind {
+                    push(Sample { x, y, pressure, kind, t: pk.time as f64 });
+                }
+            }
+            if (n as usize) < buf.len() {
+                break;
+            }
+        }
     }
 }
 

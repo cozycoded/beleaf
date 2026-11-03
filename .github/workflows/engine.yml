@@ -46,7 +46,7 @@ jobs:
           body: |
             The Rust brush engine experiment. Download beleaf-engine-test.exe and run it (Windows may say "unknown publisher": More info > Run anyway).
             Draw with your pen: the title bar shows the pressure and tilt Windows Ink reports.
-            Keys: [ and ] size, - and = opacity, O pressure changes opacity on/off, 1-6 colours, D dual tip on/off, T taper on/off, F follow direction, C clear.
+            Keys: [ and ] size, - and = opacity, O pressure changes opacity on/off, W switches the pen between Windows Ink and Wintab, 1-6 colours, D dual tip on/off, T taper on/off, F follow direction, C clear.
 
   web:
     runs-on: ubuntu-latest
