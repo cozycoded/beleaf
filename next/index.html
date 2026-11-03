@@ -3183,7 +3183,7 @@ function render() {
   else if (compRect) { const r = compRect; compRect = null; compose(anim.cur, { rect: r }); navDirty = true; PERF.time('composite', performance.now() - t0); }
   t0 = performance.now();
   const x = vctx, busy = stroking || panDrag || gesture || zdrag || rdrag || performance.now() - lastInteract < 160;
-  const bg = stageBackground(), part = !screenFull && scrRect && !bgFresh, sr = scrRect; screenFull = false; scrRect = null; bgFresh = false;
+  const bg = GPUV.on ? null : stageBackground(), part = !GPUV.on && !screenFull && scrRect && !bgFresh, sr = scrRect; screenFull = false; scrRect = null; bgFresh = false;
   x.setTransform(1, 0, 0, 1, 0, 0);
   if (part) { x.save(); x.beginPath(); x.rect(Math.floor(sr[0] * dpr), Math.floor(sr[1] * dpr), Math.ceil((sr[2] - sr[0]) * dpr) + 1, Math.ceil((sr[3] - sr[1]) * dpr) + 1); x.clip(); }
   if (GPUV.on) x.clearRect(0, 0, view.width, view.height); else x.drawImage(bg, 0, 0);
@@ -7083,14 +7083,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.03-0047' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.03-0101' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.03-0047';
+const BELEAF_BUILD = '2026.11.03-0101';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
@@ -7260,7 +7260,7 @@ $('#cmdBar').addEventListener('contextmenu', e => { e.preventDefault(); openCBSe
 buildCB();
 
 /* ================= phones held upright: the top bar becomes a command bar ================= */
-// the beleaf leaf, then undo, redo, colour and layers always in reach; everything else scrolls sideways
+// the beleaf leaf, then the menu, undo, redo, colour and layers always in reach; everything else scrolls sideways
 const mobBar = el('div', { class: 'mobbar', id: 'mobBar', role: 'toolbar', 'aria-label': 'Commands' });
 $('#appLogo').after(mobBar);
 function mbProxy(src, label, html) {
@@ -7273,8 +7273,8 @@ const MB_MENU = '<svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 
 let mbScroll = null;
 function buildMobBar() {
   const col = el('button', { class: 'ibtn mb mbcol', type: 'button', title: 'Colour', 'aria-label': 'Colour' }, el('i', { style: `background:${clearOn ? 'transparent' : color.hex}` })); col.onclick = e => { e.stopPropagation(); openPanel('color'); };
-  const pin = el('div', { class: 'mb-pin' }, mbProxy($('#undoBtn'), 'Undo'), mbProxy($('#redoBtn'), 'Redo'), col, mbProxy($('.menubar [data-open="layers"]'), 'Layers'));
-  // the rest: the main menu, the focus timer, your command bar commands, then timeline, appearance and export
+  const pin = el('div', { class: 'mb-pin' }, mbProxy($('#hamb'), 'Menu', MB_MENU), mbProxy($('#undoBtn'), 'Undo'), mbProxy($('#redoBtn'), 'Redo'), col, mbProxy($('.menubar [data-open="layers"]'), 'Layers'));
+  // the rest: the focus timer, your command bar commands, then timeline, appearance and export
   const pomo = $('#pomoChip'), pc = el('button', { class: 'pomochip mbpomo', type: 'button', 'aria-label': 'Focus timer' }); pc.onclick = e => { e.stopPropagation(); pomo.click(); };
   const pomoSync = () => { pc.innerHTML = pomo.innerHTML; pc.hidden = pomo.hidden; pc.className = pomo.className + ' mbpomo'; pc.style.cssText = pomo.style.cssText; };
   pomoSync(); if (!pomo._mbObs) { pomo._mbObs = true; new MutationObserver(() => { const p = $('#mobBar .mbpomo'); if (p) p._sync(); }).observe(pomo, { attributes: true, childList: true, subtree: true, characterData: true }); } pc._sync = pomoSync;
@@ -7283,7 +7283,7 @@ function buildMobBar() {
   const more = [mbProxy($('#tlBtn'), 'Timeline'), mbProxy($('#themeBtn'), 'Appearance')]; if (!CB.items.includes('app.export')) more.push(mbProxy($('#exportBtn'), 'Export'));
   const gear = el('button', { class: 'ibtn mb', type: 'button', title: 'Choose what’s in this bar', 'aria-label': 'Choose what’s in this bar', onclick: e => { e.stopPropagation(); openCBSettings(); } }); gear.innerHTML = '<svg class="ic" viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>';
   const keep = mbScroll ? mbScroll.scrollLeft : 0;
-  mbScroll = el('div', { class: 'mb-scroll' }, mbProxy($('#hamb'), 'Menu', MB_MENU), pc, el('span', { class: 'mbsep', 'aria-hidden': 'true' }), ...items, el('span', { class: 'mbsep', 'aria-hidden': 'true' }), ...more, gear);
+  mbScroll = el('div', { class: 'mb-scroll' }, pc, ...items, el('span', { class: 'mbsep', 'aria-hidden': 'true' }), ...more, gear);
   const fade = () => mbScroll.classList.toggle('more', mbScroll.scrollLeft + mbScroll.clientWidth < mbScroll.scrollWidth - 4);
   mbScroll.addEventListener('scroll', fade, { passive: true }); new ResizeObserver(fade).observe(mbScroll);
   mobBar.replaceChildren(pin, mbScroll); mbScroll.scrollLeft = keep; requestAnimationFrame(fade);
@@ -7474,7 +7474,7 @@ var GPUV = (() => {
   let markAllRect = null, markAllFull = false;
   const bufs = new Map();           // 'comp', depth+'f'/'g'/'t', 'scratch' -> { tex, fb }
   let bw = 0, bh = 0;               // buffer size (document size)
-  let bgTex = null, bgUp = '', onionUp = '', onT = { p: null, n: null };
+  let onionUp = '', onT = { p: null, n: null };
   let compVer = 0, mipVer = -1, R = null; // R: the rect being recomposed (null = all)
   let settleT = 0, settling = false, verSeen = -1;
   const pref = () => { try { return localStorage.getItem('nibnext.gpuCanvas') !== '0'; } catch { return true; } };
@@ -7550,7 +7550,7 @@ var GPUV = (() => {
     cvs.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;display:block';
     view.parentElement.insertBefore(cvs, view);
     try {
-      gl = cvs.getContext('webgl2', { alpha: false, antialias: false, premultipliedAlpha: true, preserveDrawingBuffer: false, desynchronized: true });
+      gl = cvs.getContext('webgl2', { alpha: false, antialias: false, premultipliedAlpha: true, preserveDrawingBuffer: false });
       if (!gl) throw new Error('WebGL2 is not available');
       progQuad = prog(VS_QUAD, FS_QUAD); progBlend = prog(VS_QUAD, FS_BLEND); progView = prog(VS_VIEW, FS_QUAD);
       vao = gl.createVertexArray(); gl.bindVertexArray(vao);
@@ -7632,13 +7632,24 @@ var GPUV = (() => {
   function texFor(c) {
     if (!c) return null;
     const live = c === tmp;
-    if (live) return upload(c, R);
+    if (live) { const t0 = performance.now(), t = upload(c, R); PERF.time('gpu upload', performance.now() - t0); return t; }
     const m = marks.get(c), had = texOf.has(c);
     if (!had || markAllFull || m === 'all') { marks.delete(c); return upload(c, null); }
     const r = uni(m, markAllRect); if (r) { marks.delete(c); return upload(c, r); }
     return texOf.get(c).tex;
   }
 
+  // the layer being drawn on: its picture plus the stroke in progress, put together on the GPU
+  // (skips building the 2D preview canvas every frame; with a selection the 2D path still does it)
+  function strokeTex(L, i, f) {
+    if (!stroking || i !== active || f !== anim.cur || xform || liveOp || !stroking.S || !eng || !eng.out) return null;
+    if (typeof clipMask === 'function' && clipMask()) return null;
+    const base = texFor(stroking.S.c); if (!base) return null;
+    const t0 = performance.now(), st = upload(eng.out, R); PERF.time('gpu upload', performance.now() - t0);
+    const T = buf('stroke'); clearBuf(T); put(T, base, 1, 'copy');
+    put(T, st, stroking.b.opacity / 100, stroking.erase ? 'destination-out' : (L.lockAlpha ? 'source-atop' : 'source-over'));
+    return T.tex;
+  }
   // ---- the layer stack, the same rules as the 2D renderList ----
   function list(dst, idxs, f, o, depth, tree, onion) {
     for (let n = 0; n < idxs.length;) {
@@ -7647,7 +7658,7 @@ var GPUV = (() => {
       if (!shows(L, o)) { n = m; continue; }
       const vis = clips.filter(k => shows(layers[k], o));
       if (L.kind === 'folder' && L.blend === 'pass' && L.opacity >= 1 && !vis.length) { list(dst, tree.get(L.id) || [], f, o, depth, tree, onion); n = m; continue; }
-      const base = L.kind === 'folder' ? folder(L, f, o, depth, tree) : texFor(srcOf(L, i, f, false));
+      const base = L.kind === 'folder' ? folder(L, f, o, depth, tree) : (strokeTex(L, i, f) || texFor(srcOf(L, i, f, false)));
       if (!base) { n = m; continue; }
       if (!vis.length) put(dst, base, L.opacity, blendOf(L));
       else {
@@ -7695,33 +7706,55 @@ var GPUV = (() => {
   function settle() { if (!G.on) return; if (stroking || performance.now() - lastInteract < 300) { settleT = setTimeout(settle, 400); return; } markAllFull = true; settling = true; dirty(); }
 
   // ---- on screen ----
-  function present(bg, busy) {
+  // the paper (or the emote boxes and their names) as a document-sized picture, made once and reused while you zoom and pan
+  let paperTex = null, paperKey = '', paperCvs = null, progShadow = null;
+  function paper() {
+    const sh = DOC.sheet, key = [DOC.w, DOC.h, sh ? JSON.stringify([sh.cols, sh.rows, sh.box, sh.gap, sh.bg, sh.boxCol, sh.white, sh.labels]) : JSON.stringify(DOC.paper)].join('|');
+    if (key === paperKey && paperTex) return paperTex;
+    const k = Math.min(2, 4096 / Math.max(DOC.w, DOC.h)), W = Math.max(1, Math.round(DOC.w * k)), H = Math.max(1, Math.round(DOC.h * k));
+    const c = paperCvs || (paperCvs = document.createElement('canvas')); c.width = W; c.height = H; const x = c.getContext('2d'); x.setTransform(k, 0, 0, k, 0, 0);
+    if (sh) drawSheetBack(x);
+    else {
+      const t = document.createElement('canvas'); t.width = t.height = 16; const g = t.getContext('2d'); g.fillStyle = '#c9ccd2'; g.fillRect(0, 0, 16, 16); g.fillStyle = '#e6e8ec'; g.fillRect(0, 0, 8, 8); g.fillRect(8, 8, 8, 8);
+      x.fillStyle = x.createPattern(t, 'repeat'); x.fillRect(0, 0, DOC.w, DOC.h); if (DOC.paper && DOC.paper.on) { x.fillStyle = DOC.paper.col; x.fillRect(0, 0, DOC.w, DOC.h); }
+    }
+    if (paperTex) gl.deleteTexture(paperTex); paperTex = newTex(W, H, c); gl.generateMipmap(gl.TEXTURE_2D); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    paperKey = key; return paperTex;
+  }
+  const VS_SHADOW = `#version 300 es
+  in vec2 p; uniform vec2 doc; uniform vec2 scr; uniform mat3 M; uniform float m; out vec2 dp;
+  void main(){ dp = mix(vec2(-m), doc + m, p); vec3 q = M * vec3(dp, 1.0); gl_Position = vec4(q.x / scr.x * 2.0 - 1.0, 1.0 - q.y / scr.y * 2.0, 0.0, 1.0); }`;
+  const FS_SHADOW = `#version 300 es
+  precision highp float; in vec2 dp; uniform vec2 doc; uniform float k; out vec4 o;
+  // a blurred rectangle (like the 2D canvas's shadowBlur 24): each edge fades as half an error function
+  float erf_(float x){ float x2 = x * x, t = .147 * x2; return sign(x) * sqrt(1.0 - exp(-x2 * (1.2732 + t) / (1.0 + t))); }
+  float edge(float t){ return .5 - .5 * erf_(t / 16.97); }
+  void main(){ vec2 t = max(-dp, dp - doc) * k; float a = .45 * edge(t.x) * edge(t.y); o = vec4(0.0, 0.0, 0.0, a); }`;
+  function present(_bg, busy) {
     if (cvs.width !== view.width || cvs.height !== view.height) { cvs.width = view.width; cvs.height = view.height; }
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, cvs.width, cvs.height); gl.disable(gl.SCISSOR_TEST); gl.disable(gl.BLEND);
-    // the stage around the document (2D-drawn, only re-copied when the view changes)
-    if (bgUp !== bgKey || !bgTex) { if (bgTex) gl.deleteTexture(bgTex); bgTex = newTex(bg.width, bg.height, bg); bgUp = bgKey; }
-    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, bgTex);
-    drawFlipped();
+    const sc = hexRgb(stageColor); gl.clearColor(sc[0] / 255, sc[1] / 255, sc[2] / 255, 1); gl.clear(gl.COLOR_BUFFER_BIT);
+    const c = Math.cos(V.r), s = Math.sin(V.r), k = dpr;
+    // screen = dpr · (translate · rotate · scale(s·flip, s)) · doc
+    const M = new Float32Array([k * c * V.s * V.flip, k * s * V.s * V.flip, 0, -k * s * V.s, k * c * V.s, 0, k * V.tx, k * V.ty, 1]);
+    // soft shadow under the document
+    if (!progShadow) progShadow = prog(VS_SHADOW, FS_SHADOW);
+    gl.useProgram(progShadow.p); gl.uniform2f(progShadow.u.doc, DOC.w, DOC.h); gl.uniform2f(progShadow.u.scr, cvs.width, cvs.height); gl.uniformMatrix3fv(progShadow.u.M, false, M);
+    gl.uniform1f(progShadow.u.m, 40 / Math.max(.01, V.s * k)); gl.uniform1f(progShadow.u.k, V.s * k);
+    gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    // the paper or emote boxes, then the drawing on top
+    gl.useProgram(progView.p); gl.uniform1i(progView.u.s, 0); gl.uniform1f(progView.u.a, 1);
+    gl.uniform2f(progView.u.doc, DOC.w, DOC.h); gl.uniform2f(progView.u.scr, cvs.width, cvs.height); gl.uniformMatrix3fv(progView.u.M, false, M);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, paper()); gl.disable(gl.BLEND); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     const C = bufs.get('comp'); if (!C) return;
     gl.bindTexture(gl.TEXTURE_2D, C.tex);
     const nearest = V.s >= 2;
     if (!nearest && !busy && mipVer !== compVer) { gl.generateMipmap(gl.TEXTURE_2D); mipVer = compVer; }
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, nearest ? gl.NEAREST : gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, nearest ? gl.NEAREST : (mipVer === compVer ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR));
-    const c = Math.cos(V.r), s = Math.sin(V.r), k = dpr;
-    // screen = dpr · (translate · rotate · scale(s·flip, s)) · doc
-    const M = new Float32Array([k * c * V.s * V.flip, k * s * V.s * V.flip, 0, -k * s * V.s, k * c * V.s, 0, k * V.tx, k * V.ty, 1]);
-    gl.useProgram(progView.p); gl.uniform1i(progView.u.s, 0); gl.uniform1f(progView.u.a, 1);
-    gl.uniform2f(progView.u.doc, bw, bh); gl.uniform2f(progView.u.scr, cvs.width, cvs.height); gl.uniformMatrix3fv(progView.u.M, false, M);
+    gl.uniform2f(progView.u.doc, C.w, C.h);
     gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); gl.disable(gl.BLEND);
-  }
-  // full-screen copy of the background with its rows turned the right way up
-  let progFlip = null;
-  function drawFlipped() {
-    if (!progFlip) progFlip = prog(`#version 300 es
-      in vec2 p; out vec2 uv; void main(){ uv = vec2(p.x, 1.0 - p.y); gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0); }`, FS_QUAD);
-    gl.useProgram(progFlip.p); gl.uniform1i(progFlip.u.s, 0); gl.uniform1f(progFlip.u.a, 1); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 
   G.markLayer = (L, rect) => {
@@ -7742,7 +7775,7 @@ var GPUV = (() => {
   G.set = on => {
     try { localStorage.setItem('nibnext.gpuCanvas', on ? '1' : '0'); } catch { }
     G.on = !!on && init(); if (cvs) cvs.style.display = G.on ? 'block' : 'none';
-    markAllFull = true; G.cpuStale = true; bgUp = ''; dirty(); badge();
+    markAllFull = true; G.cpuStale = true; paperKey = ''; dirty(); badge();
     return G.on;
   };
   function badge() {

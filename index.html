@@ -7017,14 +7017,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.03-0047' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.03-0101' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.03-0047';
+const BELEAF_BUILD = '2026.11.03-0101';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
@@ -7194,7 +7194,7 @@ $('#cmdBar').addEventListener('contextmenu', e => { e.preventDefault(); openCBSe
 buildCB();
 
 /* ================= phones held upright: the top bar becomes a command bar ================= */
-// the beleaf leaf, then undo, redo, colour and layers always in reach; everything else scrolls sideways
+// the beleaf leaf, then the menu, undo, redo, colour and layers always in reach; everything else scrolls sideways
 const mobBar = el('div', { class: 'mobbar', id: 'mobBar', role: 'toolbar', 'aria-label': 'Commands' });
 $('#appLogo').after(mobBar);
 function mbProxy(src, label, html) {
@@ -7207,8 +7207,8 @@ const MB_MENU = '<svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 
 let mbScroll = null;
 function buildMobBar() {
   const col = el('button', { class: 'ibtn mb mbcol', type: 'button', title: 'Colour', 'aria-label': 'Colour' }, el('i', { style: `background:${clearOn ? 'transparent' : color.hex}` })); col.onclick = e => { e.stopPropagation(); openPanel('color'); };
-  const pin = el('div', { class: 'mb-pin' }, mbProxy($('#undoBtn'), 'Undo'), mbProxy($('#redoBtn'), 'Redo'), col, mbProxy($('.menubar [data-open="layers"]'), 'Layers'));
-  // the rest: the main menu, the focus timer, your command bar commands, then timeline, appearance and export
+  const pin = el('div', { class: 'mb-pin' }, mbProxy($('#hamb'), 'Menu', MB_MENU), mbProxy($('#undoBtn'), 'Undo'), mbProxy($('#redoBtn'), 'Redo'), col, mbProxy($('.menubar [data-open="layers"]'), 'Layers'));
+  // the rest: the focus timer, your command bar commands, then timeline, appearance and export
   const pomo = $('#pomoChip'), pc = el('button', { class: 'pomochip mbpomo', type: 'button', 'aria-label': 'Focus timer' }); pc.onclick = e => { e.stopPropagation(); pomo.click(); };
   const pomoSync = () => { pc.innerHTML = pomo.innerHTML; pc.hidden = pomo.hidden; pc.className = pomo.className + ' mbpomo'; pc.style.cssText = pomo.style.cssText; };
   pomoSync(); if (!pomo._mbObs) { pomo._mbObs = true; new MutationObserver(() => { const p = $('#mobBar .mbpomo'); if (p) p._sync(); }).observe(pomo, { attributes: true, childList: true, subtree: true, characterData: true }); } pc._sync = pomoSync;
@@ -7217,7 +7217,7 @@ function buildMobBar() {
   const more = [mbProxy($('#tlBtn'), 'Timeline'), mbProxy($('#themeBtn'), 'Appearance')]; if (!CB.items.includes('app.export')) more.push(mbProxy($('#exportBtn'), 'Export'));
   const gear = el('button', { class: 'ibtn mb', type: 'button', title: 'Choose what’s in this bar', 'aria-label': 'Choose what’s in this bar', onclick: e => { e.stopPropagation(); openCBSettings(); } }); gear.innerHTML = '<svg class="ic" viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>';
   const keep = mbScroll ? mbScroll.scrollLeft : 0;
-  mbScroll = el('div', { class: 'mb-scroll' }, mbProxy($('#hamb'), 'Menu', MB_MENU), pc, el('span', { class: 'mbsep', 'aria-hidden': 'true' }), ...items, el('span', { class: 'mbsep', 'aria-hidden': 'true' }), ...more, gear);
+  mbScroll = el('div', { class: 'mb-scroll' }, pc, ...items, el('span', { class: 'mbsep', 'aria-hidden': 'true' }), ...more, gear);
   const fade = () => mbScroll.classList.toggle('more', mbScroll.scrollLeft + mbScroll.clientWidth < mbScroll.scrollWidth - 4);
   mbScroll.addEventListener('scroll', fade, { passive: true }); new ResizeObserver(fade).observe(mbScroll);
   mobBar.replaceChildren(pin, mbScroll); mbScroll.scrollLeft = keep; requestAnimationFrame(fade);
