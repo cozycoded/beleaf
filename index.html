@@ -1476,6 +1476,25 @@ button.logo[aria-expanded="true"]{box-shadow:0 0 0 2px var(--accent)}
 .upd-status.new{color:var(--accent-fg)}
 .dockbody{display:flex;flex-direction:column;gap:12px;min-width:0}
 #apPomo .pomo-face{width:min(200px,50vw)}
+/* phones held upright: the top bar is a command bar (pinned undo, redo, colour, layers; the rest scrolls) */
+.mobbar{display:none}
+@media (max-width:699px){
+  .menubar{gap:0;padding:0 0 0 8px}
+  .menubar>:not(#appLogo):not(.mobbar):not(.menu-pop){display:none!important}
+  .menubar #appLogo{margin-right:4px}
+  .mobbar{display:flex;flex:1;min-width:0;height:100%;align-items:center}
+  .mb-pin{display:flex;align-items:center;flex-shrink:0;padding-right:3px;margin-right:2px;border-right:1px solid var(--line2);height:60%}
+  .mb-scroll{flex:1;min-width:0;height:100%;display:flex;align-items:center;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;overscroll-behavior-x:contain;padding-right:6px;scroll-snap-type:x proximity}
+  .mb-scroll::-webkit-scrollbar{display:none}
+  .mb-scroll.more{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 30px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 30px),transparent)}
+  .mobbar .ibtn{flex:0 0 auto;scroll-snap-align:start}
+  .mobbar .ibtn:disabled{opacity:.35}
+  .mobbar .ibtn[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+  .mbsep{flex:0 0 1px;height:20px;background:var(--line2);margin:0 4px}
+  .mbcol i{width:calc(22px*var(--iz,1));height:calc(22px*var(--iz,1));border-radius:50%;border:2px solid var(--fg);display:block;box-sizing:border-box;background-image:none}
+  .mbpomo{flex:0 0 auto;margin:0 2px}
+  .mbpomo[hidden]{display:none}
+}
 </style>
 
 <div class="app" id="app" data-open="" data-timeline="" data-quick="on" data-dl="open" data-dr="open">
@@ -6998,14 +7017,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.03-0026' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.03-0047' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.03-0026';
+const BELEAF_BUILD = '2026.11.03-0047';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
@@ -7173,6 +7192,39 @@ function toggleCB() { CB.on = !CB.on; saveCB(); buildCB(); toast(CB.on ? 'Comman
 function openCBSettings() { openListEditor({ title: 'Command bar settings', note: 'Pick the commands that sit in the bar above your canvases. Drag them into order and add dividers to group them.', sets: { list: [{ name: 'Command bar', items: CB.items }] }, onChange: () => { saveCB(); buildCB(); }, reset: () => { CB.items.splice(0, CB.items.length, ...CB_DEF); } }); }
 $('#cmdBar').addEventListener('contextmenu', e => { e.preventDefault(); openCBSettings(); });
 buildCB();
+
+/* ================= phones held upright: the top bar becomes a command bar ================= */
+// the beleaf leaf, then undo, redo, colour and layers always in reach; everything else scrolls sideways
+const mobBar = el('div', { class: 'mobbar', id: 'mobBar', role: 'toolbar', 'aria-label': 'Commands' });
+$('#appLogo').after(mobBar);
+function mbProxy(src, label, html) {
+  // a stand-in for a button that lives elsewhere in the top bar: same action, same on/off and greyed-out state
+  const b = el('button', { class: 'ibtn mb', type: 'button', 'aria-label': label, title: label }); b.innerHTML = html || src.innerHTML;
+  const sync = () => { b.disabled = !!src.disabled; if (src.hasAttribute('aria-pressed')) b.setAttribute('aria-pressed', src.getAttribute('aria-pressed')); };
+  b.onclick = e => { e.stopPropagation(); src.click(); }; sync(); new MutationObserver(sync).observe(src, { attributes: true, attributeFilter: ['disabled', 'aria-pressed'] }); return b;
+}
+const MB_MENU = '<svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
+let mbScroll = null;
+function buildMobBar() {
+  const col = el('button', { class: 'ibtn mb mbcol', type: 'button', title: 'Colour', 'aria-label': 'Colour' }, el('i', { style: `background:${clearOn ? 'transparent' : color.hex}` })); col.onclick = e => { e.stopPropagation(); openPanel('color'); };
+  const pin = el('div', { class: 'mb-pin' }, mbProxy($('#undoBtn'), 'Undo'), mbProxy($('#redoBtn'), 'Redo'), col, mbProxy($('.menubar [data-open="layers"]'), 'Layers'));
+  // the rest: the main menu, the focus timer, your command bar commands, then timeline, appearance and export
+  const pomo = $('#pomoChip'), pc = el('button', { class: 'pomochip mbpomo', type: 'button', 'aria-label': 'Focus timer' }); pc.onclick = e => { e.stopPropagation(); pomo.click(); };
+  const pomoSync = () => { pc.innerHTML = pomo.innerHTML; pc.hidden = pomo.hidden; pc.className = pomo.className + ' mbpomo'; pc.style.cssText = pomo.style.cssText; };
+  pomoSync(); if (!pomo._mbObs) { pomo._mbObs = true; new MutationObserver(() => { const p = $('#mobBar .mbpomo'); if (p) p._sync(); }).observe(pomo, { attributes: true, childList: true, subtree: true, characterData: true }); } pc._sync = pomoSync;
+  const items = []; let sep = false;
+  CB.items.forEach(id => { if (id === '|') { sep = items.length > 0; return; } if (id === 'undo' || id === 'redo' || !ACT[id]) return; if (sep) { items.push(el('span', { class: 'mbsep', 'aria-hidden': 'true' })); sep = false; } const b = el('button', { class: 'ibtn mb', type: 'button', title: cmdName(id), 'aria-label': cmdName(id), onclick: e => { e.stopPropagation(); runCmd(id); } }); b.innerHTML = cmdSvg(id); items.push(b); });
+  const more = [mbProxy($('#tlBtn'), 'Timeline'), mbProxy($('#themeBtn'), 'Appearance')]; if (!CB.items.includes('app.export')) more.push(mbProxy($('#exportBtn'), 'Export'));
+  const gear = el('button', { class: 'ibtn mb', type: 'button', title: 'Choose what’s in this bar', 'aria-label': 'Choose what’s in this bar', onclick: e => { e.stopPropagation(); openCBSettings(); } }); gear.innerHTML = '<svg class="ic" viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>';
+  const keep = mbScroll ? mbScroll.scrollLeft : 0;
+  mbScroll = el('div', { class: 'mb-scroll' }, mbProxy($('#hamb'), 'Menu', MB_MENU), pc, el('span', { class: 'mbsep', 'aria-hidden': 'true' }), ...items, el('span', { class: 'mbsep', 'aria-hidden': 'true' }), ...more, gear);
+  const fade = () => mbScroll.classList.toggle('more', mbScroll.scrollLeft + mbScroll.clientWidth < mbScroll.scrollWidth - 4);
+  mbScroll.addEventListener('scroll', fade, { passive: true }); new ResizeObserver(fade).observe(mbScroll);
+  mobBar.replaceChildren(pin, mbScroll); mbScroll.scrollLeft = keep; requestAnimationFrame(fade);
+}
+{ const _b = buildCB; buildCB = function () { _b.apply(this, arguments); buildMobBar(); };
+  const _pc = paintChips; paintChips = function () { _pc.apply(this, arguments); const i = $('#mobBar .mbcol i'); if (i) i.style.background = clearOn ? 'transparent' : color.hex; }; }
+buildMobBar();
 
 /* ================= Quick Access: a floating list of favourite commands, in sets ================= */
 const QA_DEF = () => [{ name: 'Set 1', items: ['undo', 'redo', '|', 'clear', 'cut', 'copy', 'paste', '|', 'transform', 'sel.all', 'sel.none', '|', 'view.flip', 'view.rot0', '|', 'size.up', 'size.down'] }, { name: 'Set 2', items: ['layer.new', 'layer.dup', 'layer.merge', 'layer.clip', 'layer.lockAlpha', '|', 'color.swap', 'color.clear', '|', 'app.export'] }];
