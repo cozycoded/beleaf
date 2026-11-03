@@ -1509,6 +1509,22 @@ button.logo[aria-expanded="true"]{box-shadow:0 0 0 2px var(--accent)}
   .card>.mgrab::after{content:"";position:absolute;left:50%;top:5px;width:40px;height:5px;margin-left:-20px;border-radius:3px;background:var(--line2)}
   .card>h2,.card>.keys-head{touch-action:none}
 }
+/* phones: brush picker at the top of the brush settings sheet */
+.dpick{display:none}
+@media (max-width:699px){
+  .dpick:not([hidden]){display:flex;flex-direction:column;gap:8px;padding:8px 10px 10px;border-bottom:1px solid var(--line);flex-shrink:0}
+  .dp-h{display:flex;align-items:center;gap:6px}.dp-h b{flex:1;font-size:calc(14px*var(--fz,1))}
+  .dp-act{display:inline-flex;align-items:center;gap:5px;height:32px;padding:0 11px;border:0;border-radius:999px;background:var(--panel-2);color:var(--fg2);font-size:calc(12px*var(--fz,1));font-weight:600}
+  .dp-act .ic{width:16px;height:16px}
+  .dp-cats{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}.dp-cats::-webkit-scrollbar{display:none}
+  .dp-cats .cat{flex:0 0 auto;height:32px}
+  .dp-list{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;overscroll-behavior-x:contain}.dp-list::-webkit-scrollbar{display:none}
+  .dp-b{flex:0 0 auto;width:calc(118px*var(--iz,1));display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 6px;border-radius:12px;border:1.5px solid var(--line);background:var(--panel-2);color:var(--fg)}
+  .dp-b canvas{width:100px;height:28px}
+  .dp-b span{font-size:calc(12px*var(--fz,1));font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dp-b[aria-pressed="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 16%,var(--panel-2))}
+  .dp-sub{font-size:calc(11px*var(--fz,1));color:var(--muted);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
+}
 </style>
 
 <div class="app" id="app" data-open="" data-timeline="" data-quick="on" data-dl="open" data-dr="open">
@@ -4320,6 +4336,22 @@ function openDetail() {
   buildSettings();
 }
 $('#detailClose').onclick = () => { detail.hidden = true; };
+// phones: the brush picker sits at the top of this sheet (hold the Brush tool to open it), so changing brush and its settings is one place
+const dPick = el('div', { class: 'dpick', id: 'dPick' }); detail.insertBefore(dPick, detail.querySelector('.detail-body'));
+function buildPick() {
+  if (dPick.hidden = tool !== 'brush') return;
+  const sb = (label, svg, fn) => { const b = el('button', { class: 'dp-act', type: 'button', title: label }); b.innerHTML = svg; b.append(el('span', { text: label })); b.onclick = fn; return b; };
+  const head = el('div', { class: 'dp-h' }, el('b', { text: 'Brushes' }),
+    sb('Import', '<svg class="ic" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M4 20h16"/></svg>', () => $('#sutIn').click()),
+    sb('Duplicate', '<svg class="ic" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></svg>', () => $('#dupBrush').click()));
+  const cats = el('div', { class: 'dp-cats', role: 'tablist', 'aria-label': 'Brush groups' }, ...CATS.filter(c => c !== 'Imported' || BRUSHES.some(b => b.cat === c)).map(c => el('button', { class: 'cat', type: 'button', 'aria-pressed': c === cat, text: c, onclick: () => { cat = c; buildBrushUI(); } })));
+  const keep = dPick.querySelector('.dp-list'), sl = keep ? keep.scrollLeft : 0;
+  const list = el('div', { class: 'dp-list' }, ...BRUSHES.filter(b => b.cat === cat).map(b => { const cv = el('canvas', { width: 160, height: 44 }); drawPreview(b, cv); return el('button', { class: 'dp-b', type: 'button', 'aria-pressed': b === brush, onclick: () => { brush = b; setTool('brush'); buildBrushUI(); buildSettings(); } }, cv, el('span', { text: b.name })); }));
+  dPick.replaceChildren(head, cats, list, el('div', { class: 'dp-sub', text: `Settings for ${cur().name}` }));
+  list.scrollLeft = sl; const on = list.querySelector('[aria-pressed="true"]'); if (on && !keep) on.scrollIntoView({ inline: 'center', block: 'nearest' });
+}
+{ const _b = buildBrushUI; buildBrushUI = function () { _b.apply(this, arguments); if (!detail.hidden) buildPick(); }; }
+new MutationObserver(() => { if (!detail.hidden) { dPick.replaceChildren(); buildPick(); } }).observe(detail, { attributes: true, attributeFilter: ['hidden'] });
 $('#detailReset').onclick = () => $('#resetBrush').click();
 (() => {
   let dd = null; const bar = $('#detailBar');
@@ -6783,7 +6815,7 @@ const phone = () => !docked();
 function toolSettings(id) {
   setTool(id);
   if (BRUSHLIKE.has(id)) openDetail(); else openPanel('brush');
-  toast(BRUSHLIKE.has(id) ? 'Brush settings' : 'Tool settings');
+  toast(BRUSHLIKE.has(id) ? (id === 'brush' && phone() ? 'Brushes and settings' : 'Brush settings') : 'Tool settings');
 }
 function holdToOpen(root, sel) {
   let h = null;
@@ -7044,14 +7076,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.03-0128' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.03-0137' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.03-0128';
+const BELEAF_BUILD = '2026.11.03-0137';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
