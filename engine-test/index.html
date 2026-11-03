@@ -21,6 +21,8 @@
   <b>beleaf engine test</b>
   <label>Colour <input type="color" id="col" value="#291f24"></label>
   <label>Size <input type="range" id="size" min="2" max="160" value="28"> <span id="sz">28</span></label>
+  <label>Opacity <input type="range" id="op" min="1" max="100" value="100"> <span id="opv">100%</span></label>
+  <label title="Light pressure draws more see-through"><input type="checkbox" id="pressop" checked> Pressure → opacity</label>
   <label><input type="checkbox" id="dual" checked> Dual tip</label>
   <label><input type="checkbox" id="taper" checked> Taper</label>
   <label><input type="checkbox" id="follow" checked> Follow direction</label>
@@ -37,7 +39,8 @@
   const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
   $('col').oninput = e => eng.set_color(...hex(e.target.value));
   $('size').oninput = e => { eng.set_size(+e.target.value); $('sz').textContent = e.target.value; };
-  ['dual', 'taper', 'follow'].forEach(k => $(k).onchange = e => eng.set_flag(k, e.target.checked));
+  $('op').oninput = e => { eng.set_opacity(+e.target.value); $('opv').textContent = e.target.value + '%'; };
+  ['dual', 'taper', 'follow', 'pressop'].forEach(k => $(k).onchange = e => eng.set_flag(k, e.target.checked));
   $('clear').onclick = () => eng.clear_canvas();
   setInterval(() => { $('pen').textContent = 'pen: ' + eng.pen_info(); }, 150);
 </script>
