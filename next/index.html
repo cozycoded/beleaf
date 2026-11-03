@@ -3,7 +3,7 @@
 <meta name="theme-color" content="#141416"><meta name="robots" content="noindex">
 <link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
 <style>html,body{margin:0;height:100%}[hidden]{display:none!important}
-#nextBadge{position:fixed;left:50%;bottom:6px;transform:translateX(-50%);z-index:90;font:600 11px system-ui,sans-serif;color:#fff;background:#7a4cff;border-radius:999px;padding:3px 10px;opacity:.85;pointer-events:none}
+#nextBadge{position:fixed;left:50%;bottom:6px;transform:translateX(-50%);z-index:90;font:600 11px system-ui,sans-serif;color:#fff;background:#7a4cff;border-radius:999px;padding:3px 10px;opacity:.85;pointer-events:none;border:0}
 @media (max-width:699px){#nextBadge{bottom:auto;top:4px}}</style>
 </head><body><div id="nextBadge">beleaf next · Rust engine test</div><title>beleaf next</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -3073,19 +3073,20 @@ function render() {
   if (stroking && strokeFlush) { strokeFlush = false; dirtyRect(eng.flush()); }
   if (stroking) { PERF.time('brush', brushMs + performance.now() - t0); brushMs = 0; }
   t0 = performance.now();
-  if (compDirty) { compose(); compDirty = false; compRect = null; PERF.time('composite', performance.now() - t0); }
+  if (GPUV.on && (compDirty || compRect)) { GPUV.compose(compDirty ? null : compRect); compDirty = false; compRect = null; PERF.time('composite', performance.now() - t0); GPUV.navSoon(); }
+  else if (compDirty) { compose(); compDirty = false; compRect = null; PERF.time('composite', performance.now() - t0); }
   else if (compRect) { const r = compRect; compRect = null; compose(anim.cur, { rect: r }); navDirty = true; PERF.time('composite', performance.now() - t0); }
   t0 = performance.now();
   const x = vctx, busy = stroking || panDrag || gesture || zdrag || rdrag || performance.now() - lastInteract < 160;
   const bg = stageBackground(), part = !screenFull && scrRect && !bgFresh, sr = scrRect; screenFull = false; scrRect = null; bgFresh = false;
   x.setTransform(1, 0, 0, 1, 0, 0);
   if (part) { x.save(); x.beginPath(); x.rect(Math.floor(sr[0] * dpr), Math.floor(sr[1] * dpr), Math.ceil((sr[2] - sr[0]) * dpr) + 1, Math.ceil((sr[3] - sr[1]) * dpr) + 1); x.clip(); }
-  x.drawImage(bg, 0, 0);
+  if (GPUV.on) x.clearRect(0, 0, view.width, view.height); else x.drawImage(bg, 0, 0);
   x.setTransform(dpr, 0, 0, dpr, 0, 0);
   x.save(); x.translate(V.tx, V.ty); x.rotate(V.r); x.scale(V.s * V.flip, V.s);
   // smooth high-quality scaling when still; quicker scaling while drawing or moving around
   x.imageSmoothingEnabled = V.s < 2; x.imageSmoothingQuality = busy ? 'low' : 'high';
-  x.drawImage(comp, 0, 0); x.restore();
+  if (!GPUV.on) x.drawImage(comp, 0, 0); x.restore(); if (GPUV.on) GPUV.present(bg, busy);
   drawOverlay(x); drawBoxHighlight(x);
   if (hover && tool === 'liquify' && !liqOp) { x.beginPath(); x.arc(hover[0], hover[1], Math.max(2, liq.size * V.s / 2), 0, 7); x.lineWidth = 1; x.setLineDash([4, 3]); x.strokeStyle = 'rgba(255,255,255,.8)'; x.stroke(); x.setLineDash([]); }
   if (hover && BRUSHLIKE.has(tool) && !anim.playing && !stroking && !shape) {
@@ -3175,7 +3176,7 @@ function snapRect(c, x, y, w, h) { const o = mk(w, h); o.getContext('2d').drawIm
 function putSnap(S, img, x, y) { if (img instanceof ImageData) S.ctx.putImageData(img, x, y); else { S.ctx.globalCompositeOperation = 'source-over'; S.ctx.globalAlpha = 1; S.ctx.clearRect(x, y, img.width, img.height); S.ctx.drawImage(img, x, y); } }
 const thumbQ = new Set(); let thumbQT = 0;
 function changed(L, rect) {
-  ver++; if (L) thumbQ.add(L); if (L && L.kind === 'anim') refreshLayerMeta(L);
+  ver++; if (typeof GPUV !== 'undefined') GPUV.markLayer(L, rect); if (L) thumbQ.add(L); if (L && L.kind === 'anim') refreshLayerMeta(L);
   if (rect) dirtyRect(rect); else dirty();
   clearTimeout(thumbQT); thumbQT = setTimeout(flushThumbs, 400); queueThumbs();
 }
@@ -7211,6 +7212,304 @@ applyTheme(); themeReady = true; newDocument(512, 512, false); setPlaceholder(tr
   await loadBrushLib(); buildSettings();
 })();
 window.__nib = { tipOf: (s, h) => tipOf(s, h), get brush() { return brush; }, get layers() { return layers; }, get DOC() { return DOC; }, get tabs() { return tabs; }, projectFileBlob, openProjectBytes, mixDabPaint, wetBlend, setMixMode: m => { mixMode = m; }, PERF, redraw: () => dirty(false), openPomo, get pomo() { return pomo; }, openShare, openImport, decodeFile, decodeCode, makeCard, payloadFor, applyPayload, readStrip, pngReadText, get BR() { return BRUSHES; }, openA11y, applyA11y, colorName, get a11y() { return a11y; }, hidLayout, hidRead, saveNow, get saveBusy() { return saveBusy; }, keymapGet: k => keymap.get(k), toScreen, boxAt, boxRect, focusBox, get sel() { return sel; }, get xform() { return xform; }, keymap: () => keymap, runAction, setSelMode, applyXform,  encodeGIF, encodeAPNG, renderFrames, anim, DOC, BRUSHES, get eng() { return eng; }, setBrush: n => { brush = BRUSHES.find(b => b.name === n); setTool('brush'); buildBrushUI(); }, get layers() { return layers; }, set active(v) { active = v; buildLayers(); } };
+/* ================= beleaf next: the canvas on the graphics card (WebGL2) =================
+   Layers become textures; stacking them (blend modes, clipping, folders, onion skin) and showing
+   them zoomed/rotated on screen happens on the GPU. Layer pixels are still painted with the 2D
+   canvas (and the Rust brush engine), so only what changed is copied up as a texture.
+   The old 2D path stays as the fallback, and keeps feeding the navigator and exports. */
+var GPUV = (() => {
+  const G = { on: false, ok: false, cpuStale: true, why: '' };
+  let gl = null, cvs = null, progQuad = null, progBlend = null, progView = null, vao = null;
+  const texOf = new WeakMap();      // source canvas -> { tex, w, h }
+  const marks = new Map();          // source canvas -> dirty rect [x0,y0,x1,y1] or 'all'
+  let markAllRect = null, markAllFull = false;
+  const bufs = new Map();           // 'comp', depth+'f'/'g'/'t', 'scratch' -> { tex, fb }
+  let bw = 0, bh = 0;               // buffer size (document size)
+  let bgTex = null, bgUp = '', onionUp = '', onT = { p: null, n: null };
+  let compVer = 0, mipVer = -1, R = null; // R: the rect being recomposed (null = all)
+  let settleT = 0, settling = false, verSeen = -1;
+  const pref = () => { try { return localStorage.getItem('nibnext.gpuCanvas') !== '0'; } catch { return true; } };
+
+  const VS_QUAD = `#version 300 es
+  in vec2 p; out vec2 uv; void main(){ uv = p; gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0); }`;
+  // plain copy with opacity (premultiplied in, premultiplied out); the blending is done by the GPU's blend unit
+  const FS_QUAD = `#version 300 es
+  precision highp float; in vec2 uv; uniform sampler2D s; uniform float a; out vec4 o;
+  void main(){ o = texture(s, uv) * a; }`;
+  // the blend modes the GPU's blend unit can't do: read what's underneath and mix in the shader (W3C compositing spec)
+  const FS_BLEND = `#version 300 es
+  precision highp float; in vec2 uv; uniform sampler2D s; uniform sampler2D d; uniform float a; uniform int m; out vec4 o;
+  float lum(vec3 c){ return dot(c, vec3(.3, .59, .11)); }
+  vec3 clipC(vec3 c){ float l = lum(c), n = min(min(c.r, c.g), c.b), x = max(max(c.r, c.g), c.b);
+    if (n < 0.0) c = l + (c - l) * l / max(l - n, 1e-5); if (x > 1.0) c = l + (c - l) * (1.0 - l) / max(x - l, 1e-5); return c; }
+  vec3 setLum(vec3 c, float l){ return clipC(c + (l - lum(c))); }
+  float sat(vec3 c){ return max(max(c.r, c.g), c.b) - min(min(c.r, c.g), c.b); }
+  vec3 setSat(vec3 c, float s){ float mx = max(max(c.r, c.g), c.b), mn = min(min(c.r, c.g), c.b);
+    return mx > mn ? (c - mn) * s / (mx - mn) : vec3(0.0); }
+  float dodge(float b, float s){ return b == 0.0 ? 0.0 : s >= 1.0 ? 1.0 : min(1.0, b / (1.0 - s)); }
+  float burn(float b, float s){ return b >= 1.0 ? 1.0 : s <= 0.0 ? 0.0 : 1.0 - min(1.0, (1.0 - b) / s); }
+  float hard(float b, float s){ return s <= .5 ? b * 2.0 * s : 1.0 - (1.0 - b) * (1.0 - (2.0 * s - 1.0)); }
+  float soft(float b, float s){ float dd = b <= .25 ? ((16.0 * b - 12.0) * b + 4.0) * b : sqrt(b);
+    return s <= .5 ? b - (1.0 - 2.0 * s) * b * (1.0 - b) : b + (2.0 * s - 1.0) * (dd - b); }
+  vec3 B(vec3 b, vec3 s){
+    if (m == 1) return b * s;
+    if (m == 2) return b + s - b * s;
+    if (m == 3) return vec3(hard(s.r, b.r), hard(s.g, b.g), hard(s.b, b.b));
+    if (m == 4) return min(b, s);
+    if (m == 5) return max(b, s);
+    if (m == 6) return vec3(dodge(b.r, s.r), dodge(b.g, s.g), dodge(b.b, s.b));
+    if (m == 7) return vec3(burn(b.r, s.r), burn(b.g, s.g), burn(b.b, s.b));
+    if (m == 8) return vec3(hard(b.r, s.r), hard(b.g, s.g), hard(b.b, s.b));
+    if (m == 9) return vec3(soft(b.r, s.r), soft(b.g, s.g), soft(b.b, s.b));
+    if (m == 10) return abs(b - s);
+    if (m == 11) return b + s - 2.0 * b * s;
+    if (m == 12) return setLum(setSat(s, sat(b)), lum(b));
+    if (m == 13) return setLum(setSat(b, sat(s)), lum(b));
+    if (m == 14) return setLum(s, lum(b));
+    if (m == 15) return setLum(b, lum(s));
+    return s; }
+  void main(){
+    vec4 S = texture(s, uv) * a, D = texture(d, uv);
+    vec3 cs = S.a > 0.0 ? S.rgb / S.a : vec3(0.0), cb = D.a > 0.0 ? D.rgb / D.a : vec3(0.0);
+    vec3 c = S.rgb * (1.0 - D.a) + D.rgb * (1.0 - S.a) + S.a * D.a * clamp(B(cb, cs), 0.0, 1.0);
+    o = vec4(c, S.a + D.a * (1.0 - S.a)); }`;
+  // the document on screen: a quad in document pixels, moved like the 2D view (translate, rotate, zoom, flip)
+  const VS_VIEW = `#version 300 es
+  in vec2 p; uniform vec2 doc; uniform vec2 scr; uniform mat3 M; out vec2 uv;
+  void main(){ uv = p; vec3 q = M * vec3(p * doc, 1.0); gl_Position = vec4(q.x / scr.x * 2.0 - 1.0, 1.0 - q.y / scr.y * 2.0, 0.0, 1.0); }`;
+  const MODES = { multiply: 1, screen: 2, overlay: 3, darken: 4, lighten: 5, 'color-dodge': 6, 'color-burn': 7, 'hard-light': 8, 'soft-light': 9, difference: 10, exclusion: 11, hue: 12, saturation: 13, color: 14, luminosity: 15 };
+
+  function sh(type, src) { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; }
+  function prog(vs, fs) {
+    const p = gl.createProgram(); gl.attachShader(p, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, fs));
+    gl.bindAttribLocation(p, 0, 'p'); gl.linkProgram(p); if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+    const u = {}; const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS); for (let i = 0; i < n; i++) { const k = gl.getActiveUniform(p, i).name; u[k] = gl.getUniformLocation(p, k); }
+    return { p, u };
+  }
+  function newTex(w, h, data) {
+    const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    if (data) gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, data);
+    else gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    return t;
+  }
+
+  function init() {
+    if (cvs) return G.ok;
+    cvs = document.createElement('canvas'); cvs.id = 'glview'; cvs.setAttribute('aria-hidden', 'true');
+    cvs.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;display:block';
+    view.parentElement.insertBefore(cvs, view);
+    try {
+      gl = cvs.getContext('webgl2', { alpha: false, antialias: false, premultipliedAlpha: true, preserveDrawingBuffer: false, desynchronized: true });
+      if (!gl) throw new Error('WebGL2 is not available');
+      progQuad = prog(VS_QUAD, FS_QUAD); progBlend = prog(VS_QUAD, FS_BLEND); progView = prog(VS_VIEW, FS_QUAD);
+      vao = gl.createVertexArray(); gl.bindVertexArray(vao);
+      const vb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, vb); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+      cvs.addEventListener('webglcontextlost', e => { e.preventDefault(); G.ok = false; G.on = false; G.why = 'the graphics card reset'; cvs.style.display = 'none'; dirty(); });
+      G.ok = true;
+    } catch (e) { G.ok = false; G.why = e.message || String(e); console.warn('GPU canvas off:', e); cvs.style.display = 'none'; }
+    return G.ok;
+  }
+
+  // ---- document-size buffers (framebuffer + texture) ----
+  function buf(key) {
+    let b = bufs.get(key);
+    if (!b || b.w !== bw || b.h !== bh) {
+      if (b) { gl.deleteTexture(b.tex); gl.deleteFramebuffer(b.fb); }
+      const tex = newTex(bw, bh), fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+      b = { tex, fb, w: bw, h: bh, key }; bufs.set(key, b);
+    }
+    return b;
+  }
+  function target(b) { gl.bindFramebuffer(gl.FRAMEBUFFER, b.fb); gl.viewport(0, 0, bw, bh); scis(); }
+  function scis() { if (R) { gl.enable(gl.SCISSOR_TEST); gl.scissor(R[0], R[1], R[2] - R[0], R[3] - R[1]); } else gl.disable(gl.SCISSOR_TEST); } // document y goes down, texture rows go up: both start at row 0, so they line up
+  function clearBuf(b) { target(b); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT); }
+  const BF = op => {
+    switch (op) {
+      case 'copy': return null;
+      case 'source-atop': return [gl.DST_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ZERO, gl.ONE];
+      case 'destination-in': return [gl.ZERO, gl.SRC_ALPHA, gl.ZERO, gl.SRC_ALPHA];
+      case 'destination-out': return [gl.ZERO, gl.ONE_MINUS_SRC_ALPHA, gl.ZERO, gl.ONE_MINUS_SRC_ALPHA];
+      case 'lighter': return [gl.ONE, gl.ONE, gl.ONE, gl.ONE];
+      default: return [gl.ONE, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA];
+    }
+  };
+  // draw texture `tex` (document-sized) onto buffer `b` with opacity and a compositing operation
+  function put(b, tex, alpha, op) {
+    if (MODES[op]) {
+      // read under, mix, write into scratch, then copy the area back
+      const S = buf('scratch'); target(S); gl.disable(gl.BLEND);
+      gl.useProgram(progBlend.p); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, b.tex); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.uniform1i(progBlend.u.s, 0); gl.uniform1i(progBlend.u.d, 1); gl.uniform1f(progBlend.u.a, alpha); gl.uniform1i(progBlend.u.m, MODES[op]);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, S.fb); gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, b.fb);
+      const r = R || [0, 0, bw, bh]; gl.disable(gl.SCISSOR_TEST);
+      gl.blitFramebuffer(r[0], r[1], r[2], r[3], r[0], r[1], r[2], r[3], gl.COLOR_BUFFER_BIT, gl.NEAREST);
+      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, null); gl.activeTexture(gl.TEXTURE0);
+      return;
+    }
+    target(b); const f = BF(op);
+    if (f) { gl.enable(gl.BLEND); gl.blendFuncSeparate(f[0], f[1], f[2], f[3]); } else gl.disable(gl.BLEND);
+    gl.useProgram(progQuad.p); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex); gl.uniform1i(progQuad.u.s, 0); gl.uniform1f(progQuad.u.a, alpha);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    gl.disable(gl.BLEND);
+  }
+
+  // ---- layer pixels -> textures (only what changed) ----
+  const uni = (a, b) => !a ? b : !b ? a : [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])];
+  function upload(c, rect) {
+    let e = texOf.get(c);
+    if (!e || e.w !== c.width || e.h !== c.height) {
+      if (e) gl.deleteTexture(e.tex);
+      e = { tex: newTex(c.width, c.height, c), w: c.width, h: c.height }; texOf.set(c, e); return e.tex;
+    }
+    gl.bindTexture(gl.TEXTURE_2D, e.tex);
+    if (!rect) gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, c);
+    else {
+      const x0 = Math.max(0, rect[0] | 0), y0 = Math.max(0, rect[1] | 0), x1 = Math.min(c.width, Math.ceil(rect[2])), y1 = Math.min(c.height, Math.ceil(rect[3]));
+      if (x1 > x0 && y1 > y0) {
+        gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, x0); gl.pixelStorei(gl.UNPACK_SKIP_ROWS, y0); gl.pixelStorei(gl.UNPACK_ROW_LENGTH, c.width);
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, x0, y0, x1 - x0, y1 - y0, gl.RGBA, gl.UNSIGNED_BYTE, c);
+        gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, 0); gl.pixelStorei(gl.UNPACK_SKIP_ROWS, 0); gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 0);
+      }
+    }
+    return e.tex;
+  }
+  // a layer's picture for this frame; `live` sources (the stroke in progress, a transform) are re-made every frame
+  function texFor(c) {
+    if (!c) return null;
+    const live = c === tmp;
+    if (live) return upload(c, R);
+    const m = marks.get(c), had = texOf.has(c);
+    if (!had || markAllFull || m === 'all') { marks.delete(c); return upload(c, null); }
+    const r = uni(m, markAllRect); if (r) { marks.delete(c); return upload(c, r); }
+    return texOf.get(c).tex;
+  }
+
+  // ---- the layer stack, the same rules as the 2D renderList ----
+  function list(dst, idxs, f, o, depth, tree, onion) {
+    for (let n = 0; n < idxs.length;) {
+      const i = idxs[n], L = layers[i]; if (onion && !L.paper) onion();
+      let m = n + 1; const clips = []; while (m < idxs.length && layers[idxs[m]].clip) clips.push(idxs[m++]);
+      if (!shows(L, o)) { n = m; continue; }
+      const vis = clips.filter(k => shows(layers[k], o));
+      if (L.kind === 'folder' && L.blend === 'pass' && L.opacity >= 1 && !vis.length) { list(dst, tree.get(L.id) || [], f, o, depth, tree, onion); n = m; continue; }
+      const base = L.kind === 'folder' ? folder(L, f, o, depth, tree) : texFor(srcOf(L, i, f, false));
+      if (!base) { n = m; continue; }
+      if (!vis.length) put(dst, base, L.opacity, blendOf(L));
+      else {
+        const Gb = buf(depth + 'g'); clearBuf(Gb); put(Gb, base, 1, 'copy');
+        for (const k of vis) {
+          const C = layers[k], cs = C.kind === 'folder' ? folder(C, f, o, depth, tree) : texFor(srcOf(C, k, f, false)); if (!cs) continue;
+          const T = buf(depth + 't'); clearBuf(T); put(T, cs, C.opacity, 'copy'); put(T, Gb.tex, 1, 'destination-in');
+          put(Gb, T.tex, 1, blendOf(C) === 'source-over' ? 'source-atop' : blendOf(C));
+        }
+        put(dst, Gb.tex, L.opacity, blendOf(L));
+      }
+      n = m;
+    }
+  }
+  function folder(F, f, o, depth, tree) { const B = buf((depth + 1) + 'f'); clearBuf(B); list(B, tree.get(F.id) || [], f, o, depth + 1, tree, null); return B.tex; }
+
+  function gcompose(rect) {
+    bw = DOC.w; bh = DOC.h;
+    R = rect ? [Math.max(0, rect[0] | 0), Math.max(0, rect[1] | 0), Math.min(bw, Math.ceil(rect[2])), Math.min(bh, Math.ceil(rect[3]))] : null;
+    if (R && (R[2] <= R[0] || R[3] <= R[1])) { R = null; return; }
+    // pixels changed somewhere without saying where (undo, filters…): copy every layer again
+    if (ver !== verSeen) { markAllFull = true; verSeen = ver; }
+    if (R) { CLIPR = R; }
+    try {
+      const C = buf('comp'); clearBuf(C);
+      const f = anim.cur, o = {};
+      const showOnion = anim.onion && !anim.playing && anim.n > 1 && hasAnim();
+      let onionDone = !showOnion;
+      if (showOnion) {
+        const k = f + ':' + ver + ':' + anim.n + ':' + anim.loop;
+        if (k !== onionKey) {
+          const p = f - 1 >= 0 ? f - 1 : (anim.loop ? anim.n - 1 : -1), nx = f + 1 < anim.n ? f + 1 : (anim.loop ? 0 : -1);
+          onionP.has = animOnly(onionP, p, '#E0525C'); onionN.has = animOnly(onionN, nx, '#3FA7D6'); onionKey = k;
+        }
+        if (onionUp !== onionKey) { const sR = R; R = null; onT.p = onionP.has ? upload(onionP, null) : null; onT.n = onionN.has ? upload(onionN, null) : null; R = sR; onionUp = onionKey; }
+      }
+      const drawOnion = () => { if (onionDone) return; onionDone = true; if (onT.p && onionP.has) put(C, onT.p, .28, 'source-over'); if (onT.n && onionN.has) put(C, onT.n, .28, 'source-over'); };
+      const tree = childMap(); list(C, tree.get(0) || [], f, o, 0, tree, drawOnion); drawOnion();
+    } finally { if (R) unclipAll(); markAllRect = null; markAllFull = false; R = null; }
+    compVer++; G.cpuStale = true;
+    if (!rect && !settling) { clearTimeout(settleT); settleT = setTimeout(settle, 700); }
+    settling = false;
+  }
+  // after a big change, quietly re-copy every layer once (catches any change that didn't report itself)
+  function settle() { if (!G.on) return; if (stroking || performance.now() - lastInteract < 300) { settleT = setTimeout(settle, 400); return; } markAllFull = true; settling = true; dirty(); }
+
+  // ---- on screen ----
+  function present(bg, busy) {
+    if (cvs.width !== view.width || cvs.height !== view.height) { cvs.width = view.width; cvs.height = view.height; }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, cvs.width, cvs.height); gl.disable(gl.SCISSOR_TEST); gl.disable(gl.BLEND);
+    // the stage around the document (2D-drawn, only re-copied when the view changes)
+    if (bgUp !== bgKey || !bgTex) { if (bgTex) gl.deleteTexture(bgTex); bgTex = newTex(bg.width, bg.height, bg); bgUp = bgKey; }
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, bgTex);
+    drawFlipped();
+    const C = bufs.get('comp'); if (!C) return;
+    gl.bindTexture(gl.TEXTURE_2D, C.tex);
+    const nearest = V.s >= 2;
+    if (!nearest && !busy && mipVer !== compVer) { gl.generateMipmap(gl.TEXTURE_2D); mipVer = compVer; }
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, nearest ? gl.NEAREST : gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, nearest ? gl.NEAREST : (mipVer === compVer ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR));
+    const c = Math.cos(V.r), s = Math.sin(V.r), k = dpr;
+    // screen = dpr · (translate · rotate · scale(s·flip, s)) · doc
+    const M = new Float32Array([k * c * V.s * V.flip, k * s * V.s * V.flip, 0, -k * s * V.s, k * c * V.s, 0, k * V.tx, k * V.ty, 1]);
+    gl.useProgram(progView.p); gl.uniform1i(progView.u.s, 0); gl.uniform1f(progView.u.a, 1);
+    gl.uniform2f(progView.u.doc, bw, bh); gl.uniform2f(progView.u.scr, cvs.width, cvs.height); gl.uniformMatrix3fv(progView.u.M, false, M);
+    gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); gl.disable(gl.BLEND);
+  }
+  // full-screen copy of the background with its rows turned the right way up
+  let progFlip = null;
+  function drawFlipped() {
+    if (!progFlip) progFlip = prog(`#version 300 es
+      in vec2 p; out vec2 uv; void main(){ uv = vec2(p.x, 1.0 - p.y); gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0); }`, FS_QUAD);
+    gl.useProgram(progFlip.p); gl.uniform1i(progFlip.u.s, 0); gl.uniform1f(progFlip.u.a, 1); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+
+  G.markLayer = (L, rect) => {
+    if (!G.on) return;
+    const S = L && L.kind !== 'folder' ? surfAt(L, anim.cur) : null;
+    verSeen = ver; // this change is accounted for
+    if (!S) { if (rect) markAllRect = uni(markAllRect, rect); else markAllFull = true; return; }
+    const prev = marks.get(S.c); marks.set(S.c, !rect || prev === 'all' ? 'all' : uni(prev, rect));
+  };
+  G.compose = rect => gcompose(rect);
+  // the navigator (and anything else reading the 2D composite) catches up a moment after changes stop
+  let navT = 0;
+  G.navSoon = () => { clearTimeout(navT); navT = setTimeout(function go() {
+    if (!G.on || !G.cpuStale) return; if (stroking) { navT = setTimeout(go, 300); return; }
+    if (navCan.offsetParent) { compose0(); G.cpuStale = false; navDirty = true; drawNav(); } }, 250); };
+  const compose0 = () => compose();
+  G.present = present;
+  G.set = on => {
+    try { localStorage.setItem('nibnext.gpuCanvas', on ? '1' : '0'); } catch { }
+    G.on = !!on && init(); if (cvs) cvs.style.display = G.on ? 'block' : 'none';
+    markAllFull = true; G.cpuStale = true; bgUp = ''; dirty(); badge();
+    return G.on;
+  };
+  function badge() {
+    const b = document.getElementById('nextBadge'); if (!b) return;
+    b.textContent = 'beleaf next · Rust engine · GPU canvas ' + (G.on ? 'on' : 'off') + (G.why && !G.on && pref() ? ' (' + G.why + ')' : '');
+  }
+  G.debug = () => ({ bufs: [...bufs.keys()], compVer, mipVer });
+  // for automated tests of beleaf next
+  G.t = { get V() { return V; }, get layers() { return layers; }, get active() { return active; }, dirty: c => dirty(c), addLayer: () => addLayer(), addFolder: () => addFolder(false) };
+  // start once the app is up
+  setTimeout(() => { if (pref()) G.set(true); else badge(); const b = document.getElementById('nextBadge'); if (b) { b.style.pointerEvents = 'auto'; b.style.cursor = 'pointer'; b.title = 'Turn the GPU canvas on or off'; b.onclick = () => G.set(!G.on); } }, 0);
+  return G;
+})();
+window.GPUV = GPUV;
+
+
 })();
 
 </script>
