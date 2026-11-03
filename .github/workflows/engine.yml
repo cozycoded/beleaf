@@ -64,16 +64,21 @@ jobs:
           cargo install wasm-bindgen-cli --version "$V" --locked
           wasm-bindgen --target web --no-typescript --out-dir out/pkg target/wasm32-unknown-unknown/release/beleaf_poc.wasm
           cp web/index.html out/
+          cargo build --release --target wasm32-unknown-unknown -p beleaf-web-engine
+          wasm-bindgen --target web --no-typescript --out-dir out-next/engine target/wasm32-unknown-unknown/release/beleaf_web_engine.wasm
       - uses: actions/upload-artifact@v4
         with:
           name: beleaf-engine-test-web
-          path: native/out
-      - name: Publish to the site under /engine-test/
+          path: |
+            native/out
+            native/out-next
+      - name: Publish to the site under /engine-test/ and /next/engine/
         run: |
           git config user.name "beleaf build"
           git config user.email "actions@users.noreply.github.com"
           rm -rf engine-test && mkdir engine-test && cp -r native/out/* engine-test/
-          git add engine-test
+          mkdir -p next && rm -rf next/engine && cp -r native/out-next/engine next/engine
+          git add engine-test next/engine
           git commit -m "Update the engine test build" || exit 0
           git pull --rebase origin main
           git push origin HEAD:main

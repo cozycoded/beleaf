@@ -44,6 +44,12 @@ pub struct Brush {
     pub size_min: Option<f32>,
     /// opacity at zero pressure, % (None = pressure doesn't change opacity)
     pub op_min: Option<f32>,
+    /// pressure response curves as (in, out) points from 0..1; empty = straight line
+    pub size_curve: Vec<[f32; 2]>,
+    pub op_curve: Vec<[f32; 2]>,
+    /// tip roundness % (100 = as drawn, lower = squashed)
+    pub roundness: f32,
+    pub jitter: Jitter,
     /// start / end taper lengths in canvas px (0 = off)
     pub taper_in: f32,
     pub taper_out: f32,
@@ -66,6 +72,10 @@ impl Brush {
             stab: 10.0,
             size_min: Some(95.0),
             op_min: Some(0.0),
+            size_curve: Vec::new(),
+            op_curve: Vec::new(),
+            roundness: 100.0,
+            jitter: Jitter::default(),
             taper_in: 60.0,
             taper_out: 60.0,
             taper_ratio: Some(30.0),
@@ -73,6 +83,39 @@ impl Brush {
             dual: Some(Dual { size: 119.0, spacing: 37.158_46, spray: true, count: 10, area: 81.0, random_angle: true }),
         }
     }
+}
+
+/// Random variation per dab, all in % (angle: 100 = up to ±180°).
+#[derive(Clone, Debug, Default)]
+pub struct Jitter {
+    pub size: f32,
+    pub opacity: f32,
+    pub angle: f32,
+    pub round: f32,
+    pub scatter: f32,
+}
+
+/// beleaf's pressure curve: smooth (monotone-ish Catmull-Rom) through the points.
+pub fn eval_curve(pts: &[[f32; 2]], x: f32) -> f32 {
+    if pts.len() < 2 {
+        return x.clamp(0.0, 1.0);
+    }
+    let x = x.clamp(0.0, 1.0);
+    for i in 1..pts.len() {
+        if x <= pts[i][0] {
+            let p0 = pts[i.saturating_sub(2)];
+            let p1 = pts[i - 1];
+            let p2 = pts[i];
+            let p3 = pts[(i + 1).min(pts.len() - 1)];
+            let t = if p2[0] > p1[0] { (x - p1[0]) / (p2[0] - p1[0]) } else { 0.0 };
+            let m1 = (p2[1] - p0[1]) / (p2[0] - p0[0]).max(1e-6) * (p2[0] - p1[0]);
+            let m2 = (p3[1] - p1[1]) / (p3[0] - p1[0]).max(1e-6) * (p2[0] - p1[0]);
+            let (t2, t3) = (t * t, t * t * t);
+            let y = (2.0 * t3 - 3.0 * t2 + 1.0) * p1[1] + (t3 - 2.0 * t2 + t) * m1 + (-2.0 * t3 + 3.0 * t2) * p2[1] + (t3 - t2) * m2;
+            return y.clamp(0.0, 1.0);
+        }
+    }
+    pts[pts.len() - 1][1]
 }
 
 /// One stamp of a tip.
@@ -92,6 +135,8 @@ pub struct Dab {
     pub dist: f32,
     /// start-taper factor that was applied when it was placed (so it can be corrected at the end)
     pub ti: f32,
+    /// roundness 0..1 (squashes the tip across its height)
+    pub round: f32,
 }
 
 #[derive(Clone, Copy)]
@@ -131,9 +176,6 @@ pub struct Stroke {
     dabs: Vec<Dab>,
 }
 
-fn clamp01(v: f32) -> f32 {
-    v.clamp(0.0, 1.0)
-}
 
 impl Stroke {
     pub fn new(b: Brush, seed: u32) -> Stroke {
@@ -157,14 +199,14 @@ impl Stroke {
     /// Size multiplier from pressure.
     fn size_factor(&self, p: f32) -> f32 {
         match self.b.size_min {
-            Some(m) => (m + (100.0 - m) * clamp01(p)) / 100.0,
+            Some(m) => (m + (100.0 - m) * eval_curve(&self.b.size_curve, p)) / 100.0,
             None => 1.0,
         }
     }
     /// Opacity multiplier from pressure.
     fn op_factor(&self, p: f32) -> f32 {
         match self.b.op_min {
-            Some(m) => (m + (100.0 - m) * clamp01(p)) / 100.0,
+            Some(m) => (m + (100.0 - m) * eval_curve(&self.b.op_curve, p)) / 100.0,
             None => 1.0,
         }
     }
@@ -201,7 +243,19 @@ impl Stroke {
         if self.b.follow {
             ang += self.heading.unwrap_or(0.0);
         }
-        let d = Dab { x: pt.x, y: pt.y, size, angle: ang * PI / 180.0, alpha, dual: false, dist: self.dist, ti };
+        let j = self.b.jitter.clone();
+        let (mut s, mut v, mut a, mut r, mut x, mut y) = (size, alpha, ang, self.b.roundness / 100.0, pt.x, pt.y);
+        if j.size > 0.0 { s *= 1.0 - self.rng.next() * j.size / 100.0; }
+        if j.opacity > 0.0 { v *= 1.0 - self.rng.next() * j.opacity / 100.0; }
+        if j.angle > 0.0 { a += (self.rng.next() * 2.0 - 1.0) * j.angle * 1.8; }
+        if j.round > 0.0 { r *= 1.0 - self.rng.next() * j.round / 100.0; }
+        if j.scatter > 0.0 {
+            let ra = (self.rng.next() * 2.0 - 1.0) * j.scatter / 100.0 * size;
+            let th = self.heading.unwrap_or(0.0) * PI / 180.0 + PI / 2.0;
+            x += th.cos() * ra;
+            y += th.sin() * ra;
+        }
+        let d = Dab { x, y, size: s, angle: a * PI / 180.0, alpha: v, dual: false, dist: self.dist, ti, round: r };
         self.dabs.push(d);
         out.push(d);
     }
@@ -220,7 +274,7 @@ impl Stroke {
                 x += th.cos() * r;
                 y += th.sin() * r;
             }
-            let d = Dab { x, y, size: base, angle: a, alpha: 1.0, dual: true, dist: self.dist, ti: 1.0 };
+            let d = Dab { x, y, size: base, angle: a, alpha: 1.0, dual: true, dist: self.dist, ti: 1.0, round: 1.0 };
             self.dabs.push(d);
             out.push(d);
         }
@@ -407,6 +461,25 @@ mod tests {
         let (_, hard) = circle(Brush::textured_acrylic(24.0), 30.0, 1.0, 0.9, 4.0);
         let avg = |v: &Vec<Dab>| { let m: Vec<&Dab> = v.iter().filter(|d| !d.dual).collect(); m.iter().map(|d| d.alpha).sum::<f32>() / m.len() as f32 };
         assert!(avg(&hard) > avg(&soft) * 2.0);
+    }
+
+    #[test]
+    fn curves_match_beleaf() {
+        assert!((eval_curve(&[], 0.3) - 0.3).abs() < 1e-6);
+        assert!((eval_curve(&[[0.0, 0.0], [1.0, 1.0]], 0.5) - 0.5).abs() < 1e-3);
+        let soft = eval_curve(&[[0.0, 0.0], [0.35, 0.15], [1.0, 1.0]], 0.35);
+        assert!((soft - 0.15).abs() < 1e-3, "{soft}");
+    }
+
+    #[test]
+    fn jitter_varies_size() {
+        let mut b = Brush::textured_acrylic(24.0);
+        b.jitter.size = 60.0;
+        b.dual = None;
+        let (_, fin) = circle(b, 40.0, 1.0, 0.9, 4.0);
+        let sizes: Vec<f32> = fin.iter().filter(|d| d.dist > 80.0 && d.dist < 160.0).map(|d| d.size).collect();
+        let (mn, mx) = sizes.iter().fold((f32::MAX, 0.0f32), |(a, b), &s| (a.min(s), b.max(s)));
+        assert!(mx > mn * 1.3, "{mn} {mx}");
     }
 
     #[test]
