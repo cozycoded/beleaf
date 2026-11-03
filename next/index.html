@@ -1394,7 +1394,25 @@ button.logo[aria-expanded="true"]{box-shadow:0 0 0 2px var(--accent)}
 .mtabs button[aria-selected="true"]{background:var(--panel-3,var(--panel));color:var(--fg)}
 .mtabs button[aria-selected="true"] .ic{color:var(--accent)}
 .mtabs .ic{width:18px;height:18px;flex-shrink:0}
-.mtabs .mt-x{margin-left:auto;border-radius:9px}
+.mtabs .mt-x{border-radius:9px}.mtabs .mt-min{margin-left:auto}
+.mt-grab{display:none;align-items:center;justify-content:center;width:22px;flex-shrink:0;color:var(--muted);cursor:move;touch-action:none}.mt-grab .ic{width:16px;height:16px;fill:currentColor;stroke:none}
+.panel.aw .mt-grab{display:flex}
+.panel.aw .mtabs{touch-action:none;cursor:move}
+.panel.aw .mtabs button{cursor:pointer}
+@media (max-width:699px){
+  .app[data-mlay="float"] .panel.aw{left:var(--wx)!important;top:var(--wy)!important;right:auto!important;bottom:auto!important;width:var(--ww)!important;transform:none;transition:opacity .15s ease,visibility .15s;overflow:hidden}
+  .app[data-mlay="float"] .panel.aw:not(.fp-on){opacity:0;visibility:hidden;pointer-events:none}
+  .app[data-mlay="float"] .panel.aw.min{height:auto!important}
+  .app[data-mlay="float"] .panel.aw.min > :not(.mtabs){display:none!important}
+  .app[data-mlay="float"] .panel.aw.min .mtabs{border-radius:16px;padding-bottom:4px}
+  .app[data-mlay="float"] .panel.aw.min .mtabs button{border-radius:9px}
+  .app[data-mlay="float"] .panel.aw > .rgrip{z-index:6}
+}
+.panel:not(.aw) > .rgrip{display:none!important}
+.panel.aw{container-type:inline-size}
+@container (max-width:300px){.mtabs button span{display:none}}
+.panel.aw > .ph .close,.panel.aw > .ph [data-collapse],.panel.aw > .sec-x{display:none!important}
+.detail.min>.dpick{display:none}
 /* ===== mini rails ===== */
 .mrail{position:absolute;z-index:20;background:color-mix(in srgb,var(--panel) 88%,transparent);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.45);padding:5px;display:flex;flex-direction:column;gap:5px;align-items:center;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
 .mrail[hidden]{display:none!important}
@@ -6971,7 +6989,9 @@ function winBox(win) {
 function setXY(win, x, y) { const fixed = getComputedStyle(win).position === 'fixed', p = !fixed && win.offsetParent ? win.offsetParent.getBoundingClientRect() : { left: 0, top: 0 }; win.style.setProperty('--wx', Math.round(x - p.left) + 'px'); win.style.setProperty('--wy', Math.round(y - p.top) + 'px'); }
 function saveWin(win) { const o = AW.get(win), m = win.dataset.wmode; if (!o || m === 'sheet' || win.hidden) return; const r = win.getBoundingClientRect(); store.set(o.key + '.' + winSpot(m), { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(win.classList.contains('min') ? parseFloat(win.style.getPropertyValue('--wh')) || r.height : r.height) }); }
 function placeWin(win) {
-  const o = AW.get(win); if (!o) return; const m = winMode(); win.dataset.wmode = m;
+  const o = AW.get(win); if (!o) return; const m = winMode();
+  if (o.floatOnly) { if (m !== 'float') { win.classList.remove('aw', 'touchy', 'min'); delete win.dataset.wmode; return; } win.classList.add('aw'); }
+  win.dataset.wmode = m;
   win.classList.toggle('touchy', m !== 'window' || matchMedia('(pointer:coarse)').matches);
   if (m === 'sheet') { const bb = $('.bottombar'); win.style.setProperty('--sb', (bb && bb.offsetParent ? Math.round(innerHeight - bb.getBoundingClientRect().top) : 60) + 'px'); if (typeof fitSheets === 'function') requestAnimationFrame(fitSheets); return; }
   const b = winBox(win), s = store.get(o.key + '.' + winSpot(m), null) || o.def(m, b), cl = (v, a, z) => Math.max(a, Math.min(z, v));
@@ -6992,7 +7012,7 @@ new MutationObserver(reWin).observe(app, { attributes: true, attributeFilter: ['
 // the All settings / brush window
 { const d = $('#detailWin'), x = $('#detailClose'); x.before(minBtn(d, 'All settings'));
   makeAdaptive(d, { key: 'win.brush', bar: $('#detailBar'), minW: 280, minH: 200, def: (m, b) => {
-    if (m === 'float') { const w = Math.min(360, Math.round((b.right - b.left) * .9)); return { x: b.right - w - 8, y: b.top + 12, w, h: b.bottom - b.top - 24 }; }
+    if (m === 'float') { const w = Math.min(360, Math.round((b.right - b.left) * .9)), H = b.bottom - b.top; return { x: b.right - w - 8, y: b.top + 12, w, h: Math.min(H - 24, Math.max(340, Math.round(H * .66))) }; }
     const l = $('.dock-left'), x0 = l && l.offsetWidth ? l.getBoundingClientRect().right + 12 : b.left + 70; return { x: x0, y: b.top + 16, w: 460, h: Math.min(560, b.bottom - b.top - 32) }; } }); }
 // floating panels: add minimise + grip whenever one is made
 new MutationObserver(() => $$('.fwin').forEach(w => {
@@ -7217,14 +7237,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.03-0222' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.03-1200' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.03-0222';
+const BELEAF_BUILD = '2026.11.03-1200';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
@@ -7456,15 +7476,56 @@ const _kc = keysChanged; keysChanged = function () { _kc(); buildCB(); buildQA()
 // Floating side panel (portrait): the open panel floats on the right with tabs on top; the canvas stays live around it.
 const MTABS = [['brush', 'Brush', ICON.brushes], ['color', 'Color', UNITS.color[2]], ['layers', 'Layers', ICON.layers], ['emotes', 'Emotes', ICON.emotes], ['nav', 'Navigator', ICON.nav]];
 const PANEL_OF = { brush: '#brushPanel', color: '#colorPanel', layers: '#layersPanel', emotes: '#emotePanel', nav: '#navPanel' };
+let fpMin = !!store.get('panelMin', false);
+const fpGrab = el('div', { class: 'mt-grab', title: 'Drag to move', 'aria-hidden': 'true' }); fpGrab.innerHTML = '<svg class="ic" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>';
 const mTabs = el('div', { class: 'mtabs', role: 'tablist', 'aria-label': 'Panels', hidden: '' });
 function placeMTabs() {
   const o = app.dataset.open, on = !docked() && app.dataset.mlay === 'float' && o && PANEL_OF[o];
   mTabs.hidden = !on; if (!on) return;
-  mTabs.replaceChildren(...MTABS.map(([k, label, ic]) => { const b = el('button', { role: 'tab', 'aria-selected': k === o, title: label, 'aria-label': label, onclick: () => { if (k !== o) openPanel(k); } }); b.innerHTML = `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ic}</svg>${k === o ? `<span>${label}</span>` : ''}`; return b; }),
-    (() => { const x = el('button', { class: 'mt-x', title: 'Tuck away', 'aria-label': 'Close panel', onclick: () => { app.dataset.open = ''; } }); x.innerHTML = '<svg class="ic" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>'; return x; })());
+  mTabs.replaceChildren(...MTABS.map(([k, label, ic]) => { const b = el('button', { role: 'tab', 'aria-selected': k === o, title: label, 'aria-label': label, onclick: () => { if (fpMin) setFpMin(false); if (k !== o) openPanel(k); } }); b.innerHTML = `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ic}</svg>${k === o ? `<span>${label}</span>` : ''}`; return b; }),
+    (() => { const x = el('button', { class: 'mt-x mt-min', title: fpMin ? 'Open up' : 'Shrink to the tab strip', 'aria-label': fpMin ? 'Open panel' : 'Minimise panel', 'aria-pressed': fpMin, onclick: () => setFpMin(!fpMin) }); x.innerHTML = fpMin ? '<svg class="ic" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>' : IC_MIN; return x; })(),
+    (() => { const x = el('button', { class: 'mt-x', title: 'Close', 'aria-label': 'Close panel', onclick: () => { app.dataset.open = ''; } }); x.innerHTML = IC_X; return x; })());
+  mTabs.prepend(fpGrab);
   const p = $(PANEL_OF[o]); if (mTabs.parentElement !== p) p.prepend(mTabs);
 }
 new MutationObserver(() => { placeMTabs(); buildRails(); }).observe(app, { attributes: true, attributeFilter: ['data-open', 'data-mlay'] });
+/* Floating side panel = a real floating window: drag it by the dotted handle (or its title), resize from the corner,
+   shrink it to just the tab strip, and tap the canvas to shrink it (that tap doesn't draw). Its spot and size are remembered. */
+const FPANELS = Object.values(PANEL_OF).map(s => $(s));
+const fpDef = (m, b) => { const W = b.right - b.left, H = b.bottom - b.top, w = Math.min(310, Math.round(W * .72)); return { x: b.right - w - 8, y: b.top + 8, w, h: Math.min(H - 16, Math.max(320, Math.round(H * .6))) }; };
+const fpOpen = () => { const o = app.dataset.open; return !docked() && app.dataset.mlay === 'float' && PANEL_OF[o] ? $(PANEL_OF[o]) : null; };
+function fpSync() {
+  const cur = fpOpen();
+  FPANELS.forEach(p => { p.classList.toggle('fp-on', p === cur); if (p.classList.contains('aw')) p.classList.toggle('min', p === cur && fpMin); });
+  if (cur) { placeWin(cur); cur.classList.toggle('min', fpMin); }
+}
+function setFpMin(m) { fpMin = !!m; store.set('panelMin', fpMin); fpSync(); placeMTabs(); }
+FPANELS.forEach(p => { AW.set(p, { key: 'win.panel', minW: 220, minH: 150, def: fpDef, floatOnly: true }); addGrip(p, { minW: 220, minH: 150, onEnd: () => saveWin(p) }); });
+new MutationObserver(fpSync).observe(app, { attributes: true, attributeFilter: ['data-open', 'data-mlay'] }); addEventListener('resize', () => requestAnimationFrame(fpSync)); fpSync();
+{ // move by the handle, the empty part of the tab strip, or the panel's title
+  let dd = null;
+  document.addEventListener('pointerdown', e => {
+    const p = fpOpen(); if (!p || !p.classList.contains('aw') || !p.contains(e.target)) return;
+    if (!(e.target.closest('.mt-grab') || (e.target.closest('.mtabs, .ph') && !e.target.closest('button, input, select')))) return;
+    const r = p.getBoundingClientRect(); dd = { p, ox: e.clientX - r.left, oy: e.clientY - r.top, id: e.pointerId, moved: false }; e.preventDefault();
+  });
+  document.addEventListener('pointermove', e => { if (!dd || e.pointerId !== dd.id) return; dd.moved = true; const b = winBox(dd.p), r = dd.p.getBoundingClientRect(); setXY(dd.p, Math.max(b.left, Math.min(b.right - r.width, e.clientX - dd.ox)), Math.max(b.top, Math.min(b.bottom - r.height, e.clientY - dd.oy))); });
+  const up = e => { if (!dd || e.pointerId !== dd.id) return; if (dd.moved) saveWin(dd.p); dd = null; }; document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
+}
+{ // tap the canvas (or the area around it) to shrink floating menus; that touch is used up so it leaves no mark
+  const eat = new Set(), stage = $('#stage');
+  const swallow = e => { e.stopImmediatePropagation(); if (e.cancelable) e.preventDefault(); };
+  addEventListener('pointerdown', e => {
+    if (eat.size) { if (stage.contains(e.target)) { eat.add(e.pointerId); swallow(e); } return; }
+    if (docked() || !stage.contains(e.target) || e.target.closest('button, input, select, .mrail, .aw')) return;
+    let hit = false; const p = fpOpen();
+    if (p && p.classList.contains('aw') && !fpMin) { setFpMin(true); hit = true; }
+    const d = $('#detailWin'); if (!d.hidden && d.dataset.wmode === 'float' && !d.classList.contains('min')) { const mb = d.querySelector('.minbtn'); mb && mb.click(); hit = true; }
+    if (hit) { eat.add(e.pointerId); swallow(e); }
+  }, true);
+  for (const t of ['pointermove', 'pointerup', 'pointercancel']) addEventListener(t, e => { if (!eat.has(e.pointerId)) return; swallow(e); if (t !== 'pointermove') eat.delete(e.pointerId); }, true);
+  for (const t of ['touchstart', 'touchmove', 'mousedown', 'click']) addEventListener(t, e => { if (eat.size && stage.contains(e.target) && !e.target.closest('button')) swallow(e); }, { capture: true, passive: false });
+}
 
 // Mini rails: layer thumbnails on one edge and a colour bubble on the other; tap to pick, hold for the full panel
 const railL = el('div', { class: 'mrail mrail-l', role: 'toolbar', 'aria-label': 'Layers', hidden: '' }), railC = el('div', { class: 'mrail mrail-c', role: 'toolbar', 'aria-label': 'Colours', hidden: '' });
