@@ -7237,14 +7237,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.03-1604' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.03-1607' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.03-1604';
+const BELEAF_BUILD = '2026.11.03-1607';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
@@ -7785,7 +7785,7 @@ var GPUV = (() => {
   // if the GPU canvas ever breaks, go straight back to the normal canvas instead of leaving a black screen
   function fail(why, err) {
     if (err) console.error('GPU canvas error, switching to the normal canvas:', err);
-    G.why = why; G.lastErr = err ? String(err && err.stack || err) : ''; G.on = false; G.ok = !!(gl && !gl.isContextLost());
+    G.why = why === 'error' && err ? 'error: ' + String(err.message || err).slice(0, 80) : why; G.lastErr = err ? String(err && err.stack || err) : ''; G.on = false; G.ok = !!(gl && !gl.isContextLost());
     if (cvs) cvs.style.display = 'none'; markAllFull = true; paperKey = ''; mipVer = -1;
     try { badge(); dirty(true); if (typeof toast === 'function') toast('GPU canvas hit a problem, so beleaf switched to the normal canvas. Tap the purple badge to try GPU again.'); } catch { }
   }
