@@ -2744,7 +2744,7 @@ class HybridEngine {
 'use strict';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
-const app = $('#app'), stage = $('#stage'), view = $('#view'), vctx = (() => { try { if (localStorage.getItem('nibnext.lowLatency') !== 'false') return view.getContext('2d', { desynchronized: true }); } catch { } return view.getContext('2d'); })();
+const app = $('#app'), stage = $('#stage'), view = $('#view'), vctx = (() => { try { if (localStorage.getItem('nibnext.lowLatency') !== 'false' && localStorage.getItem('nibnext.gpuCanvas') === '0') return view.getContext('2d', { desynchronized: true }); } catch { } return view.getContext('2d'); })();
 const mk = mkc;
 const hexRgb = h => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
 const el = (tag, props = {}, ...kids) => { const e = document.createElement(tag); for (const k in props) { if (k === 'class') e.className = props[k]; else if (k === 'text') e.textContent = props[k]; else if (k.startsWith('on')) e[k] = props[k]; else e.setAttribute(k, props[k]); } e.append(...kids); return e; };
@@ -7237,14 +7237,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.03-1607' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.03-1609' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.03-1607';
+const BELEAF_BUILD = '2026.11.03-1609';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
@@ -8043,6 +8043,9 @@ var GPUV = (() => {
   };
   G.set = on => {
     try { localStorage.setItem('nibnext.gpuCanvas', on ? '1' : '0'); } catch { }
+    // switching on while the 2D canvas is a low-latency one: that one would cover the GPU canvas, so restart the page with an ordinary one
+    if (on) { let ds = false; try { ds = !!(vctx.getContextAttributes && vctx.getContextAttributes().desynchronized); } catch { }
+      if (ds) { let p = null; try { toast('Turning the GPU canvas on…'); if (typeof saveNow === 'function') p = saveNow(true); } catch { } Promise.resolve(p).catch(() => { }).finally(() => setTimeout(() => location.reload(), 200)); return false; } }
     if (on && cvs && gl && gl.isContextLost()) resetGL();
     G.on = !!on && init(); if (cvs) cvs.style.display = G.on ? 'block' : 'none'; checked = 0; if (G.on) G.why = '';
     markAllFull = true; G.cpuStale = true; paperKey = ''; dirty(); badge();
