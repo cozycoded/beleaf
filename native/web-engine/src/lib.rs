@@ -118,10 +118,16 @@ struct Params {
     angle_tilt: bool,
     #[serde(rename = "colorJitter")]
     color_jitter: ColJ,
+    mix: f32,
+    #[serde(rename = "blendOnly")]
+    blend_only: bool,
+    #[serde(rename = "mixMode")]
+    mix_mode: String,
+    opacity: f32,
 }
 impl Default for Params {
     fn default() -> Self {
-        Params { size: 10.0, spacing: 8.0, flow: 100.0, angle: 0.0, follow: false, stab: 0.0, roundness: 100.0, build: false, aa: 2.0, size_dyn: Dyn::default(), op_dyn: Dyn::default(), taper: Taper::default(), jitter: JitterP::default(), dual: DualP::default(), tex: TexP::default(), spray: SprayP::default(), tilt_dyn: TiltP::default(), tilt_op: TiltP::default(), tilt_round: 0.0, angle_tilt: false, color_jitter: ColJ::default() }
+        Params { size: 10.0, spacing: 8.0, flow: 100.0, angle: 0.0, follow: false, stab: 0.0, roundness: 100.0, build: false, aa: 2.0, size_dyn: Dyn::default(), op_dyn: Dyn::default(), taper: Taper::default(), jitter: JitterP::default(), dual: DualP::default(), tex: TexP::default(), spray: SprayP::default(), tilt_dyn: TiltP::default(), tilt_op: TiltP::default(), tilt_round: 0.0, angle_tilt: false, color_jitter: ColJ::default(), mix: 0.0, blend_only: false, mix_mode: String::new(), opacity: 100.0 }
     }
 }
 impl Params {
@@ -157,6 +163,11 @@ impl Params {
                 let j = &self.color_jitter;
                 if j.hue != 0.0 || j.sat != 0.0 || j.val != 0.0 { Some(ColorJitter { hue: j.hue, sat: j.sat, val: j.val, per_stroke: j.per_stroke }) } else { None }
             },
+            mix: self.mix,
+            blend_only: self.blend_only,
+            mix_paint: self.mix_mode != "normal",
+            opacity: self.opacity,
+            build: self.build,
         }
     }
 }
@@ -369,6 +380,7 @@ pub struct GpuEngine {
     ub_comp: wgpu::Buffer,
     comp_bg: wgpu::BindGroup,
     stroke: Option<Stroke>,
+    sampler: Option<js_sys::Function>,
     build: bool,
     binary: bool,
     dual_on: bool,
@@ -478,6 +490,7 @@ impl GpuEngine {
             ub_comp,
             comp_bg,
             stroke: None,
+            sampler: None,
             build: false,
             binary: false,
             dual_on: false,
@@ -546,6 +559,12 @@ impl GpuEngine {
         );
     }
 
+    /// For mixing brushes: `f(x, y, r)` returns the layer's colour under the brush as [r, g, b (0-255), coverage 0-1].
+    /// Applies to the next `begin`; pass undefined for none.
+    pub fn set_sampler(&mut self, f: Option<js_sys::Function>) {
+        self.sampler = f;
+    }
+
     /// Start a stroke. `params` is the brush as JSON; colour 0..1.
     pub fn begin(&mut self, params: &str, r: f32, g: f32, b: f32) -> bool {
         let p: Params = match serde_json::from_str(params) {
@@ -557,7 +576,8 @@ impl GpuEngine {
         self.dual_on = brush.dual.is_some() && self.tips[1].is_some();
         self.build = p.build;
         self.binary = p.aa == 0.0;
-        self.per_dab_col = brush.color_jitter.as_ref().is_some_and(|j| !j.per_stroke);
+        let mixing = brush.mix > 0.0 && self.sampler.is_some();
+        self.per_dab_col = mixing || brush.color_jitter.as_ref().is_some_and(|j| !j.per_stroke);
         self.tex = [if p.tex.on { 1.0 } else { 0.0 }, p.tex.density / 100.0, p.tex.scale / 100.0, if self.per_dab_col { 1.0 } else { 0.0 }];
         self.seed = self.seed.wrapping_mul(1664525).wrapping_add(1013904223);
         let mut brush = brush;
@@ -566,6 +586,19 @@ impl GpuEngine {
         }
         let mut stroke = Stroke::new(brush, self.seed);
         stroke.set_color([r, g, b]);
+        if mixing {
+            let f = self.sampler.take().unwrap();
+            stroke.set_sampler(Box::new(move |x, y, rad| {
+                let v = f.call3(&JsValue::NULL, &JsValue::from_f64(x as f64), &JsValue::from_f64(y as f64), &JsValue::from_f64(rad as f64)).unwrap_or(JsValue::NULL);
+                let a = js_sys::Array::from(&v);
+                if a.length() < 4 {
+                    return [0.0; 4];
+                }
+                let n = |i: u32| a.get(i).as_f64().unwrap_or(0.0) as f32;
+                [n(0) / 255.0, n(1) / 255.0, n(2) / 255.0, n(3)]
+            }));
+        }
+        self.sampler = None;
         let c = stroke.color();
         self.color = [c[0], c[1], c[2], 1.0];
         self.stroke = Some(stroke);

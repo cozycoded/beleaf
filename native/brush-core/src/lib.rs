@@ -8,7 +8,14 @@
 //! opacity, the stabiliser, "rotation follows the stroke", Clip Studio-style start/end taper
 //! (by speed, capped to a share of the stroke) and a sprayed second ("dual") tip.
 
+use std::collections::HashMap;
 use std::f32::consts::PI;
+
+pub mod pigment;
+
+/// Reads the layer under the brush: (x, y, radius) → colour 0..1 and coverage 0..1.
+pub type Sampler = Box<dyn FnMut(f32, f32, f32) -> [f32; 4]>;
+const WET_CELL: f32 = 32.0;
 
 /// The second tip that masks the first (Clip Studio's "dual brush"): the final coverage is
 /// main coverage × dual coverage, which is what gives textured brushes their broken edges.
@@ -70,6 +77,16 @@ pub struct Brush {
     pub angle_tilt: bool,
     /// random colour changes, per stroke or per dab
     pub color_jitter: Option<ColorJitter>,
+    /// 0..100: how much the brush picks up the paint under it (needs a sampler)
+    pub mix: f32,
+    /// a blender: no paint of its own, only pushes around what's there
+    pub blend_only: bool,
+    /// realistic pigment mixing (yellow + blue = green) instead of blending the light
+    pub mix_paint: bool,
+    /// the stroke's opacity on the layer, 0..100 (for how much of its own wet paint shows)
+    pub opacity: f32,
+    /// dabs build up on each other instead of keeping the strongest
+    pub build: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -167,6 +184,11 @@ impl Brush {
             tilt_round: 0.0,
             angle_tilt: false,
             color_jitter: None,
+            mix: 0.0,
+            blend_only: false,
+            mix_paint: true,
+            opacity: 100.0,
+            build: false,
         }
     }
 }
@@ -267,6 +289,12 @@ pub struct Stroke {
     col: [f32; 3],
     /// last pen direction (azimuth, radians)
     az: Option<f32>,
+    sampler: Option<Sampler>,
+    /// the paint the brush carries while mixing
+    load: [f32; 3],
+    loaded: bool,
+    /// main dabs by area, to find this stroke's own wet paint quickly
+    wet: HashMap<(i32, i32), Vec<u32>>,
 }
 
 
@@ -288,12 +316,87 @@ impl Stroke {
             dabs: Vec::new(),
             col: [0.0; 3],
             az: None,
+            sampler: None,
+            load: [0.0; 3],
+            loaded: false,
+            wet: HashMap::new(),
         }
     }
 
+    /// Lets the brush pick up paint from the layer (for brushes with `mix` > 0).
+    pub fn set_sampler(&mut self, s: Sampler) {
+        self.sampler = Some(s);
+    }
+
+    /// This stroke's own paint at a point so far: colour and coverage.
+    fn wet_at(&self, x: f32, y: f32) -> Option<([f32; 3], f32)> {
+        let ids = self.wet.get(&((x / WET_CELL).floor() as i32, (y / WET_CELL).floor() as i32))?;
+        let (mut c, mut a) = ([0.0f32; 3], 0.0f32);
+        for &i in ids {
+            let d = &self.dabs[i as usize];
+            let (dx, dy) = (x - d.x, y - d.y);
+            let (sn, cs) = d.angle.sin_cos();
+            let (lx, ly) = (dx * cs + dy * sn, -dx * sn + dy * cs);
+            let hw = d.size / 2.0;
+            let hh = (hw * d.round).max(0.25);
+            let r = ((lx / hw).powi(2) + (ly / hh).powi(2)).sqrt();
+            let v = ((1.0 - r) * hw + 0.5).clamp(0.0, 1.0) * d.alpha;
+            if v <= 0.0 {
+                continue;
+            }
+            if self.b.build {
+                let na = a + v * (1.0 - a);
+                let k = v / na;
+                for j in 0..3 { c[j] += (d.col[j] - c[j]) * k; }
+                a = na;
+            } else if v > a {
+                let k = if a > 0.0 { (v - a) / v } else { 1.0 };
+                for j in 0..3 { c[j] += (d.col[j] - c[j]) * k; }
+                a = v;
+            }
+        }
+        if a > 0.0 { Some((c, a)) } else { None }
+    }
+
+    /// What's under the brush: the layer as it was, with this stroke's own wet paint on top.
+    fn wet_sample(&self, under: [f32; 4], x: f32, y: f32) -> [f32; 4] {
+        let Some((c, a)) = self.wet_at(x.round(), y.round()) else { return under };
+        let a = a * self.b.opacity / 100.0;
+        if a < 0.02 {
+            return under;
+        }
+        if under[3] < 0.02 {
+            return [c[0], c[1], c[2], a];
+        }
+        let ua = under[3];
+        let big_a = a + ua * (1.0 - a);
+        let k = a / big_a;
+        [c[0] * k + under[0] * (1.0 - k), c[1] * k + under[1] * (1.0 - k), c[2] * k + under[2] * (1.0 - k), big_a]
+    }
+
+    fn mix_cols(&self, a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
+        if self.b.mix_paint {
+            pigment::mix(a, b, t)
+        } else {
+            [0, 1, 2].map(|i| a[i] + (b[i] - a[i]) * t)
+        }
+    }
+
+    fn remember_wet(&mut self, i: usize) {
+        let d = self.dabs[i];
+        let e = d.size / 2.0 + 1.0;
+        let (x0, x1) = (((d.x - e) / WET_CELL).floor() as i32, ((d.x + e) / WET_CELL).floor() as i32);
+        let (y0, y1) = (((d.y - e) / WET_CELL).floor() as i32, ((d.y + e) / WET_CELL).floor() as i32);
+        for cy in y0..=y1 {
+            for cx in x0..=x1 {
+                self.wet.entry((cx, cy)).or_default().push(i as u32);
+            }
+        }
+    }
     /// Sets the stroke colour (0..1). Call before the first `add`; per-stroke colour jitter is applied here.
     pub fn set_color(&mut self, c: [f32; 3]) {
         self.col = c;
+        self.load = c;
         if self.b.color_jitter.as_ref().is_some_and(|j| j.per_stroke) {
             self.col = self.jitter_color(c);
         }
@@ -376,7 +479,35 @@ impl Stroke {
                 round *= 1.0 - self.b.tilt_round / 100.0 * (1.0 - t) * 0.85;
             }
         }
-        let col = if self.b.color_jitter.as_ref().is_some_and(|j| !j.per_stroke) { self.jitter_color(self.col) } else { self.col };
+        let mut alpha = alpha;
+        let mut col = self.col;
+        if self.b.mix > 0.0 && self.sampler.is_some() {
+            let under = (self.sampler.as_mut().unwrap())(pt.x, pt.y, (size / 4.0).max(1.0));
+            let sm = self.wet_sample(under, pt.x, pt.y);
+            let rgb = [sm[0], sm[1], sm[2]];
+            // a blender starts with the colour it first touches
+            if self.b.blend_only && !self.loaded && sm[3] >= 0.02 {
+                self.load = rgb;
+                self.loaded = true;
+            }
+            // gentle pickup: the brush carries its colour for about half a brush-width before the colour underneath takes over
+            let step = (self.b.spacing / 100.0).max(0.01);
+            let m = self.b.mix / 100.0 * sm[3] * (1.0 - (-step / 0.55).exp());
+            if m > 0.0 {
+                self.load = self.mix_cols(self.load, rgb, m);
+            }
+            if self.b.blend_only {
+                if sm[3] < 0.02 {
+                    return;
+                }
+                alpha *= sm[3];
+            }
+            col = if self.b.blend_only { self.load } else { self.mix_cols(self.col, self.load, self.b.mix / 100.0) };
+        }
+        if self.b.color_jitter.as_ref().is_some_and(|j| !j.per_stroke) {
+            col = self.jitter_color(col);
+        }
+        let mixing = self.b.mix > 0.0 && self.sampler.is_some();
         let j = self.b.jitter.clone();
         let spray = self.b.spray.clone();
         let n = spray.as_ref().map_or(1, |s| s.count.max(1));
@@ -404,6 +535,9 @@ impl Stroke {
             }
             let d = Dab { x, y, size: s, angle: a * PI / 180.0, alpha: v, dual: false, dist: self.dist, ti, round: r, col };
             self.dabs.push(d);
+            if mixing {
+                self.remember_wet(self.dabs.len() - 1);
+            }
             out.push(d);
         }
     }
@@ -708,5 +842,51 @@ mod tests {
             let back = hsv2rgb(h, s, v);
             for i in 0..3 { assert!((back[i] - c[i]).abs() < 1e-4, "{c:?} -> {back:?}"); }
         }
+    }
+
+    fn mix_line(b: Brush, under: [f32; 4]) -> Vec<Dab> {
+        let mut s = Stroke::new(b, 5);
+        s.set_color([1.0, 0.9, 0.0]);
+        // blue paint on the right half of the layer
+        s.set_sampler(Box::new(move |x, _, _| if x > 100.0 { under } else { [0.0; 4] }));
+        for i in 0..=80 {
+            s.add(i as f32 * 2.5, 50.0, 1.0, i as f64 * 8.0);
+        }
+        s.finish()
+    }
+
+    #[test]
+    fn mixing_picks_up_the_paint_underneath() {
+        let mut b = Brush::plain(20.0);
+        b.mix = 60.0;
+        b.flow = 50.0;
+        let d = mix_line(b, [0.0, 0.2, 0.9, 1.0]);
+        let first = d[0].col;
+        let last = d[d.len() - 1].col;
+        assert!((first[0] - 1.0).abs() < 0.02, "starts with its own colour {first:?}");
+        assert!(last[1] > last[0] && last[1] > last[2], "yellow into blue goes green {last:?}");
+    }
+
+    #[test]
+    fn blender_only_paints_where_there_is_paint() {
+        let mut b = Brush::plain(20.0);
+        b.mix = 80.0;
+        b.blend_only = true;
+        let d = mix_line(b, [0.0, 0.2, 0.9, 1.0]);
+        assert!(d.iter().all(|d| d.x > 85.0), "a blender on an empty layer leaves nothing");
+        assert!(d.iter().all(|d| d.col[2] > 0.5), "and carries the blue it touched {:?}", d[0].col);
+    }
+
+    #[test]
+    fn wet_paint_is_picked_up_going_back() {
+        let mut b = Brush::plain(20.0);
+        b.mix = 70.0;
+        let mut s = Stroke::new(b, 5);
+        s.set_color([1.0, 0.0, 0.0]);
+        s.set_sampler(Box::new(|_, _, _| [0.0; 4]));
+        for i in 0..=40 { s.add(i as f32 * 2.5, 50.0, 1.0, i as f64 * 8.0); }
+        // switch colour mid-stroke isn't possible, but the wet red must be seen under the brush
+        let w = s.wet_at(50.0, 50.0).expect("wet paint");
+        assert!(w.1 > 0.9 && w.0[0] > 0.9);
     }
 }

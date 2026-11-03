@@ -2554,7 +2554,6 @@ const rustReady = (async () => {
 // what the Rust engine can't do yet → old engine
 function rustWhyNot(b) {
   if (!RUST) return RUST_ERR ? 'not available here' : 'still loading';
-  if (b.mix > 0 || b.blendOnly) return 'paint mixing';
   return '';
 }
 const tipBytes = t => { const d = t.data, o = new Uint8Array(t.w * t.h); for (let i = 0; i < o.length; i++) { const v = d[i]; o[i] = v <= 0 ? 0 : v >= 1 ? 255 : Math.round(v * 255); } return o; };
@@ -2566,7 +2565,7 @@ class HybridEngine {
   get box() { if (!this.gpu) return this.js.box; const b = RUST.g.bbox(); return b.length ? [Math.floor(b[0]), Math.floor(b[1]), Math.ceil(b[2]), Math.ceil(b[3])] : null; }
   begin(b, opts) {
     this.gpu = false;
-    const why = opts && opts.gpu ? (opts.sample ? 'paint mixing' : rustWhyNot(b)) : 'shape tool';
+    const why = opts && opts.gpu ? rustWhyNot(b) : 'shape tool';
     if (opts && opts.gpu && !why) {
       try {
         const R = RUST; R.g.resize(this.w, this.h);
@@ -2580,7 +2579,8 @@ class HybridEngine {
           sizeDyn: b.sizeDyn || { on: false }, opDyn: b.opDyn || { on: false }, taper: b.taper || {}, jitter: b.jitter || {}, dual: dual ? b.dual : { on: false },
           tex: { on: !!tx, density: tx ? b.texture.density : 0, scale: tx ? b.texture.scale : 100 },
           spray: b.spray || { on: false }, tiltDyn: b.tiltDyn || { on: false }, tiltOp: b.tiltOp || { on: false }, tiltRound: b.tiltRound || 0, angleTilt: !!b.angleTilt,
-          colorJitter: b.colorJitter || {} };
+          colorJitter: b.colorJitter || {}, mix: opts.sample && !opts.erase ? b.mix || 0 : 0, blendOnly: !!b.blendOnly, mixMode: b.mixMode || 'paint', opacity: b.opacity ?? 100 };
+        R.g.set_sampler(opts.sample && !opts.erase ? opts.sample : undefined);
         const c = opts.color || [0, 0, 0];
         if (R.g.begin(JSON.stringify(p), c[0] / 255, c[1] / 255, c[2] / 255)) { this.gpu = true; ENGINE_USED.last = 'rust'; ENGINE_USED.why = ''; return; }
       } catch (e) { console.warn('Rust engine stroke failed, using the old one:', e); }
