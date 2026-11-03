@@ -16,14 +16,17 @@ export class GpuEngine {
         wasm.__wbg_gpuengine_free(ptr, 0);
     }
     /**
-     * One pen sample (document px, pressure 0..1, time ms). Drawn on the next flush.
+     * One pen sample (document px, pressure 0..1, tilt 0 flat..1 upright, azimuth radians, time ms).
+     * Tilt and azimuth are undefined when the pen doesn't report them. Drawn on the next flush.
      * @param {number} x
      * @param {number} y
      * @param {number} p
+     * @param {number | null | undefined} tilt
+     * @param {number | null | undefined} az
      * @param {number} t
      */
-    add(x, y, p, t) {
-        wasm.gpuengine_add(this.__wbg_ptr, x, y, p, t);
+    add(x, y, p, tilt, az, t) {
+        wasm.gpuengine_add(this.__wbg_ptr, x, y, p, isLikeNone(tilt) ? Number.MAX_SAFE_INTEGER : Math.fround(tilt), isLikeNone(az) ? Number.MAX_SAFE_INTEGER : Math.fround(az), t);
     }
     /**
      * The whole stroke's area [x0, y0, x1, y1] (empty if nothing drawn).
@@ -1787,17 +1790,17 @@ function __wbg_get_imports() {
             arg0.writeTexture(arg1, arg2, arg3, arg4);
         },
         __wbindgen_generic_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 2438, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 2441, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_d0cceb78ed04714a___convert__closures_____invoke___wasm_bindgen_d0cceb78ed04714a___JsValue__core_37ee0ce0c4cd57d5___result__Result_____wasm_bindgen_d0cceb78ed04714a___JsError___true_);
             return ret;
         },
         __wbindgen_generic_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 274, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 277, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_d0cceb78ed04714a___convert__closures_____invoke___wasm_bindgen_d0cceb78ed04714a___JsValue______true_);
             return ret;
         },
         __wbindgen_generic_0000000000000003: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUUncapturedErrorEvent")], shim_idx: 274, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUUncapturedErrorEvent")], shim_idx: 277, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_d0cceb78ed04714a___convert__closures_____invoke___wasm_bindgen_d0cceb78ed04714a___JsValue______true__13);
             return ret;
         },
