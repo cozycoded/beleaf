@@ -7237,14 +7237,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.03-1200' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.03-1604' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.03-1200';
+const BELEAF_BUILD = '2026.11.03-1604';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
@@ -7707,7 +7707,7 @@ window.__nib = { tipOf: (s, h) => tipOf(s, h), get brush() { return brush; }, ge
 var GPUV = (() => {
   const G = { on: false, ok: false, cpuStale: true, why: '' };
   let gl = null, cvs = null, progQuad = null, progBlend = null, progView = null, vao = null;
-  const texOf = new WeakMap();      // source canvas -> { tex, w, h }
+  let texOf = new WeakMap();      // source canvas -> { tex, w, h }
   const marks = new Map();          // source canvas -> dirty rect [x0,y0,x1,y1] or 'all'
   let markAllRect = null, markAllFull = false;
   const bufs = new Map();           // 'comp', depth+'f'/'g'/'t', 'scratch' -> { tex, fb }
@@ -7782,6 +7782,14 @@ var GPUV = (() => {
     return t;
   }
 
+  // if the GPU canvas ever breaks, go straight back to the normal canvas instead of leaving a black screen
+  function fail(why, err) {
+    if (err) console.error('GPU canvas error, switching to the normal canvas:', err);
+    G.why = why; G.lastErr = err ? String(err && err.stack || err) : ''; G.on = false; G.ok = !!(gl && !gl.isContextLost());
+    if (cvs) cvs.style.display = 'none'; markAllFull = true; paperKey = ''; mipVer = -1;
+    try { badge(); dirty(true); if (typeof toast === 'function') toast('GPU canvas hit a problem, so beleaf switched to the normal canvas. Tap the purple badge to try GPU again.'); } catch { }
+  }
+  function resetGL() { bufs.clear(); texOf = new WeakMap(); marks.clear(); onT = { p: null, n: null }; paperTex = null; paperKey = ''; progShadow = null; onionUp = ''; mipVer = -1; compVer = 0; try { cvs && cvs.remove(); } catch { } cvs = null; gl = null; }
   function init() {
     if (cvs) return G.ok;
     cvs = document.createElement('canvas'); cvs.id = 'glview'; cvs.setAttribute('aria-hidden', 'true');
@@ -7795,7 +7803,8 @@ var GPUV = (() => {
       const vb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, vb); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), gl.STATIC_DRAW);
       gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
-      cvs.addEventListener('webglcontextlost', e => { e.preventDefault(); G.ok = false; G.on = false; G.why = 'the graphics card reset'; cvs.style.display = 'none'; dirty(); });
+      cvs.addEventListener('webglcontextlost', e => { e.preventDefault(); fail('the graphics card reset'); });
+      cvs.addEventListener('webglcontextrestored', () => { const want = pref(); resetGL(); if (want) G.set(true); });
       G.ok = true;
     } catch (e) { G.ok = false; G.why = e.message || String(e); console.warn('GPU canvas off:', e); cvs.style.display = 'none'; }
     return G.ok;
@@ -7945,7 +7954,7 @@ var GPUV = (() => {
 
   // ---- on screen ----
   // the paper (or the emote boxes and their names) as a document-sized picture, made once and reused while you zoom and pan
-  let paperTex = null, paperKey = '', paperCvs = null, progShadow = null;
+  let checked = 0, paperTex = null, paperKey = '', paperCvs = null, progShadow = null;
   function paper() {
     const sh = DOC.sheet, key = [DOC.w, DOC.h, sh ? JSON.stringify([sh.cols, sh.rows, sh.box, sh.gap, sh.bg, sh.boxCol, sh.white, sh.labels]) : JSON.stringify(DOC.paper)].join('|');
     if (key === paperKey && paperTex) return paperTex;
@@ -7957,7 +7966,7 @@ var GPUV = (() => {
       x.fillStyle = x.createPattern(t, 'repeat'); x.fillRect(0, 0, DOC.w, DOC.h); if (DOC.paper && DOC.paper.on) { x.fillStyle = DOC.paper.col; x.fillRect(0, 0, DOC.w, DOC.h); }
     }
     if (paperTex) gl.deleteTexture(paperTex); paperTex = newTex(W, H, c); gl.generateMipmap(gl.TEXTURE_2D); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-    paperKey = key; return paperTex;
+    paperKey = key; checked = 0; return paperTex;
   }
   const VS_SHADOW = `#version 300 es
   in vec2 p; uniform vec2 doc; uniform vec2 scr; uniform mat3 M; uniform float m; out vec2 dp;
@@ -8002,17 +8011,40 @@ var GPUV = (() => {
     if (!S) { if (rect) markAllRect = uni(markAllRect, rect); else markAllFull = true; return; }
     const prev = marks.get(S.c); marks.set(S.c, !rect || prev === 'all' ? 'all' : uni(prev, rect));
   };
-  G.compose = rect => gcompose(rect);
+  G.compose = rect => { try { gcompose(rect); if (gl.isContextLost()) fail('the graphics card reset'); } catch (e) { fail('error', e); } };
   // the navigator (and anything else reading the 2D composite) catches up a moment after changes stop
   let navT = 0;
   G.navSoon = () => { clearTimeout(navT); navT = setTimeout(function go() {
     if (!G.on || !G.cpuStale) return; if (stroking) { navT = setTimeout(go, 300); return; }
     if (navCan.offsetParent) { compose0(); G.cpuStale = false; navDirty = true; drawNav(); } }, 250); };
   const compose0 = () => compose();
-  G.present = present;
+  G.present = (bg, busy) => {
+    try {
+      present(bg, busy);
+      const e = gl.getError(); if (gl.isContextLost()) return fail('the graphics card reset');
+      if (e && e !== gl.CONTEXT_LOST_WEBGL) throw new Error('WebGL error ' + e);
+      // the first frames after switching on or making a canvas: make sure the paper actually shows
+      if (checked < 3 && !busy && DOC.w && !DOC.placeholder) {
+        checked++; const c = Math.cos(V.r), s = Math.sin(V.r), k = dpr, px = (DOC.w / 2), py = (DOC.h / 2);
+        const sx = Math.round(k * (V.tx + (c * px * V.flip - s * py) * V.s)), sy = Math.round(cvs.height - k * (V.ty + (s * px * V.flip + c * py) * V.s));
+        if (sx > 0 && sy > 0 && sx < cvs.width && sy < cvs.height) {
+          const a = new Uint8Array(4); gl.readPixels(sx, sy, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, a);
+          G.probe = [...a];
+          // only judge it where nothing is drawn yet, so the screen should show the paper (never black unless the paper is black)
+          const C = bufs.get('comp'), b = new Uint8Array(4);
+          if (C && !DOC.sheet && a[0] + a[1] + a[2] === 0) {
+            gl.bindFramebuffer(gl.FRAMEBUFFER, C.fb); gl.readPixels(DOC.w >> 1, DOC.h >> 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, b); gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            const pc = DOC.paper && DOC.paper.on ? hexRgb(DOC.paper.col) : [200, 200, 200];
+            if (b[3] === 0 && pc[0] + pc[1] + pc[2] > 60) throw new Error('the picture came out black');
+          }
+        }
+      }
+    } catch (e) { fail('error', e); }
+  };
   G.set = on => {
     try { localStorage.setItem('nibnext.gpuCanvas', on ? '1' : '0'); } catch { }
-    G.on = !!on && init(); if (cvs) cvs.style.display = G.on ? 'block' : 'none';
+    if (on && cvs && gl && gl.isContextLost()) resetGL();
+    G.on = !!on && init(); if (cvs) cvs.style.display = G.on ? 'block' : 'none'; checked = 0; if (G.on) G.why = '';
     markAllFull = true; G.cpuStale = true; paperKey = ''; dirty(); badge();
     return G.on;
   };
