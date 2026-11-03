@@ -63,9 +63,11 @@ pub struct Settings {
     pub dual: bool,
     pub taper: bool,
     pub follow: bool,
+    /// pen pressure changes opacity (light pressure = see-through)
+    pub press_op: bool,
     pub clear: bool,
 }
-pub static SETTINGS: Mutex<Settings> = Mutex::new(Settings { color: [0.16, 0.12, 0.14], size: 28.0, opacity: 1.0, dual: true, taper: true, follow: true, clear: false });
+pub static SETTINGS: Mutex<Settings> = Mutex::new(Settings { color: [0.16, 0.12, 0.14], size: 28.0, opacity: 1.0, dual: true, taper: true, follow: true, press_op: true, clear: false });
 
 fn brush_from_settings() -> (Brush, [f32; 3], f32) {
     let s = SETTINGS.lock().unwrap();
@@ -78,6 +80,9 @@ fn brush_from_settings() -> (Brush, [f32; 3], f32) {
         b.taper_out = 0.0;
     }
     b.follow = s.follow;
+    if !s.press_op {
+        b.op_min = None;
+    }
     (b, s.color, s.opacity)
 }
 
@@ -654,8 +659,8 @@ impl App {
                 let s = SETTINGS.lock().unwrap();
                 let src = ["no input yet", "Windows Ink pen", "mouse", "pointer"][p.source as usize];
                 w.set_title(&format!(
-                    "beleaf engine test · size {:.0} (keys [ ]) · {} · pressure {:.2} · tilt {} / {} · dual {} (D) · taper {} (T) · C clears · 1-6 colours",
-                    s.size, src, p.pressure, p.tilt_x, p.tilt_y, if s.dual { "on" } else { "off" }, if s.taper { "on" } else { "off" }
+                    "beleaf engine test · size {:.0} ([ ]) · opacity {:.0}% (- =) · pressure→opacity {} (O) · {} · pressure {:.2} · tilt {} / {} · dual {} (D) · taper {} (T) · C clears · 1-6 colours",
+                    s.size, s.opacity * 100.0, if s.press_op { "on" } else { "off" }, src, p.pressure, p.tilt_x, p.tilt_y, if s.dual { "on" } else { "off" }, if s.taper { "on" } else { "off" }
                 ));
             }
         }
@@ -673,6 +678,9 @@ fn key(c: &str) {
         "t" | "T" => s.taper = !s.taper,
         "f" | "F" => s.follow = !s.follow,
         "c" | "C" => s.clear = true,
+        "-" => s.opacity = (s.opacity - 0.1).max(0.05),
+        "=" | "+" => s.opacity = (s.opacity + 0.1).min(1.0),
+        "o" | "O" => s.press_op = !s.press_op,
         _ => {
             if let Ok(n) = c.parse::<usize>() {
                 if (1..=6).contains(&n) {
@@ -905,10 +913,16 @@ mod webpen {
     pub fn set_size(s: f32) {
         SETTINGS.lock().unwrap().size = s.clamp(1.0, 400.0);
     }
+    /// 1..100 %
+    #[wasm_bindgen]
+    pub fn set_opacity(v: f32) {
+        SETTINGS.lock().unwrap().opacity = (v / 100.0).clamp(0.01, 1.0);
+    }
     #[wasm_bindgen]
     pub fn set_flag(name: &str, on: bool) {
         let mut s = SETTINGS.lock().unwrap();
         match name {
+            "pressop" => s.press_op = on,
             "dual" => s.dual = on,
             "taper" => s.taper = on,
             "follow" => s.follow = on,
