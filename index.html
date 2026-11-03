@@ -1129,7 +1129,9 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
   .panel > .sheet-grab,#detailWin > .sheet-grab{position:sticky!important;top:0;z-index:6;background:var(--panel)}
   .panel > .ph,.panel > .sec-h,[data-unit] > .ph{position:sticky!important;top:18px;z-index:6}
   /* never taller than the room above the tool bar, so the grab handle and title are always on screen */
-  .panel{--sheet-max:calc(100dvh - 62px - env(safe-area-inset-bottom,0px) - 8px);max-height:var(--sheet-max)!important}
+  .panel,#detailWin{--sheet-max:calc(100dvh - 62px - 44px - env(safe-area-inset-bottom,0px) - 12px);max-height:var(--sheet-max)!important}
+  #detailWin{height:min(70vh,var(--sheet-max))!important}
+  #detailWin[style*="--sheet-h"]{height:min(var(--sheet-h),var(--sheet-max))!important}
   .panel[style*="--sheet-h"]{height:min(var(--sheet-h),var(--sheet-max))!important}
 }
 
@@ -1494,6 +1496,18 @@ button.logo[aria-expanded="true"]{box-shadow:0 0 0 2px var(--accent)}
   .mbcol i{width:calc(22px*var(--iz,1));height:calc(22px*var(--iz,1));border-radius:50%;border:2px solid var(--fg);display:block;box-sizing:border-box;background-image:none}
   .mbpomo{flex:0 0 auto;margin:0 2px}
   .mbpomo[hidden]{display:none}
+}
+/* every window: an × in its top corner; on phones a grab bar to pull it down */
+.card.has-x{position:relative}
+.card>.mx{position:sticky;top:0;align-self:flex-end;flex-shrink:0;margin:-6px -6px calc(-34px*var(--iz,1) - 6px) 0;z-index:3;width:calc(34px*var(--iz,1));height:calc(34px*var(--iz,1));border-radius:50%;border:0;background:color-mix(in srgb,var(--fg) 8%,transparent);color:var(--fg2);display:grid;place-items:center;padding:0;cursor:pointer}
+.card>.mx:hover{background:color-mix(in srgb,var(--fg) 16%,transparent);color:var(--fg)}
+.card>.mx .ic{width:calc(18px*var(--iz,1));height:calc(18px*var(--iz,1))}
+.card.has-x>h2,.card.has-x>.keys-head,.card.has-x>.mgrab+.mx+*{margin-right:40px}
+.card>.mgrab{display:none}
+@media (max-width:699px){
+  .card>.mgrab{display:block;flex-shrink:0;height:16px;margin:-12px -12px -6px;position:relative;touch-action:none;cursor:grab}
+  .card>.mgrab::after{content:"";position:absolute;left:50%;top:5px;width:40px;height:5px;margin-left:-20px;border-radius:3px;background:var(--line2)}
+  .card>h2,.card>.keys-head{touch-action:none}
 }
 </style>
 
@@ -3807,7 +3821,7 @@ let capturing = null;
 window.addEventListener('keydown', e => {
   if (capturing) { e.preventDefault(); e.stopImmediatePropagation(); if (e.key === 'Escape') { capturing = null; buildKeyEditor(); return; } const c = comboFromEvent(e); if (c) captureKey(c); return; }
   if (e.target.matches('input:not([type=range]):not([type=checkbox]):not([type=color]),select,textarea') || e.target.closest('[contenteditable="true"]')) return;
-  if ($$('.modal').some(m => !m.hidden)) { if (e.key === 'Escape') { const m = $$('.modal').find(m => !m.hidden); const d = m && m.querySelector('[data-dismiss]'); if (d) d.click(); } return; }
+  if ($$('.modal').some(m => !m.hidden)) { if (e.key === 'Escape') { const m = $$('.modal').filter(m => !m.hidden).pop(); if (typeof closeModal === 'function') closeModal(m); else { const d = m && m.querySelector('[data-dismiss]'); if (d) d.click(); } } return; }
   if (e.key === ' ') { if (!spaceDown) { spaceDown = true; view.style.cursor = 'grab'; } e.preventDefault(); return; }
   if (e.key === 'Escape') { if (xform) cancelXform(); else if (selOp) selUp(true); else if (liveOp) cancelLive(); return; }
   if (e.key === 'Enter' && xform) { e.preventDefault(); applyXform(); return; }
@@ -6845,7 +6859,7 @@ document.addEventListener('pointerdown', e => {
 document.addEventListener('pointermove', e => {
   const s = sw; if (!s || e.pointerId !== s.id) return; const dy = e.clientY - s.y0;
   if (!s.moved && Math.abs(dy) < 8) return; s.moved = true; s.p.classList.add('sheet-drag');
-  if (dy > 0) s.p.style.transform = `translateY(${dy}px)`; else { s.p.style.transform = ''; s.p.style.setProperty('--sheet-h', Math.min(innerHeight - 70, s.h0 - dy) + 'px'); }
+  if (dy > 0) s.p.style.transform = `translateY(${dy}px)`; else { s.p.style.transform = ''; s.p.style.setProperty('--sheet-h', Math.min(parseFloat(getComputedStyle(s.p).getPropertyValue('--sheet-max')) || innerHeight - 120, s.h0 - dy) + 'px'); }
 }, { passive: true });
 const swEnd = e => {
   const s = sw; if (!s || e.pointerId !== s.id) return; sw = null; if (!s.moved) return;
@@ -6855,6 +6869,19 @@ const swEnd = e => {
   else if (dy < 0) { sheetH[s.p.id] = Math.round(s.p.getBoundingClientRect().height); store.set('sheetH', sheetH); }
 };
 document.addEventListener('pointerup', swEnd); document.addEventListener('pointercancel', swEnd);
+// a sheet is never taller than the room between its bottom edge and the top bar, so its title bar and × always stay on screen
+function fitSheets() {
+  if (!phone()) return; const hb = $('.menubar').getBoundingClientRect().bottom;
+  $$('#brushPanel, #colorPanel, #layersPanel, #navPanel, #emotePanel, #detailWin').forEach(p => {
+    const cs = getComputedStyle(p), b = parseFloat(cs.bottom); if (!isFinite(b) || (cs.position !== 'fixed' && cs.position !== 'absolute')) return;
+    const box = cs.position === 'fixed' || !p.offsetParent ? { top: 0, bottom: innerHeight } : p.offsetParent.getBoundingClientRect();
+    p.style.setProperty('--sheet-max', Math.max(160, Math.round(box.bottom - b - Math.max(hb, box.top) - 8)) + 'px');
+  });
+}
+addEventListener('resize', () => requestAnimationFrame(fitSheets));
+new MutationObserver(() => requestAnimationFrame(fitSheets)).observe($('#detailWin'), { attributes: true, attributeFilter: ['hidden'] });
+new MutationObserver(() => requestAnimationFrame(fitSheets)).observe(app, { attributes: true, attributeFilter: ['data-open', 'data-mlay'] });
+setTimeout(fitSheets, 0);
 
 /* ---- colour panel: the wheel grows and shrinks to fill whatever room the panel has, like the other panels' contents ---- */
 // Everything else in the panel keeps its size; the wheel takes the height left over (never wider than the panel).
@@ -7017,14 +7044,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.03-0101' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.03-0128' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.03-0101';
+const BELEAF_BUILD = '2026.11.03-0128';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
@@ -7344,6 +7371,49 @@ function toggleFullscreen() {
 }
 CI['view.full'] = '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/><rect x="8" y="8" width="8" height="8" rx="1"/>';
 document.addEventListener('fullscreenchange', () => { const on = !!document.fullscreenElement; app.classList.toggle('is-full', on); toast(on ? 'Full screen (Esc to leave)' : 'Left full screen'); });
+
+
+/* ================= every window can be closed: an × in its corner, Esc, tapping outside it, and on phones a swipe down ================= */
+function closeModal(m) {
+  if (!m || m.hidden) return;
+  // its own Cancel / Done button when it has one (so anything it does on closing still happens), otherwise just hide it
+  const d = m.querySelector('[data-dismiss]'); if (d && d.offsetParent) d.click(); else m.hidden = true;
+}
+const topModal = () => $$('.modal').filter(m => !m.hidden).pop();
+const MX_SVG = '<svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+function modalChrome() {
+  $$('.modal:not([hidden]) > .card').forEach(c => {
+    if (c.querySelector(':scope > .mx')) return;
+    const m = c.parentElement, x = el('button', { class: 'mx', type: 'button', title: 'Close', 'aria-label': 'Close' }); x.innerHTML = MX_SVG; x.onclick = () => closeModal(m);
+    c.prepend(el('div', { class: 'mgrab', 'aria-hidden': 'true' }), x); c.classList.add('has-x');
+  });
+}
+let mcT = 0; new MutationObserver(() => { if (!mcT) mcT = requestAnimationFrame(() => { mcT = 0; modalChrome(); }); }).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['hidden'] });
+modalChrome();
+// tapping the dimmed area around a window closes it (a press that starts inside the window and ends outside doesn't)
+let mDown = null;
+document.addEventListener('pointerdown', e => { mDown = e.target.classList && e.target.classList.contains('modal') ? e.target : null; }, true);
+document.addEventListener('click', e => { const m = e.target; if (m === mDown && m.classList.contains('modal') && !m.hidden) closeModal(m); mDown = null; });
+// phones: pull a window down by its top (the grab bar or its title) to close it
+let mSw = null;
+document.addEventListener('pointerdown', e => {
+  if (!matchMedia('(max-width:699px)').matches) return; const c = e.target.closest('.modal:not([hidden]) > .card'); if (!c) return;
+  if (!e.target.closest('.mgrab, .card > h2, .keys-head, .apcard > h2') || e.target.closest('button, input, select, textarea')) return;
+  mSw = { c, id: e.pointerId, y0: e.clientY, t0: performance.now(), moved: false };
+}, true);
+document.addEventListener('pointermove', e => {
+  const s = mSw; if (!s || e.pointerId !== s.id) return; const dy = Math.max(0, e.clientY - s.y0);
+  if (!s.moved && dy < 8) return; s.moved = true; s.c.style.transition = 'none'; s.c.style.transform = `translateY(${dy}px)`; s.c.style.opacity = String(Math.max(.4, 1 - dy / 600));
+}, { passive: true });
+const mSwEnd = e => {
+  const s = mSw; if (!s || e.pointerId !== s.id) return; mSw = null; if (!s.moved) return;
+  const dy = e.clientY - s.y0, v = dy / Math.max(1, performance.now() - s.t0), m = s.c.parentElement;
+  s.c.style.transition = 'transform .18s, opacity .18s'; s.c.style.transform = ''; s.c.style.opacity = '';
+  if (dy > 110 || v > .7) closeModal(m); // (before swallowing the click that ends the swipe, so its Done button still works)
+  window.addEventListener('click', ev => { ev.stopPropagation(); ev.preventDefault(); }, { capture: true, once: true }); setTimeout(() => window.dispatchEvent(new MouseEvent('click')), 0);
+  setTimeout(() => { s.c.style.transition = ''; }, 200);
+};
+document.addEventListener('pointerup', mSwEnd, true); document.addEventListener('pointercancel', mSwEnd, true);
 
 
 /* ================= sample: a blinking cat ================= */
