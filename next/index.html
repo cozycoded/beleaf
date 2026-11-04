@@ -265,7 +265,7 @@ input[type=range]{width:100%;accent-color:var(--fg);height:24px;margin:0;min-wid
   .drawer-btn{display:none}
   .dock{display:contents}
   .panel{position:fixed;left:0;right:0;bottom:calc(60px + env(safe-area-inset-bottom,0px));max-height:66vh;background:var(--panel-3);border-top:1px solid var(--line);border-radius:16px 16px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.55);z-index:40;transform:translateY(110%);transition:transform .2s ease;padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);overflow-y:auto}
-  .app[data-open="brush"] #brushPanel,.app[data-open="color"] #colorPanel,.app[data-open="layers"] #layersPanel,.app[data-open="nav"] #navPanel,.app[data-open="emotes"] #emotePanel{transform:none}
+  .app[data-open="brush"] #brushPanel,.app[data-open="color"] #colorPanel,.app[data-open="layers"] #layersPanel,.app[data-open="nav"] #navPanel,.app[data-open="emotes"] #emotePanel,.app[data-open="ref"] #refPanel{transform:none}
   .panel[data-collapsed="true"] > :not(.ph):not(.sheet-grab){display:none!important}
   .panel[data-collapsed="true"]{height:auto!important}
   .ph .close{display:grid}
@@ -761,6 +761,12 @@ html.sb-reset *{overflow:hidden!important}
 .ref-tools .ibtn[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
 .ref-view{position:relative;flex:1 1 auto;min-height:140px;border-radius:10px;background:var(--panel);overflow:hidden}
 #refCan{position:absolute;inset:0;width:100%;height:100%;cursor:grab;touch-action:none;outline:none}
+.ref-op{display:flex;align-items:center;gap:8px;font-size:calc(12px*var(--fz,1));color:var(--fg2)}.ref-op input{flex:1;min-width:0;accent-color:var(--accent)}.ref-op output{width:34px;text-align:right;color:var(--muted)}
+#refCan.grey{filter:grayscale(1)}
+@media (max-width:699px){#refPanel .ref-view{min-height:200px}#refFloatB{display:none}.app[data-mlay="float"] #refPanel>.ref-body{flex:1 1 auto;min-height:0}}#refCan.gone{opacity:0}
+.fwin[data-float="ref"]{opacity:var(--ref-a,1);transition:opacity .15s}.fwin[data-float="ref"]:hover,.fwin[data-float="ref"]:focus-within{opacity:max(var(--ref-a,1),.92)}
+#refPanel .ref-view{opacity:var(--ref-a,1)}.fwin[data-float="ref"] #refPanel .ref-view{opacity:1}
+.app[data-mlay="float"] #refPanel.aw.fp-on{opacity:var(--ref-a,1)}.app[data-mlay="float"] #refPanel.aw.fp-on .ref-view{opacity:1}.app[data-mlay="float"] #refPanel.aw.fp-on:focus-within{opacity:max(var(--ref-a,1),.92)}
 .ref-empty{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:calc(12px*var(--fz,1));text-align:center;padding:12px;pointer-events:none}
 #refPanel[data-empty="no"] .ref-empty{display:none}
 #refZoom{width:100%}
@@ -1042,7 +1048,11 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
 .fwin,.detail,.pop{position:absolute}
 .pop{position:fixed}
 .fwin.min{height:auto!important;min-height:0;resize:none;overflow:hidden}.fwin.min>[data-unit]{display:none!important}
-.detail.min{height:auto!important;min-height:0}.detail.min>.detail-body{display:none}
+.detail.min{height:auto!important;min-height:0}.detail.min>.detail-body,.detail.min>.studio-top{display:none}
+.studio-top{flex-shrink:0;display:flex;flex-direction:column;gap:6px;padding:8px 10px;border-bottom:1px solid var(--line)}
+.st-pad{display:block;width:100%;height:96px;border-radius:10px;background:#FFFFFF;touch-action:none;cursor:crosshair}
+.st-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.st-row .btn{padding:5px 10px;font-size:calc(12px*var(--fz,1))}.st-row .st-note{flex:1 1 180px;color:var(--muted);font-size:calc(11.5px*var(--fz,1));line-height:1.35}
+#detailWin.touchy:not([data-ptab="settings"]) > .studio-top{display:none}
 .pop.min .pop-b{display:none}.pop.min{height:auto!important}
 .min>.rgrip{display:none}
 .pop .pop-b{flex:1;min-height:0}
@@ -1381,7 +1391,7 @@ button.logo[aria-expanded="true"]{box-shadow:0 0 0 2px var(--accent)}
 /* ===== phone: floating side panel ===== */
 @media (max-width:699px){
   .app[data-mlay="float"] .panel{left:auto!important;right:8px;top:62px;bottom:calc(68px + env(safe-area-inset-bottom,0px));width:min(310px,70vw);max-height:none!important;height:auto!important;border-radius:16px;border:1px solid var(--line);box-shadow:0 12px 34px rgba(0,0,0,.55);transform:translateX(calc(100% + 24px));transition:transform .2s ease;display:flex;flex-direction:column}
-  .app[data-mlay="float"][data-open="brush"] #brushPanel,.app[data-mlay="float"][data-open="color"] #colorPanel,.app[data-mlay="float"][data-open="layers"] #layersPanel,.app[data-mlay="float"][data-open="nav"] #navPanel,.app[data-mlay="float"][data-open="emotes"] #emotePanel{transform:none}
+  .app[data-mlay="float"][data-open="ref"] #refPanel,.app[data-mlay="float"][data-open="brush"] #brushPanel,.app[data-mlay="float"][data-open="color"] #colorPanel,.app[data-mlay="float"][data-open="layers"] #layersPanel,.app[data-mlay="float"][data-open="nav"] #navPanel,.app[data-mlay="float"][data-open="emotes"] #emotePanel{transform:none}
   .app[data-mlay="float"] .panel > .sheet-grab{display:none!important}
   .app[data-mlay="float"] .scrim,.app[data-mlay="rails"] .scrim{display:none!important}
   .app[data-mlay="float"] .panel > .ph{position:static!important}
@@ -1563,6 +1573,28 @@ button.logo[aria-expanded="true"]{box-shadow:0 0 0 2px var(--accent)}
 .aw.touchy>.rgrip{width:30px;height:30px;right:0;bottom:0}.aw.touchy>.rgrip svg{width:16px;height:16px}
 .aw[data-wmode="float"] .fbar,.aw[data-wmode="window"] .fbar{cursor:move;touch-action:none}
 .touchy .detail-body{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}
+/* Adjust window and the drag-on-canvas readout */
+.adjwin{position:absolute;z-index:46;background:var(--panel-3);border:1px solid var(--line2);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.5);display:flex;flex-direction:column;overflow:hidden}
+.adjwin[hidden]{display:none!important}
+.adjwin .fbar{height:34px;cursor:move;display:flex;align-items:center;gap:2px;padding:0 4px 0 12px;flex-shrink:0;color:var(--fg);font-size:calc(12px*var(--fz,1));font-weight:700;border-bottom:1px solid var(--line);touch-action:none}
+.adjwin .fbar>span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adj-body{flex:1;min-height:0;overflow:auto;padding:12px 14px;display:flex;flex-direction:column;gap:12px}
+.adj-row{display:grid;grid-template-columns:minmax(80px,auto) minmax(0,1fr) 62px;align-items:center;gap:10px;font-size:calc(13px*var(--fz,1))}
+.adj-row.check{grid-template-columns:1fr auto}
+.adj-row.main label{font-weight:700}
+.adj-row input[type=range]{width:100%;accent-color:var(--accent)}
+.adj-row .num{width:62px;height:30px;background:var(--panel-2);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:0 6px;font:inherit}
+.adj-act{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:10px 12px;border-top:1px solid var(--line)}
+.adj-act .adj-sp{flex:1}
+.adj-body .note{margin:0;color:var(--muted);font-size:calc(12px*var(--fz,1));line-height:1.45}
+.adj-presets{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px}
+.adj-presets button{display:flex;flex-direction:column;gap:5px;align-items:stretch;border:1px solid var(--line);background:var(--panel-2);color:var(--fg2);border-radius:10px;padding:6px;font-size:calc(11.5px*var(--fz,1));text-align:left}
+.adj-presets button[aria-checked="true"]{border-color:var(--accent);color:var(--fg)}
+.adj-grad{display:block;height:16px;border-radius:5px}
+.adj-pill{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:9;max-width:calc(100% - 24px);background:color-mix(in srgb,var(--panel) 94%,transparent);border:1px solid var(--line2);border-radius:999px;padding:7px 14px;font-size:calc(12.5px*var(--fz,1));font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .4s}
+.adj-pill.dim{opacity:.55}
+.app[data-adjusting] #view{cursor:ew-resize}
+#adjWin.aw[data-wmode="sheet"]:not(.min){height:auto!important;max-height:min(46vh,var(--sheet-max,46vh))!important}
 .touchy .detail-body .setchips{flex-direction:row;flex-wrap:wrap;border-right:0}
 </style>
 
@@ -1728,10 +1760,14 @@ button.logo[aria-expanded="true"]{box-shadow:0 0 0 2px var(--accent)}
             <button class="ibtn" id="refFitB" title="Fit" aria-label="Fit reference"><svg class="ic" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
             <button class="ibtn" id="refFlip" title="Flip" aria-label="Flip reference"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M9 7L3 18h6V7zM15 7l6 11h-6V7z"/></svg></button>
             <button class="ibtn" id="refPickB" aria-pressed="false" title="Pick colors from the reference" aria-label="Pick colors from the reference"><svg class="ic" viewBox="0 0 24 24"><path d="M17 3a2.1 2.1 0 013 3l-2 2-3-3 2-2z"/><path d="M15 8l-9 9-2 3 3-2 9-9"/></svg></button>
+            <button class="ibtn" id="refHideB" aria-pressed="false" title="Hide the picture for a moment" aria-label="Hide the reference picture"><svg class="ic" viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.9 10.9 0 0112 5c6 0 10 7 10 7a17.6 17.6 0 01-3.2 3.9M6.6 6.6C3.9 8.3 2 12 2 12s4 7 10 7a9.7 9.7 0 005.4-1.6"/><path d="M9.9 9.9a3 3 0 004.2 4.2"/></svg></button>
+            <button class="ibtn" id="refGreyB" aria-pressed="false" title="Grey: check light and dark" aria-label="Show the reference in grey"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 010 16z" fill="currentColor"/></svg></button>
+            <button class="ibtn" id="refFloatB" title="Float over the canvas" aria-label="Float the reference over the canvas"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="7" width="12" height="12" rx="2"/><path d="M9 7V5a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2h-4"/></svg></button>
             <button class="ibtn" id="refDel" title="Remove this reference" aria-label="Remove this reference"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button>
           </div>
           <div class="ref-view"><canvas id="refCan" tabindex="0" aria-label="Reference image: drag to move, scroll to zoom"></canvas><div class="ref-empty">Open, paste or drop an image here</div></div>
           <input type="range" id="refZoom" min="-200" max="200" value="0" aria-label="Reference zoom">
+          <label class="ref-op"><span>See-through</span><input type="range" id="refOp" min="0" max="85" value="0" aria-label="See-through: let the canvas show under the reference"><output id="refOpO">0%</output></label>
           <input type="file" id="refFile" accept="image/*" multiple hidden>
         </div>
       </section>
@@ -1816,8 +1852,8 @@ button.logo[aria-expanded="true"]{box-shadow:0 0 0 2px var(--accent)}
       </section>
       </div>
     </div>
-    <div class="detail" id="detailWin" hidden role="dialog" aria-label="All brush settings">
-      <div class="fbar dbar" id="detailBar"><span id="detailTitle">All settings</span><button id="detailReset" title="Reset this brush" aria-label="Reset this brush"><svg class="ic" viewBox="0 0 24 24"><path d="M4 12a8 8 0 108-8H7"/><path d="M8 1L5 4l3 3"/></svg></button><button id="detailClose" title="Close" aria-label="Close all settings"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="detail" id="detailWin" hidden role="dialog" aria-label="Brush studio">
+      <div class="fbar dbar" id="detailBar"><span id="detailTitle">Brush studio</span><button id="detailReset" title="Reset this brush" aria-label="Reset this brush"><svg class="ic" viewBox="0 0 24 24"><path d="M4 12a8 8 0 108-8H7"/><path d="M8 1L5 4l3 3"/></svg></button><button id="detailClose" title="Close" aria-label="Close all settings"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
       <div class="detail-body"><div class="setchips" id="setChips" role="tablist" aria-label="Setting groups"></div><div class="groups" id="groups"></div></div>
     </div>
     <div class="scrim" id="scrim"></div>
@@ -3415,8 +3451,9 @@ const UNDO_STEPS = () => Math.max(10, Math.min(1000, +store.get('undoSteps', 250
 function record(e) { if (e.S && !e.kind) { const c = cropEntry(e); if (!c) { if (!e.sel) return; e = { kind: 'sel', sel: e.sel }; } else e = c; }
   packSoon(e);
   e._b = entryBytes(e); histBytes += e._b; markDirty(e.S); if (e.px) markDirty(e.px.S); tlNote(e.S ? [e.x0, e.y0, e.before.width, e.before.height] : null); history.push(e); while (history.length > 1 && (history.length > UNDO_STEPS() || histBytes > HIST_MAX)) histBytes -= history.shift()._b || 0; future.forEach(f => histBytes -= f._b || 0); future.length = 0; syncUndo(); }
-function undo() { if (xform) { cancelXform(); return; } const e = history.pop(); if (!e) return; applyH(e, true); future.push(e); syncUndo(); }
-function redo() { if (xform) return; const e = future.pop(); if (!e) return; applyH(e, false); history.push(e); syncUndo(); }
+let undoGuard = null; // something in progress (an adjustment) can catch undo/redo first
+function undo() { if (undoGuard && undoGuard('undo')) return; if (xform) { cancelXform(); return; } const e = history.pop(); if (!e) return; applyH(e, true); future.push(e); syncUndo(); }
+function redo() { if (undoGuard && undoGuard('redo')) return; if (xform) return; const e = future.pop(); if (!e) return; applyH(e, false); history.push(e); syncUndo(); }
 function applyH(e, back) {
   if (e.sel) setSelCanvas(back ? e.sel.prev : e.sel.next);
   if (e.kind === 'sel') return;
@@ -4411,7 +4448,7 @@ function brushProps() {
     ctlToggles('Pressure', [['Size', () => b().sizeDyn.on, v => b().sizeDyn.on = v], ['Opacity', () => b().opDyn.on, v => b().opDyn.on = v]]),
     b().mix > 0 || b().blendOnly ? ctlSeg('Mixing', [['paint', 'Realistic'], ['normal', 'Normal']], () => b().mixMode || 'paint', v => { b().mixMode = v; brushEdited(true); }) : null,
     ctlToggles('Pen tilt', [['Size', () => b().tiltDyn.on, v => b().tiltDyn.on = v], ['Opacity', () => (b().tiltOp || {}).on, v => { b().tiltOp = b().tiltOp || { on: false, min: 30 }; b().tiltOp.on = v; }]]),
-    btnRow(['All settings…', openDetail], ['Reset brush', () => $('#resetBrush').click()]),
+    btnRow(['Brush studio…', openDetail], ['Reset brush', () => $('#resetBrush').click()]),
     ...penTestPad(),
   ];
 }
@@ -4486,7 +4523,7 @@ const dPick = el('div', { class: 'dpick', id: 'dPick' }); detail.insertBefore(dP
 const P_TABS = [['brushes', 'Brushes', '<path d="M18 3l3 3-9 9-3-3 9-9z"/><path d="M9 12c-3 0-5 2-5 5 0 1-1 3-2 3 2 1 6 1 8-1 1.5-1.5 2-4 0-7z"/>'],
   ['prop', 'Property', '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>'],
   ['size', 'Size', '<circle cx="6" cy="12" r="2"/><circle cx="12.5" cy="12" r="3"/><circle cx="19.5" cy="12" r="1.5"/>'],
-  ['settings', 'Settings', '<path d="M14.5 4a5 5 0 00-4.6 6.9L4 16.8V20h3.2l5.9-5.9A5 5 0 1014.5 4z"/>']];
+  ['settings', 'Studio', '<path d="M14.5 4a5 5 0 00-4.6 6.9L4 16.8V20h3.2l5.9-5.9A5 5 0 1014.5 4z"/>']];
 let pTab = store.get('brushSheetTab', 'brushes');
 function setPTab(t) { pTab = t; store.set('brushSheetTab', t); buildPick(); }
 function buildPick() {
@@ -4505,7 +4542,7 @@ function buildPick() {
         sb('Reset', '<svg class="ic" viewBox="0 0 24 24"><path d="M4 12a8 8 0 108-8H7"/><path d="M8 1L5 4l3 3"/></svg>', () => $('#resetBrush').click())));
   } else if (pTab === 'prop') {
     // the same Tool property as the Settings panel ("All settings…" jumps to the Settings tab here)
-    const kids = brushProps().filter(Boolean); kids.forEach(k => k.querySelectorAll && k.querySelectorAll('.tp-wrench, .tp-acts .btn').forEach(b => { if (/All settings|all brush settings/i.test(b.textContent + (b.title || ''))) b.onclick = () => setPTab('settings'); }));
+    const kids = brushProps().filter(Boolean); kids.forEach(k => k.querySelectorAll && k.querySelectorAll('.tp-wrench, .tp-acts .btn').forEach(b => { if (/All settings|all brush settings|Brush studio/i.test(b.textContent + (b.title || ''))) b.onclick = () => setPTab('settings'); }));
     pane = el('div', { class: 'dp-pane' }, el('div', { class: 'grp-body tp' }, ...kids));
   } else if (pTab === 'size') {
     const grid = el('div', { class: 'sizes dp-sizes' }, ...SIZE_PRESETS.map(sz => { const d = Math.max(2, Math.min(26, 1.5 + Math.sqrt(sz) * 2)); return el('button', { class: 'szb', type: 'button', 'aria-label': 'Size ' + sz, 'data-size': sz, 'aria-pressed': Math.abs(sz - cur().size) < .05, onclick: () => { cur().size = sz; brushEdited(true); } }, el('i', { style: `width:${d}px;height:${d}px` }), el('span', { text: sz })); }));
@@ -5149,6 +5186,27 @@ refCan.addEventListener('pointermove', e => { if (!refDrag) return; const d = de
 refCan.addEventListener('pointerup', () => refDrag = null);
 refCan.addEventListener('wheel', e => { e.preventDefault(); const d = devicePixelRatio || 1, r = refCan.getBoundingClientRect(), px = (e.clientX - r.left) * d, py = (e.clientY - r.top) * d, k = Math.exp(-e.deltaY * .0015); refV.x = px + (refV.x - px) * k; refV.y = py + (refV.y - py) * k; refV.s *= k; refDraw(); }, { passive: false });
 $('#refZoom').oninput = e => { const k = Math.pow(2, +e.target.value / 50); const cx = refCan.width / 2, cy = refCan.height / 2, base = refV._base || (refV._base = refV.s); const ns = base * k; refV.x = cx + (refV.x - cx) * ns / refV.s; refV.y = cy + (refV.y - cy) * ns / refV.s; refV.s = ns; refDraw(); };
+// pick colours: tap, or keep the pen down and drag to pick as you go; holding a finger still on the picture picks too
+{
+  let hold = null; const pickAt = (e, keep) => { const d = devicePixelRatio || 1, r = refCan.getBoundingClientRect(), c = refCtx.getImageData(Math.round((e.clientX - r.left) * d), Math.round((e.clientY - r.top) * d), 1, 1).data; if (c[3] > 10) { setColor(toHex(c[0], c[1], c[2])); if (keep) pushRecent(color.hex); } };
+  refCan.addEventListener('pointerdown', e => { if (!refBmp) return; clearTimeout(hold && hold.t); hold = { x: e.clientX, y: e.clientY, id: e.pointerId, picking: refPick || e.altKey || tool === 'picker', t: setTimeout(() => { if (!hold) return; hold.picking = true; refDrag = null; try { navigator.vibrate && navigator.vibrate(10); } catch { } pickAt(hold.e || e, false); toast('Picking from the reference: slide to choose, lift to keep'); }, 450) }; }, true);
+  refCan.addEventListener('pointermove', e => { if (!hold || e.pointerId !== hold.id) return; hold.e = e; if (!hold.picking && Math.hypot(e.clientX - hold.x, e.clientY - hold.y) > 8) { clearTimeout(hold.t); hold = null; return; } if (hold.picking) { e.stopImmediatePropagation(); pickAt(e, false); } }, true);
+  const up = e => { if (!hold || e.pointerId !== hold.id) return; clearTimeout(hold.t); if (hold.picking && hold.e) pushRecent(color.hex); hold = null; };
+  refCan.addEventListener('pointerup', up, true); refCan.addEventListener('pointercancel', up, true);
+}
+// hide the picture for a moment, check values in grey, and see through it to the canvas
+$('#refHideB').onclick = () => { const on = !refCan.classList.contains('gone'); refCan.classList.toggle('gone', on); $('#refHideB').setAttribute('aria-pressed', on); };
+$('#refGreyB').onclick = () => { const on = !refCan.classList.contains('grey'); refCan.classList.toggle('grey', on); $('#refGreyB').setAttribute('aria-pressed', on); };
+const refOpSet = v => { v = Math.max(0, Math.min(85, +v || 0)); $('#refOp').value = v; $('#refOpO').textContent = v + '%'; document.documentElement.style.setProperty('--ref-a', String(1 - v / 100)); store.set('refSeeThrough', v); };
+$('#refOp').oninput = e => refOpSet(e.target.value); refOpSet(store.get('refSeeThrough', 0));
+// float it over the canvas (computers and tablets) so see-through shows your drawing underneath
+function refFloatSync() { const f = !!$('#refPanel').closest('.fwin'); const b = $('#refFloatB'); b.title = f ? 'Put back in its column' : 'Float over the canvas'; b.setAttribute('aria-label', f ? 'Dock the reference' : 'Float the reference over the canvas'); b.setAttribute('aria-pressed', f); }
+$('#refFloatB').onclick = () => {
+  if (!docked()) return; const win = $('#refPanel').closest('.fwin');
+  if (win) dockUnit('ref', homeOf('ref')); else { const W = $('.work').clientWidth; showUnit('ref'); makeFloat('ref', { x: W - 340, y: 60, w: 320, h: 360 }); }
+  saveLay(); refreshDocks(); refFloatSync(); requestAnimationFrame(() => refFit());
+};
+new MutationObserver(refFloatSync).observe($('.work'), { childList: true, subtree: false }); refFloatSync();
 refLoad();
 
 /* ================= sticky notes ================= */
@@ -5470,7 +5528,7 @@ function buildSettings() {
   buildToolProp();
   if (!BRUSHLIKE.has(tool)) { $('#detailWin').hidden = true; return; }
   if ($('#detailWin').hidden) return;
-  $('#detailTitle').textContent = 'All settings: ' + toolTitle();
+  $('#detailTitle').textContent = 'Brush studio · ' + toolTitle();
   const G = [
     group('Brush tip',
       ctlSelect('Tip shape', tipOptions(), () => b().tip, v => b().tip = v),
@@ -6017,6 +6075,7 @@ const MENUS = {
   emote: [['New emote sheet…', '', () => openSheet('new')], ['Size preview (Twitch, YouTube, Kick, TikTok)…', '@app.sizes', () => openSizes()], ['Sheet size and boxes…', '@emote.sheet', () => openSheet(DOC.sheet ? 'edit' : 'new')], ['Emotes panel', '', () => openPanel('emotes')], ['Next emote box', '@emote.next', () => stepBox(1)], ['Previous emote box', '@emote.prev', () => stepBox(-1)], ['Zoom to this emote', '@emote.focus', () => focusBox(curBox)], ['Rename this emote…', '@emote.rename', () => renameBox(curBox)], ['Keep drawing inside the boxes on / off', '@emote.keep', () => setKeepIn(!keepIn)], ['Export this emote…', '@emote.export', () => openExport('emote')], ['Export every emote…', '@emote.exportAll', () => openExport('all')]],
   edit: [['Undo', '@undo', undo], ['Redo', '@redo', redo], ['Cut', '@cut', () => runAction('cut')], ['Copy', '@copy', () => runAction('copy')], ['Paste', '@paste', () => runAction('paste')], ['Clear', '@clear', () => runAction('clear')], ['Fill with main color', '@fillsel', () => runAction('fillsel')], ['Transform…', '@transform', () => runAction('transform')], ['Swap main and sub color', '@color.swap', swapColors]],
   select: [['Select all', '@sel.all', () => runAction('sel.all')], ['Deselect', '@sel.none', () => runAction('sel.none')], ['Invert selection', '@sel.invert', () => runAction('sel.invert')], ['Rectangle selection', '@sel.rect', () => runAction('sel.rect')], ['Ellipse selection', '@sel.ellipse', () => runAction('sel.ellipse')], ['Lasso selection', '@sel.lasso', () => runAction('sel.lasso')], ['Magic wand', '@sel.wand', () => runAction('sel.wand')], ['Transform selection…', '@transform', () => runAction('transform')]],
+  adjust: [], // filled by the Adjust module
   layer: [['New layer', '@layer.new', addLayer], ['New folder', '@layer.folder', () => addFolder(false)], ['Put layer in a new folder', '@layer.wrap', () => addFolder(true)], ['Rename…', '@layer.rename', () => renameLayer(active)], ['Label color…', '', () => colorPop($('#lColor'))], ['New animation layer', '@layer.anim', addAnimLayer], ['Duplicate layer', '@layer.dup', () => $('#dupL').click()], ['Clip to layer below', '@layer.clip', () => toggleFlag('clip')], ['Lock transparent pixels', '@layer.lockAlpha', () => toggleFlag('lockAlpha')], ['Lock layer', '@layer.lock', () => toggleFlag('locked')], ['Set as reference layer', '', () => toggleFlag('ref')], ['Set as draft layer', '', () => toggleFlag('draft')], ['Merge down', '@layer.merge', mergeDown], ['Delete layer', '', () => $('#delL').click()]],
   anim: [['Play / pause', '@anim.play', togglePlay], ['New blank frame', '@anim.new', addFrame], ['Duplicate frame', '@anim.dup', dupFrame], ['Delete frame', '@anim.del', delFrame], ['Onion skin on / off', '@anim.onion', toggleOnion], ['Show or hide timeline', '@anim.timeline', toggleTimeline]],
   view: [['Canvas / box color…', '', () => { closeMenu(); cbgPop.open($('#cbgSw')); }], ['Show canvas / box color', '@view.canvasColor', () => cbgSetOn(!cbgOn())], ['Size preview…', '@app.sizes', () => openSizes()], ['Colour-blind preview', '@view.cvd', cycleCvd], '-', ['Navigator', '', () => openPanel('nav')], ['Full screen', '@view.full', () => toggleFullscreen()], '-', ['Fit to screen', '@view.fit', fit], ['Actual size', '@view.actual', () => zoomAt(1 / V.s)], ['Zoom in', '@view.in', () => zoomAt(1.25)], ['Zoom out', '@view.out', () => zoomAt(.8)], ['Rotate left 15°', '@view.rotL', () => rotateTo(V.r * 180 / Math.PI - 15)], ['Rotate right 15°', '@view.rotR', () => rotateTo(V.r * 180 / Math.PI + 15)], ['Reset rotation', '@view.rot0', () => rotateTo(0)], ['Flip horizontally', '@view.flip', flipView],
@@ -7055,7 +7114,7 @@ function makeAdaptive(win, { key, bar, minW = 260, minH = 160, def }) {
 const reWin = () => AW.forEach((_, w) => { if (!w.hidden) placeWin(w); });
 new MutationObserver(reWin).observe(app, { attributes: true, attributeFilter: ['data-mlay'] }); addEventListener('resize', () => requestAnimationFrame(reWin));
 // the All settings / brush window
-{ const d = $('#detailWin'), x = $('#detailClose'); x.before(minBtn(d, 'All settings'));
+{ const d = $('#detailWin'), x = $('#detailClose'); x.before(minBtn(d, 'Brush studio'));
   makeAdaptive(d, { key: 'win.brush', bar: $('#detailBar'), minW: 280, minH: 200, def: (m, b) => {
     if (m === 'float') { const w = Math.min(360, Math.round((b.right - b.left) * .9)), H = b.bottom - b.top; return { x: b.right - w - 8, y: b.top + 12, w, h: Math.min(H - 24, Math.max(340, Math.round(H * .66))) }; }
     const l = $('.dock-left'), x0 = l && l.offsetWidth ? l.getBoundingClientRect().right + 12 : b.left + 70; return { x: x0, y: b.top + 16, w: 460, h: Math.min(560, b.bottom - b.top - 32) }; } }); }
@@ -7085,8 +7144,8 @@ function placeSecX(u, sh, x) {
 }
 /* ---- phones: panels slide up from the bottom; swipe them down to close, drag the top bar up to make them taller ---- */
 const sheetH = store.get('sheetH', {});
-function sheetOf(t) { return t.closest('#brushPanel, #colorPanel, #layersPanel, #navPanel, #emotePanel, #detailWin'); }
-$$('#brushPanel, #colorPanel, #layersPanel, #navPanel, #emotePanel, #detailWin').forEach(p => { if (!p.querySelector(':scope > .sheet-grab')) p.prepend(el('div', { class: 'sheet-grab', 'aria-hidden': 'true' })); if (sheetH[p.id]) p.style.setProperty('--sheet-h', sheetH[p.id] + 'px'); });
+function sheetOf(t) { return t.closest('#brushPanel, #colorPanel, #layersPanel, #navPanel, #emotePanel, #refPanel, #detailWin'); }
+$$('#brushPanel, #colorPanel, #layersPanel, #navPanel, #emotePanel, #refPanel, #detailWin').forEach(p => { if (!p.querySelector(':scope > .sheet-grab')) p.prepend(el('div', { class: 'sheet-grab', 'aria-hidden': 'true' })); if (sheetH[p.id]) p.style.setProperty('--sheet-h', sheetH[p.id] + 'px'); });
 let sw = null;
 document.addEventListener('pointerdown', e => {
   if (!phone()) return; const p = sheetOf(e.target); if (!p) return;
@@ -7110,7 +7169,7 @@ document.addEventListener('pointerup', swEnd); document.addEventListener('pointe
 // a sheet is never taller than the room between its bottom edge and the top bar, so its title bar and × always stay on screen
 function fitSheets() {
   if (!phone()) return; const hb = $('.menubar').getBoundingClientRect().bottom;
-  $$('#brushPanel, #colorPanel, #layersPanel, #navPanel, #emotePanel, #detailWin').forEach(p => {
+  $$('#brushPanel, #colorPanel, #layersPanel, #navPanel, #emotePanel, #refPanel, #detailWin').forEach(p => {
     const cs = getComputedStyle(p), b = parseFloat(cs.bottom); if (!isFinite(b) || (cs.position !== 'fixed' && cs.position !== 'absolute')) return;
     const box = cs.position === 'fixed' || !p.offsetParent ? { top: 0, bottom: innerHeight } : p.offsetParent.getBoundingClientRect();
     p.style.setProperty('--sheet-max', Math.max(160, Math.round(box.bottom - b - Math.max(hb, box.top) - 8)) + 'px');
@@ -7282,14 +7341,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.04-0814' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.04-0853' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.04-0814';
+const BELEAF_BUILD = '2026.11.04-0853';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
@@ -7520,8 +7579,10 @@ const _kc = keysChanged; keysChanged = function () { _kc(); buildCB(); buildQA()
 
 /* ================= phones: panels you can use while drawing ================= */
 // Floating side panel (portrait): the open panel floats on the right with tabs on top; the canvas stays live around it.
-const MTABS = [['brush', 'Brush', ICON.brushes], ['color', 'Color', UNITS.color[2]], ['layers', 'Layers', ICON.layers], ['emotes', 'Emotes', ICON.emotes], ['nav', 'Navigator', ICON.nav]];
-const PANEL_OF = { brush: '#brushPanel', color: '#colorPanel', layers: '#layersPanel', emotes: '#emotePanel', nav: '#navPanel' };
+const MTABS = [['brush', 'Brush', ICON.brushes], ['color', 'Color', UNITS.color[2]], ['layers', 'Layers', ICON.layers], ['emotes', 'Emotes', ICON.emotes], ['nav', 'Navigator', ICON.nav], ['ref', 'Reference', UNITS.ref[2]]];
+const PANEL_OF = { brush: '#brushPanel', color: '#colorPanel', layers: '#layersPanel', emotes: '#emotePanel', nav: '#navPanel', ref: '#refPanel' };
+// the reference window is in View on every screen size (on phones it opens like the other panels)
+{ const v = MENUS.view, i = v.findIndex(it => Array.isArray(it) && it[0] === 'Navigator'); v.splice(i + 1, 0, ['Reference window', '', () => { if (!docked()) return openPanel('ref'); const u = unitEl('ref'); if (u.hidden) showUnit('ref'); else hideUnit('ref'); }]); }
 let fpMin = !!store.get('panelMin', false);
 const fpGrab = el('div', { class: 'mt-grab', title: 'Drag to move', 'aria-hidden': 'true' }); fpGrab.innerHTML = '<svg class="ic" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>';
 const mTabs = el('div', { class: 'mtabs', role: 'tablist', 'aria-label': 'Panels', hidden: '' });
@@ -7563,7 +7624,7 @@ new MutationObserver(fpSync).observe(app, { attributes: true, attributeFilter: [
   const swallow = e => { e.stopImmediatePropagation(); if (e.cancelable) e.preventDefault(); };
   addEventListener('pointerdown', e => {
     if (eat.size) { if (stage.contains(e.target)) { eat.add(e.pointerId); swallow(e); } return; }
-    if (docked() || !stage.contains(e.target) || e.target.closest('button, input, select, .mrail, .aw')) return;
+    if (docked() || app.dataset.adjusting || !stage.contains(e.target) || e.target.closest('button, input, select, .mrail, .aw')) return;
     let hit = false; const p = fpOpen();
     if (p && p.classList.contains('aw') && !fpMin) { setFpMin(true); hit = true; }
     const d = $('#detailWin'); if (!d.hidden && d.dataset.wmode === 'float' && !d.classList.contains('min')) { const mb = d.querySelector('.minbtn'); mb && mb.click(); hit = true; }
@@ -7713,6 +7774,278 @@ document.addEventListener('pointerup', mSwEnd, true); document.addEventListener(
   addEventListener('pointerup', up, true); addEventListener('pointercancel', up, true);
   const ck = $('#tapUndoCk'); if (ck) { ck.checked = store.get('tapUndo', true) !== false; ck.onchange = () => store.set('tapUndo', ck.checked); }
 }
+
+/* ================= Brush studio: a live drawing pad, make-your-own-copy and reset, above the brush's settings ================= */
+{
+  const D = $('#detailWin'), pad = el('canvas', { class: 'st-pad', 'aria-label': 'Drawing pad: try this brush here' });
+  const note = el('span', { class: 'st-note' }), copyB = el('button', { class: 'btn', type: 'button' }), resetB = el('button', { class: 'btn', type: 'button', text: 'Reset to how it came' }), clearB = el('button', { class: 'btn', type: 'button', text: 'Clear pad' });
+  const top = el('div', { class: 'studio-top' }, pad, el('div', { class: 'st-row' }, note, copyB, resetB, clearB));
+  D.insertBefore(top, D.querySelector('.detail-body'));
+  let eng = null, base = null, used = false, live = null, sampleT = 0;
+  const px = () => devicePixelRatio || 1;
+  function fit() { const r = pad.getBoundingClientRect(), d = px(); if (!r.width) return false; const w = Math.round(r.width * d), h = Math.round(r.height * d); if (pad.width !== w || pad.height !== h) { pad.width = w; pad.height = h; eng = new HybridEngine(w, h); base = mk(w, h); used = false; } return true; }
+  const show = () => { const x = pad.getContext('2d'); x.clearRect(0, 0, pad.width, pad.height); x.drawImage(base, 0, 0); if (live) x.drawImage(eng.out, 0, 0); };
+  const padBrush = cap => { const b = JSON.parse(JSON.stringify(cur())), sc = Math.min(1, cap / Math.max(1, b.size)); b.size = Math.max(1.5, b.size * sc); if (b.taper) b.taper = { ...b.taper, in: (b.taper.in || 0) * sc, out: (b.taper.out || 0) * sc }; b.mix = 0; b.blendOnly = false; return b; };
+  function sample() {
+    if (D.hidden || used || !fit()) return; const W = pad.width, H = pad.height, d = px(), b = padBrush(H * .32);
+    base.getContext('2d').clearRect(0, 0, W, H); eng.begin(b, { color: hexRgb(clearOn ? '#2A2A2F' : color.hex), seed: 7 });
+    for (let i = 0; i <= 120; i++) { const t = i / 120; eng.add(W * .06 + t * W * .88, H * .5 + Math.sin(t * Math.PI * 2) * H * .22, .12 + Math.sin(t * Math.PI) * .88, null); }
+    eng.end(); eng.flush(); base.getContext('2d').drawImage(eng.out, 0, 0); eng.reset(); live = null; show();
+  }
+  const sampleSoon = () => { clearTimeout(sampleT); sampleT = setTimeout(sample, 90); };
+  pad.addEventListener('pointerdown', e => {
+    if (!fit()) return; e.preventDefault(); pad.setPointerCapture(e.pointerId); used = true; const r = pad.getBoundingClientRect(), d = px();
+    if (!pad._mine) { base.getContext('2d').clearRect(0, 0, pad.width, pad.height); pad._mine = true; }
+    eng.begin(padBrush(pad.height * .45), { color: hexRgb(clearOn ? '#2A2A2F' : color.hex), seed: (Math.random() * 1e6) | 0 }); live = { id: e.pointerId };
+    eng.add((e.clientX - r.left) * d, (e.clientY - r.top) * d, pressureOf(e), tiltOf(e), azOf(e)); eng.flush(); show();
+  });
+  pad.addEventListener('pointermove', e => { if (!live || e.pointerId !== live.id) return; const r = pad.getBoundingClientRect(), d = px(); const ev = e.getCoalescedEvents ? e.getCoalescedEvents() : [e]; for (const q of (ev.length ? ev : [e])) eng.add((q.clientX - r.left) * d, (q.clientY - r.top) * d, pressureOf(q), tiltOf(q), azOf(q)); eng.flush(); show(); });
+  const up = e => { if (!live || e.pointerId !== live.id) return; eng.end(); eng.flush(); base.getContext('2d').drawImage(eng.out, 0, 0); eng.reset(); live = null; show(); };
+  pad.addEventListener('pointerup', up); pad.addEventListener('pointercancel', up);
+  clearB.onclick = () => { used = false; pad._mine = false; sample(); };
+  resetB.onclick = () => { $('#resetBrush').click(); sampleSoon(); };
+  copyB.onclick = async () => {
+    const b = cur();
+    if (!b.user) { $('#dupBrush').click(); try { const d = JSON.parse(b._def), id = b.id; Object.keys(d).forEach(k => b[k] = d[k]); b.id = id; } catch { } saveBrushLib(); openDetail(); toast(`Now editing your own copy: ${cur().name}. The original is back to how it came.`); }
+    else { const n = await askName('Rename this brush', b.name); if (n) { b.name = n.slice(0, 40); buildBrushUI(); saveBrushLib(); buildSettings(); } }
+    sync(); sampleSoon();
+  };
+  function sync() {
+    if (D.hidden) return; const b = cur(), mine = !!b.user, edited = !mine && b._def && (() => { try { const a = JSON.parse(b._def), c = JSON.parse(JSON.stringify(b)); delete a.id; delete c.id; delete c._def; delete a._def; return JSON.stringify(a) !== JSON.stringify(c); } catch { return false; } })();
+    copyB.textContent = mine ? 'Rename…' : 'Make my own copy';
+    note.textContent = mine ? 'Your own brush: changes save as you go.' : edited ? 'You’ve changed this built-in brush. Reset brings back the original, or make a copy to keep both.' : 'Built-in brush. Make your own copy to change it and keep the original.';
+    resetB.hidden = mine;
+  }
+  const be0 = brushEdited; brushEdited = function () { const r = be0.apply(this, arguments); if (!D.hidden) { sync(); sampleSoon(); } return r; };
+  new MutationObserver(() => { if (!D.hidden) { requestAnimationFrame(() => { fit(); used = false; pad._mine = false; sync(); sample(); }); } }).observe(D, { attributes: true, attributeFilter: ['hidden', 'data-ptab'] });
+  new ResizeObserver(() => { if (!D.hidden && !used) sampleSoon(); }).observe(pad);
+  // switching brushes while the studio is open shows the new one
+  const bb0 = buildBrushUI; buildBrushUI = function () { const r = bb0.apply(this, arguments); if (!D.hidden) { used = false; pad._mine = false; sync(); sampleSoon(); } return r; };
+}
+
+/* four fingers tap: hide or show the panels, for a clean canvas (like Procreate) */
+{
+  const T = new Set(); let maxN = 0, t0 = 0, moved = false, P0 = new Map();
+  view.addEventListener('pointerdown', e => { if (e.pointerType !== 'touch') return; if (!T.size) { maxN = 0; moved = false; t0 = performance.now(); P0.clear(); } T.add(e.pointerId); P0.set(e.pointerId, [e.clientX, e.clientY]); maxN = Math.max(maxN, T.size); }, true);
+  addEventListener('pointermove', e => { const s = P0.get(e.pointerId); if (s && Math.hypot(e.clientX - s[0], e.clientY - s[1]) > 16) moved = true; }, true);
+  const up = e => { if (!T.has(e.pointerId)) return; T.delete(e.pointerId); if (T.size) return; if (maxN === 4 && !moved && performance.now() - t0 < 400 && store.get('tapUndo', true) !== false) { app.dataset.panels = app.dataset.panels === 'hidden' ? '' : 'hidden'; toast(app.dataset.panels === 'hidden' ? 'Panels hidden: tap with four fingers to bring them back' : 'Panels back'); } };
+  addEventListener('pointerup', up, true); addEventListener('pointercancel', up, true);
+}
+
+/* ================= Adjust menu: colour, blur and line adjustments for the current layer =================
+   Pick one from Adjust, then drag left or right anywhere on the canvas to set its strength (like Procreate),
+   or use the sliders in the Adjust window. It previews on the layer straight away; Apply keeps it as one undo step,
+   Cancel puts the layer back. Works inside a selection (and inside emote boxes), and keeps transparency locked when the layer is. */
+const ADJ_PRESETS = [
+  ['main', 'Main → sub colour', null],
+  ['sunset', 'Sunset', ['#2B1055', '#B83B5E', '#F08A5D', '#F9ED69']],
+  ['night', 'Cool night', ['#0B132B', '#1C2541', '#3A506B', '#5BC0BE', '#E0FBFC']],
+  ['sepia', 'Old photo', ['#2E1F14', '#7A5230', '#C9A27A', '#F4E6CF']],
+  ['neon', 'Neon', ['#120136', '#7F00FF', '#E100FF', '#00F5D4']],
+  ['mono', 'Black and white', ['#000000', '#FFFFFF']],
+];
+const ADJ = {
+  hsb: { name: 'Hue, saturation, brightness', group: 'Colour', params: [['hue', 'Hue', -180, 180, 0, '°'], ['sat', 'Saturation', -100, 100, 0, '%'], ['bri', 'Brightness', -100, 100, 0, '%']], main: 'hue' },
+  balance: { name: 'Colour balance', group: 'Colour', params: [['cr', 'Cyan ↔ Red', -100, 100, 0, ''], ['mg', 'Magenta ↔ Green', -100, 100, 0, ''], ['yb', 'Yellow ↔ Blue', -100, 100, 0, '']], main: 'cr', note: 'Shifts the middle tones most, so shadows and highlights stay clean.' },
+  bc: { name: 'Brightness and contrast', group: 'Colour', params: [['b', 'Brightness', -100, 100, 0, '%'], ['c', 'Contrast', -100, 100, 0, '%']], main: 'c' },
+  gmap: { name: 'Gradient map', group: 'Colour', params: [['mix', 'Strength', 0, 100, 100, '%']], main: 'mix', note: 'Recolours by how light each pixel is: dark parts take the left colour, light parts the right.' },
+  invert: { name: 'Invert colours', group: 'Colour', params: [['mix', 'Strength', 0, 100, 100, '%']], main: 'mix' },
+  poster: { name: 'Posterize', group: 'Colour', params: [['lv', 'Levels', 2, 16, 4, '']], main: 'lv', note: 'Fewer levels = flatter, cel-shaded colour.' },
+  blur: { name: 'Gaussian blur', group: 'Blur and detail', params: [['r', 'Radius', 0, 100, 8, 'px']], main: 'r', pad: p => p.r * 3 },
+  motion: { name: 'Motion blur', group: 'Blur and detail', params: [['d', 'Distance', 0, 200, 24, 'px'], ['a', 'Angle', -180, 180, 0, '°']], main: 'd', pad: p => p.d },
+  sharpen: { name: 'Sharpen', group: 'Blur and detail', params: [['amt', 'Amount', 0, 300, 100, '%'], ['r', 'Radius', 1, 10, 2, 'px']], main: 'amt' },
+  noise: { name: 'Noise', group: 'Blur and detail', params: [['amt', 'Amount', 0, 100, 20, '%'], ['mono', 'Same on every colour (grain)', 0, 1, 1, 'bool']], main: 'amt' },
+  outline: { name: 'Outline around shapes', group: 'Line and tone', params: [['w', 'Width', 1, 60, 6, 'px'], ['soft', 'Softness', 0, 100, 30, '%']], main: 'w', pad: p => p.w + 2, note: 'Uses your main colour, behind the drawing: a sticker edge for emotes.' },
+  glow: { name: 'Glow', group: 'Line and tone', params: [['r', 'Size', 1, 80, 16, 'px'], ['s', 'Strength', 0, 200, 100, '%']], main: 'r', pad: p => p.r * 3 },
+  tone: { name: 'Screentone', group: 'Line and tone', params: [['size', 'Dot spacing', 3, 40, 8, 'px'], ['ang', 'Angle', 0, 90, 45, '°']], main: 'size', note: 'Turns soft shading into printed-style dots: darker or more solid areas get bigger dots.' },
+};
+let adj = null; // the adjustment in progress
+const adjVals = store.get('adjVals', {});
+
+/* ---- the Adjust window (follows the layout like every other pop-up) ---- */
+const adjWin = el('div', { class: 'adjwin', id: 'adjWin', hidden: '', role: 'dialog', 'aria-label': 'Adjust' });
+const adjBar = el('div', { class: 'fbar adj-bar' }, el('span', { id: 'adjTitle', text: 'Adjust' }));
+const adjX = el('button', { class: 'ibtn sm', 'aria-label': 'Cancel adjustment', title: 'Cancel' }); adjX.innerHTML = IC_X; adjX.onclick = () => adjCancel();
+adjBar.append(minBtn(adjWin, 'Adjust'), adjX);
+const adjBody = el('div', { class: 'adj-body' }), adjAct = el('div', { class: 'adj-act' });
+adjWin.append(adjBar, adjBody, adjAct);
+$('#detailWin').after(adjWin);
+makeAdaptive(adjWin, { key: 'win.adjust', bar: adjBar, minW: 260, minH: 180, def: (m, b) => {
+  if (m === 'float') { const w = Math.min(340, Math.round((b.right - b.left) * .88)); return { x: b.right - w - 8, y: b.bottom - 330, w, h: 310 }; }
+  return { x: b.right - 380, y: b.top + 16, w: 360, h: Math.min(420, b.bottom - b.top - 32) }; } });
+const adjPill = el('div', { class: 'adj-pill', hidden: '', 'aria-live': 'polite' }); $('#stage').append(adjPill);
+
+/* ---- menu ---- */
+{
+  const items = [];
+  let g = '';
+  for (const [k, A] of Object.entries(ADJ)) { if (A.group !== g) { if (g) items.push('-'); g = A.group; } items.push([A.name + '…', '', () => adjStart(k)]); }
+  MENUS.adjust.push(...items);
+  MENU_ICONS.adjust = '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 010 16z" fill="currentColor"/>'; MENU_NAMES.adjust = 'Adjust';
+  const b = el('button', { class: 'mbtn', 'data-menu': 'adjust', 'aria-haspopup': 'true', 'aria-expanded': 'false', text: 'Adjust' });
+  $('.mbtn[data-menu="select"]').after(b);
+  b.onclick = e => { e.stopPropagation(); if (openMenu === 'adjust') return closeMenu(); closeMenu(); openMenu = 'adjust'; b.setAttribute('aria-expanded', 'true'); showMenu(['adjust'], b); };
+  b.addEventListener('pointerenter', e => { if (e.pointerType !== 'touch' && openMenu && openMenu !== 'adjust' && !pop.hidden) { closeMenu(); openMenu = 'adjust'; b.setAttribute('aria-expanded', 'true'); showMenu(['adjust'], b); } });
+}
+
+/* ---- start / preview / apply / cancel ---- */
+function adjStart(kind) {
+  closeMenu(); if (adj) adjCancel();
+  if (xform) applyXform();
+  const L = layers[active]; if (!L || !editable(L)) return;
+  if (!L.visible) { toast('This layer is hidden'); return; } if (L.locked) { toast('This layer is locked'); return; }
+  const S = editSurf(L), A = ADJ[kind], W = DOC.w, H = DOC.h;
+  const P = Object.assign({}, ...A.params.map(p => ({ [p[0]]: p[4] })), adjVals[kind] || {}); if (kind === 'gmap') P.preset = P.preset || 'main';
+  // work only on the part of the layer that has something on it (plus room for blur and glow to spread)
+  const full = S.ctx.getImageData(0, 0, W, H), d = full.data; let x0 = W, y0 = H, x1 = -1, y1 = -1;
+  for (let y = 0; y < H; y++) { const r = y * W * 4; for (let x = 0; x < W; x++) if (d[r + x * 4 + 3]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } }
+  if (x1 < 0) { toast('This layer is empty'); return; }
+  const cm = clipMask(); let md = null;
+  const padMax = Math.min(220, Math.max(...A.params.map(p => p[3])) * (kind === 'blur' || kind === 'glow' ? 3 : 1) + 4);
+  const rx0 = Math.max(0, x0 - (A.pad ? padMax : 0)), ry0 = Math.max(0, y0 - (A.pad ? padMax : 0)), rx1 = Math.min(W, x1 + 1 + (A.pad ? padMax : 0)), ry1 = Math.min(H, y1 + 1 + (A.pad ? padMax : 0));
+  const rw = rx1 - rx0, rh = ry1 - ry0, orig = S.ctx.getImageData(rx0, ry0, rw, rh);
+  if (cm) md = cm.getContext('2d').getImageData(rx0, ry0, rw, rh).data;
+  adj = { kind, A, P, L, S, x: rx0, y: ry0, w: rw, h: rh, orig, md, lock: L.lockAlpha, busy: false, again: false, seed: (Math.random() * 1e9) | 0 };
+  app.dataset.adjusting = kind;
+  adjBuild(); adjWin.hidden = false; adjPreview();
+  adjPillShow(); setTimeout(() => { if (adj) adjPill.classList.add('dim'); }, 2600);
+}
+function adjBuild() {
+  const { A, P, kind } = adj; $('#adjTitle').textContent = A.name;
+  const rows = A.params.map(([k, label, min, max, def, unit]) => {
+    if (unit === 'bool') { const c = el('input', { type: 'checkbox' }); c.checked = !!P[k]; c.onchange = () => { P[k] = c.checked ? 1 : 0; adjPreview(); }; return el('label', { class: 'check adj-row' }, label, c); }
+    const id = 'adj_' + k, r = el('input', { type: 'range', id, min, max, step: 1 }), n = el('input', { type: 'number', class: 'num', min, max, step: 1, 'aria-label': label });
+    r.value = n.value = P[k];
+    r.oninput = () => { P[k] = +r.value; n.value = r.value; adjPreview(); adjPillShow(); };
+    n.onchange = () => { let v = Math.max(min, Math.min(max, +n.value || 0)); P[k] = v; r.value = n.value = v; adjPreview(); };
+    const row = el('div', { class: 'adj-row' + (k === A.main ? ' main' : '') }, el('label', { for: id, text: label }), r, n); row._k = k; return row;
+  });
+  const kids = [...rows];
+  if (kind === 'gmap') kids.unshift(el('div', { class: 'adj-presets', role: 'radiogroup', 'aria-label': 'Gradient' }, ...ADJ_PRESETS.map(([id, label, stops]) => {
+    const cols = stops || [color.hex, sub.hex], b = el('button', { role: 'radio', 'aria-checked': P.preset === id, title: label, onclick: () => { P.preset = id; adjBuild(); adjPreview(); } },
+      el('span', { class: 'adj-grad', style: `background:linear-gradient(90deg,${cols.join(',')})` }), el('span', { text: label })); return b; })));
+  if (A.note) kids.push(el('p', { class: 'note', text: A.note }));
+  kids.push(el('p', { class: 'note adj-tip', text: `Tip: drag left or right on the canvas to change ${A.params.find(p => p[0] === A.main)[1].toLowerCase()}.` }));
+  adjBody.replaceChildren(...kids);
+  const cmp = el('button', { class: 'btn', text: 'Hold to compare', title: 'Hold to see the layer without the change' });
+  const show = on => { if (!adj) return; adj.S.ctx.putImageData(on ? adj.out || adj.orig : adj.orig, adj.x, adj.y); changed(adj.L, [adj.x, adj.y, adj.x + adj.w, adj.y + adj.h]); };
+  cmp.addEventListener('pointerdown', e => { e.preventDefault(); show(false); }); ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => cmp.addEventListener(t, () => show(true)));
+  adjAct.replaceChildren(cmp, el('button', { class: 'btn', text: 'Reset', onclick: () => { A.params.forEach(p => P[p[0]] = p[4]); adjBuild(); adjPreview(); } }),
+    el('span', { class: 'adj-sp' }), el('button', { class: 'btn', text: 'Cancel', onclick: () => adjCancel() }), el('button', { class: 'btn primary', text: 'Apply', onclick: () => adjApply() }));
+}
+function adjSyncRows() { if (!adj) return; adjBody.querySelectorAll('.adj-row').forEach(r => { if (!r._k) return; const [rng, num] = r.querySelectorAll('input'); rng.value = num.value = adj.P[r._k]; }); }
+function adjPillShow() { if (!adj) return; const A = adj.A, p = A.params.find(q => q[0] === A.main); adjPill.textContent = `${A.name}: ${adj.P[A.main]}${p[5] && p[5] !== 'bool' ? p[5] : ''} · drag left or right on the canvas`; adjPill.hidden = false; }
+// recompute off the pen's path: only the newest values are drawn, so dragging never queues up work
+function adjPreview() {
+  if (!adj) return; if (adj.busy) { adj.again = true; return; }
+  adj.busy = true;
+  requestAnimationFrame(() => setTimeout(() => {
+    if (!adj) return; const t0 = performance.now();
+    try { adj.out = adjRun(adj); adj.S.ctx.putImageData(adj.out, adj.x, adj.y); changed(adj.L, [adj.x, adj.y, adj.x + adj.w, adj.y + adj.h]); }
+    catch (e) { console.error(e); toast('That adjustment hit a problem'); }
+    PERF.time('adjust', performance.now() - t0); adj.busy = false; if (adj.again) { adj.again = false; adjPreview(); }
+  }, 0));
+}
+function adjApply() {
+  if (!adj) return; const a = adj; if (a.busy) { a.again = false; setTimeout(adjApply, 30); return; }
+  if (!a.out) a.out = adjRun(a);
+  a.S.ctx.putImageData(a.out, a.x, a.y);
+  adjVals[a.kind] = { ...a.P }; store.set('adjVals', adjVals);
+  adjEnd(); record({ S: a.S, L: a.L, x0: a.x, y0: a.y, before: a.orig, after: a.out }); changed(a.L, [a.x, a.y, a.x + a.w, a.y + a.h]); toast(a.A.name + ' applied');
+}
+function adjCancel() { if (!adj) return; const a = adj; a.S.ctx.putImageData(a.orig, a.x, a.y); adjEnd(); changed(a.L, [a.x, a.y, a.x + a.w, a.y + a.h]); }
+function adjEnd() { adj = null; adjWin.hidden = true; adjPill.hidden = true; adjPill.classList.remove('dim'); delete app.dataset.adjusting; }
+// undo while adjusting = cancel the adjustment (the layer is showing a preview, not a saved change)
+undoGuard = k => { if (!adj) return false; if (k === 'undo') adjCancel(); return true; };
+document.addEventListener('keydown', e => { if (!adj) return; if (e.key === 'Escape') { e.preventDefault(); adjCancel(); } else if (e.key === 'Enter' && !/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) { e.preventDefault(); adjApply(); } }, true);
+
+/* ---- drag on the canvas to set the main value ---- */
+{
+  let dr = null;
+  view.addEventListener('pointerdown', e => {
+    if (!adj) return; e.stopImmediatePropagation(); e.preventDefault();
+    if (dr) return; // a second finger: ignore it
+    const p = adj.A.params.find(q => q[0] === adj.A.main); dr = { id: e.pointerId, x: e.clientX, v0: adj.P[adj.A.main], min: p[2], max: p[3] };
+    try { view.setPointerCapture(e.pointerId); } catch { } adjPill.classList.remove('dim'); adjPillShow();
+  }, true);
+  view.addEventListener('pointermove', e => {
+    if (!adj || !dr || e.pointerId !== dr.id) return; e.stopImmediatePropagation();
+    const span = Math.max(200, view.getBoundingClientRect().width * .8), v = Math.round(Math.max(dr.min, Math.min(dr.max, dr.v0 + (e.clientX - dr.x) / span * (dr.max - dr.min))));
+    if (v !== adj.P[adj.A.main]) { adj.P[adj.A.main] = v; adjSyncRows(); adjPillShow(); adjPreview(); }
+  }, true);
+  const up = e => { if (!dr || e.pointerId !== dr.id) return; dr = null; if (adj) { e.stopImmediatePropagation(); setTimeout(() => adj && adjPill.classList.add('dim'), 1500); } };
+  view.addEventListener('pointerup', up, true); view.addEventListener('pointercancel', up, true);
+}
+// closing the window with its × cancels; minimising keeps the preview
+new MutationObserver(() => { if (adjWin.hidden && adj) adjCancel(); }).observe(adjWin, { attributes: true, attributeFilter: ['hidden'] });
+
+/* ================= the maths (straight RGBA in, straight RGBA out) ================= */
+function adjRun(a) {
+  const { orig, w, h, P, kind, md, lock } = a, src = orig.data, out = new ImageData(w, h), o = out.data, n = w * h;
+  switch (kind) {
+    case 'hsb': { const dh = P.hue / 360, ds = P.sat / 100, db = P.bri / 100;
+      for (let i = 0; i < n * 4; i += 4) { if (!src[i + 3]) continue; let [hh, s, v] = rgb2hsv(src[i], src[i + 1], src[i + 2]); hh = (hh + dh + 1) % 1; s = ds >= 0 ? s + (1 - s) * ds * s : s * (1 + ds); v = db >= 0 ? v + (1 - v) * db : v * (1 + db); const c = hsv2rgb(hh, Math.max(0, Math.min(1, s)), Math.max(0, Math.min(1, v))); o[i] = c[0]; o[i + 1] = c[1]; o[i + 2] = c[2]; o[i + 3] = src[i + 3]; } break; }
+    case 'balance': { const k = 1.1;
+      for (let i = 0; i < n * 4; i += 4) { if (!src[i + 3]) continue; const L = (src[i] * .3 + src[i + 1] * .59 + src[i + 2] * .11) / 255, m = Math.max(0, 1 - Math.abs(2 * L - 1)) * k;
+        o[i] = src[i] + P.cr * m; o[i + 1] = src[i + 1] + P.mg * m; o[i + 2] = src[i + 2] + P.yb * m; o[i + 3] = src[i + 3]; } break; }
+    case 'bc': { const f = P.c >= 0 ? 1 + P.c / 50 : 1 + P.c / 100, b = P.b * 1.28;
+      for (let i = 0; i < n * 4; i += 4) { if (!src[i + 3]) continue; for (let c = 0; c < 3; c++) o[i + c] = (src[i + c] - 128) * f + 128 + b; o[i + 3] = src[i + 3]; } break; }
+    case 'gmap': { const pr = ADJ_PRESETS.find(p => p[0] === P.preset) || ADJ_PRESETS[0], stops = (pr[2] || [color.hex, sub.hex]).map(hexRgb), lut = new Uint8Array(256 * 3), m = P.mix / 100;
+      for (let v = 0; v < 256; v++) { const t = v / 255 * (stops.length - 1), j = Math.min(stops.length - 2, Math.floor(t)), f = t - j; for (let c = 0; c < 3; c++) lut[v * 3 + c] = stops[j][c] + (stops[j + 1][c] - stops[j][c]) * f; }
+      for (let i = 0; i < n * 4; i += 4) { if (!src[i + 3]) continue; const L = Math.round(src[i] * .299 + src[i + 1] * .587 + src[i + 2] * .114); for (let c = 0; c < 3; c++) o[i + c] = src[i + c] + (lut[L * 3 + c] - src[i + c]) * m; o[i + 3] = src[i + 3]; } break; }
+    case 'invert': { const m = P.mix / 100; for (let i = 0; i < n * 4; i += 4) { for (let c = 0; c < 3; c++) o[i + c] = src[i + c] + (255 - 2 * src[i + c]) * m; o[i + 3] = src[i + 3]; } break; }
+    case 'poster': { const L = P.lv - 1; for (let i = 0; i < n * 4; i += 4) { for (let c = 0; c < 3; c++) o[i + c] = Math.round(src[i + c] / 255 * L) / L * 255; o[i + 3] = src[i + 3]; } break; }
+    case 'blur': { if (P.r < .5) { o.set(src); break; } const f = premul(src, n); gaussF(f, w, h, P.r / 2); unpremul(f, o, n); break; }
+    case 'motion': { if (P.d < 1) { o.set(src); break; } const f = premul(src, n), g = new Float32Array(n * 4), steps = Math.max(2, Math.min(48, Math.round(P.d))), ang = P.a * Math.PI / 180, dx = Math.cos(ang) * P.d / (steps - 1), dy = Math.sin(ang) * P.d / (steps - 1), off = (steps - 1) / 2;
+      for (let s = 0; s < steps; s++) { const ox = Math.round((s - off) * dx), oy = Math.round((s - off) * dy);
+        for (let y = 0; y < h; y++) { const sy = y + oy; if (sy < 0 || sy >= h) continue; const xa = Math.max(0, -ox), xb = Math.min(w, w - ox); let gi = (y * w + xa) * 4, si = (sy * w + xa + ox) * 4; for (let x = xa; x < xb; x++, gi += 4, si += 4) { g[gi] += f[si]; g[gi + 1] += f[si + 1]; g[gi + 2] += f[si + 2]; g[gi + 3] += f[si + 3]; } } }
+      for (let i = 0; i < n * 4; i++) g[i] /= steps; unpremul(g, o, n); break; }
+    case 'sharpen': { const f = premul(src, n), b = Float32Array.from(f); gaussF(b, w, h, P.r / 2); const k = P.amt / 100;
+      for (let i = 0; i < n * 4; i += 4) { const A = src[i + 3]; if (!A) continue; for (let c = 0; c < 3; c++) { const s0 = src[i + c], bl = b[i + 3] > 0 ? b[i + c] / b[i + 3] * 255 : s0; o[i + c] = s0 + (s0 - bl) * k; } o[i + 3] = A; } break; }
+    case 'noise': { let sd = a.seed; const rnd = () => (sd = (sd * 1664525 + 1013904223) >>> 0) / 4294967296 - .5, k = P.amt / 100 * 160;
+      for (let i = 0; i < n * 4; i += 4) { if (!src[i + 3]) { rnd(); continue; } if (P.mono) { const v = rnd() * k; for (let c = 0; c < 3; c++) o[i + c] = src[i + c] + v; } else for (let c = 0; c < 3; c++) o[i + c] = src[i + c] + rnd() * k; o[i + 3] = src[i + 3]; } break; }
+    case 'outline': { const R = P.w, band = Math.max(1, P.soft / 100 * R), dist = chamfer(src, w, h), [cr, cg, cb] = hexRgb(color.hex);
+      for (let i = 0, p = 0; p < n; p++, i += 4) { const d = dist[p] / 3, ea = Math.max(0, Math.min(1, (R + band / 2 - d) / band));
+        const sa = src[i + 3] / 255, oa = sa + ea * (1 - sa); if (oa <= 0) continue;
+        o[i] = (src[i] * sa + cr * ea * (1 - sa)) / oa; o[i + 1] = (src[i + 1] * sa + cg * ea * (1 - sa)) / oa; o[i + 2] = (src[i + 2] * sa + cb * ea * (1 - sa)) / oa; o[i + 3] = oa * 255; } break; }
+    case 'glow': { const f = premul(src, n), g = Float32Array.from(f); gaussF(g, w, h, P.r / 2); const s = P.s / 100;
+      for (let i = 0; i < n * 4; i += 4) { const sa = f[i + 3], ga = Math.min(1, g[i + 3] * s), oa = sa + ga * (1 - sa); if (oa <= 0) continue; const gk = g[i + 3] > 0 ? ga / g[i + 3] : 0;
+        for (let c = 0; c < 3; c++) o[i + c] = (f[i + c] + g[i + c] * gk * (1 - sa)) / oa * 255; o[i + 3] = oa * 255; } break; }
+    case 'tone': { const S = P.size, an = P.ang * Math.PI / 180, ca = Math.cos(an), sa = Math.sin(an), x0 = a.x, y0 = a.y;
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = (y * w + x) * 4, A = src[i + 3]; if (!A) continue;
+        const L = (src[i] * .299 + src[i + 1] * .587 + src[i + 2] * .114) / 255, cov = A / 255 * (1 - .8 * L), gx = x + x0, gy = y + y0, u = (gx * ca + gy * sa) / S, v = (-gx * sa + gy * ca) / S;
+        const du = (u - Math.floor(u) - .5) * S, dv = (v - Math.floor(v) - .5) * S, d = Math.hypot(du, dv), R = S * Math.sqrt(cov / Math.PI), al = Math.max(0, Math.min(1, R - d + .5));
+        o[i] = src[i]; o[i + 1] = src[i + 1]; o[i + 2] = src[i + 2]; o[i + 3] = al * 255; } break; }
+  }
+  // locked transparency: keep the old see-through parts
+  if (lock) for (let i = 3; i < n * 4; i += 4) o[i] = src[i];
+  // only inside the selection / emote boxes
+  if (md) for (let i = 0; i < n * 4; i += 4) { const m = md[i + 3] / 255; if (m >= 1) continue; for (let c = 0; c < 4; c++) o[i + c] = src[i + c] + (o[i + c] - src[i + c]) * m; }
+  return out;
+}
+function premul(src, n) { const f = new Float32Array(n * 4); for (let i = 0; i < n * 4; i += 4) { const a = src[i + 3] / 255; f[i] = src[i] / 255 * a; f[i + 1] = src[i + 1] / 255 * a; f[i + 2] = src[i + 2] / 255 * a; f[i + 3] = a; } return f; }
+function unpremul(f, o, n) { for (let i = 0; i < n * 4; i += 4) { const a = f[i + 3]; if (a <= 1 / 512) { o[i + 3] = 0; continue; } o[i] = f[i] / a * 255; o[i + 1] = f[i + 1] / a * 255; o[i + 2] = f[i + 2] / a * 255; o[i + 3] = a * 255; } }
+// Gaussian blur as three box blurs (fast at any radius), in place
+function gaussF(f, w, h, sigma) {
+  if (sigma < .3) return; const nb = 3, wIdeal = Math.sqrt(12 * sigma * sigma / nb + 1); let wl = Math.floor(wIdeal); if (wl % 2 === 0) wl--; const wu = wl + 2, m = Math.round((12 * sigma * sigma - nb * wl * wl - 4 * nb * wl - 3 * nb) / (-4 * wl - 4));
+  const t = new Float32Array(f.length);
+  for (let k = 0; k < nb; k++) { const r = ((k < m ? wl : wu) - 1) / 2; boxH(f, t, w, h, r); boxV(t, f, w, h, r); }
+}
+function boxH(s, d, w, h, r) { const iarr = 1 / (r + r + 1); for (let y = 0; y < h; y++) for (let c = 0; c < 4; c++) { const row = y * w; let acc = 0; for (let x = -r - 1; x < r; x++) acc += x >= 0 && x < w ? s[(row + x) * 4 + c] : 0;
+  for (let x = 0; x < w; x++) { const a = x + r, b = x - r - 1; if (a < w) acc += s[(row + a) * 4 + c]; if (b >= 0) acc -= s[(row + b) * 4 + c]; d[(row + x) * 4 + c] = acc * iarr; } } }
+function boxV(s, d, w, h, r) { const iarr = 1 / (r + r + 1); for (let x = 0; x < w; x++) for (let c = 0; c < 4; c++) { let acc = 0; for (let y = -r - 1; y < r; y++) acc += y >= 0 && y < h ? s[(y * w + x) * 4 + c] : 0;
+  for (let y = 0; y < h; y++) { const a = y + r, b = y - r - 1; if (a < h) acc += s[(a * w + x) * 4 + c]; if (b >= 0) acc -= s[(b * w + x) * 4 + c]; d[(y * w + x) * 4 + c] = acc * iarr; } } }
+// distance to the nearest drawn pixel (chamfer 3-4, so units are thirds of a pixel)
+function chamfer(src, w, h) {
+  const n = w * h, D = new Float32Array(n), BIG = 1e9; for (let p = 0; p < n; p++) D[p] = src[p * 4 + 3] > 127 ? 0 : BIG;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const p = y * w + x; let v = D[p]; if (!v) continue;
+    if (x > 0) v = Math.min(v, D[p - 1] + 3); if (y > 0) { v = Math.min(v, D[p - w] + 3); if (x > 0) v = Math.min(v, D[p - w - 1] + 4); if (x < w - 1) v = Math.min(v, D[p - w + 1] + 4); } D[p] = v; }
+  for (let y = h - 1; y >= 0; y--) for (let x = w - 1; x >= 0; x--) { const p = y * w + x; let v = D[p]; if (!v) continue;
+    if (x < w - 1) v = Math.min(v, D[p + 1] + 3); if (y < h - 1) { v = Math.min(v, D[p + w] + 3); if (x < w - 1) v = Math.min(v, D[p + w + 1] + 4); if (x > 0) v = Math.min(v, D[p + w - 1] + 4); } D[p] = v; }
+  return D;
+}
+function rgb2hsv(r, g, b) { r /= 255; g /= 255; b /= 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn; let h = 0; if (d) { h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h /= 6; if (h < 0) h += 1; } return [h, mx ? d / mx : 0, mx]; }
+function hsv2rgb(h, s, v) { const i = Math.floor(h * 6), f = h * 6 - i, p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s); const [r, g, b] = [[v, t, p], [q, v, p], [p, v, t], [p, q, v], [t, p, v], [v, p, q]][((i % 6) + 6) % 6]; return [r * 255, g * 255, b * 255]; }
 
 
 /* ================= sample: a blinking cat ================= */
