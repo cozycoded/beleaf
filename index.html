@@ -1929,6 +1929,7 @@ button.logo[aria-expanded="true"]{box-shadow:0 0 0 2px var(--accent)}
     <label class="check wide">No pressure coming through? Use drawing speed instead (slow = heavy, fast = light)<input id="speedPressCk" type="checkbox"></label>
     <label class="check wide"><span>Low-latency drawing<small style="display:block;color:var(--muted);font-size:calc(11px*var(--fz,1));font-weight:400;margin-top:2px">Puts brush strokes on screen sooner. Turn off if the canvas flickers. Takes effect after a reload.</small></span><input id="lowLatCk" type="checkbox"></label>
     <label class="check wide">Pen only: fingers pan, zoom and rotate<input id="penOnlyCk" type="checkbox"></label>
+    <label class="check wide">Tap with two fingers to undo, three fingers to redo<input id="tapUndoCk" type="checkbox"></label>
   </div>
   <p class="note">Pressure feel works like Clip Studio's “Adjust pen pressure”: left needs a lighter touch for full strength, right needs you to press harder.</p>
   </div>
@@ -6674,7 +6675,8 @@ function makePop(win) {
     toggle(anchor) { win.hidden ? api.open(anchor) : api.close(); },
     get open_() { return !win.hidden; },
   };
-  addEventListener('resize', () => { if (!win.hidden) { const r = win.getBoundingClientRect(); place(r.left, r.top); } });
+  const keepIn = () => { if (!win.hidden) { const r = win.getBoundingClientRect(); place(r.left, r.top); } };
+  addEventListener('resize', keepIn); new ResizeObserver(keepIn).observe(win); // its contents can grow after it opens (size preview): keep it on screen
   return api;
 }
 
@@ -7171,14 +7173,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.03-1200' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.04-0810' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.03-1200';
+const BELEAF_BUILD = '2026.11.04-0810';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
@@ -7582,6 +7584,25 @@ const mSwEnd = e => {
   setTimeout(() => { s.c.style.transition = ''; }, 200);
 };
 document.addEventListener('pointerup', mSwEnd, true); document.addEventListener('pointercancel', mSwEnd, true);
+
+/* ================= finger taps: two fingers = undo, three fingers = redo (like Procreate and ibis Paint) ================= */
+{
+  const T = new Map(); let maxN = 0, t0 = 0, moved = false, V0 = null;
+  view.addEventListener('pointerdown', e => {
+    if (e.pointerType !== 'touch') return;
+    if (!T.size) { t0 = performance.now(); moved = false; maxN = 0; V0 = { ...V }; }
+    T.set(e.pointerId, [e.clientX, e.clientY]); maxN = Math.max(maxN, T.size);
+  }, true);
+  addEventListener('pointermove', e => { const s = T.get(e.pointerId); if (s && Math.hypot(e.clientX - s[0], e.clientY - s[1]) > 14) moved = true; }, true);
+  const up = e => {
+    if (!T.has(e.pointerId)) return; T.delete(e.pointerId); if (T.size) return;
+    if (moved || performance.now() - t0 > 320 || (maxN !== 2 && maxN !== 3) || store.get('tapUndo', true) === false) return;
+    if (V0) { Object.assign(V, V0); dirty(false); } // a quick tap can nudge the zoom a hair: put it back
+    if (maxN === 2) { if (!history.length) return toast('Nothing to undo'); undo(); toast('Undo'); } else { if (!future.length) return toast('Nothing to redo'); redo(); toast('Redo'); }
+  };
+  addEventListener('pointerup', up, true); addEventListener('pointercancel', up, true);
+  const ck = $('#tapUndoCk'); if (ck) { ck.checked = store.get('tapUndo', true) !== false; ck.onchange = () => store.set('tapUndo', ck.checked); }
+}
 
 
 /* ================= sample: a blinking cat ================= */
