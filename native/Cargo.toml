@@ -1,5 +1,5 @@
 [workspace]
-members = ["brush-core", "poc", "web-engine"]
+members = ["brush-core", "poc", "web-engine", "app"]
 resolver = "2"
 
 [profile.release]

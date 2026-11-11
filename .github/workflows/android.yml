@@ -1,0 +1,54 @@
+name: beleaf Android
+
+# Builds the native Android app in native/app (the web app at the root is not touched)
+# and attaches the APK to the "android-test" release, so it can be downloaded straight to a phone.
+on:
+  push:
+    branches: [main]
+    paths: ["native/**", ".github/workflows/android.yml", ".android/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: native
+          cache-all-crates: true
+      - name: Install cargo-apk
+        run: cargo install cargo-apk --locked || cargo install cargo-apk
+      - name: Build the APK
+        working-directory: native/app
+        run: |
+          export ANDROID_NDK_ROOT="${ANDROID_NDK_LATEST_HOME:-$ANDROID_NDK_HOME}"
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          echo "SDK: $ANDROID_HOME  NDK: $ANDROID_NDK_ROOT"
+          ls $ANDROID_HOME/platforms || true
+          cargo apk build --release
+          find ../target -name "*.apk" -exec ls -la {} \;
+      - name: Collect
+        run: |
+          mkdir -p out
+          cp $(find native/target -name "beleaf.apk" | head -1) out/beleaf.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: beleaf-android
+          path: out/beleaf.apk
+      - name: Attach to the android-test release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-test
+          name: beleaf for Android (test)
+          prerelease: true
+          files: out/beleaf.apk
+          body: |
+            beleaf as a real Android app (test build). On your phone: tap beleaf.apk below to download it, open it, and allow installing from this source when Android asks.
+            Updates install over the old one and keep your drawing.
