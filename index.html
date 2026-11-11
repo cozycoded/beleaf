@@ -4127,7 +4127,7 @@ function drawBoxHighlight(x) {
   const [bx, by, w] = boxRect(curBox), q = [[bx, by], [bx + w, by], [bx + w, by + w], [bx, by + w]].map(([a, b]) => toScreen(a, b));
   x.save(); x.beginPath(); q.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.lineWidth = 2; x.strokeStyle = accentCol; x.globalAlpha = .7; x.stroke(); x.restore();
 }
-function sheetTitle() { const s = DOC.sheet; $('#docTitle').textContent = s ? `Emote sheet · ${s.cols} × ${s.rows} · ${s.box} px boxes` : `Untitled · ${DOC.w} × ${DOC.h} px`; }
+function sheetTitle() { const s = DOC.sheet; $('#docTitle').textContent = s ? `Emote sheet · ${s.cols} × ${s.rows} · ${s.box} px boxes` : `${DOC.name || 'Untitled'} · ${DOC.w} × ${DOC.h} px`; }
 function focusBox(i) {
   if (!DOC.sheet) return; curBox = Math.max(0, Math.min(boxCount() - 1, i)); const [bx, by, w] = boxRect(curBox);
   V.r = 0; V.s = Math.max(.05, Math.min(32, Math.min(VW, VH) * .78 / w)); const [a, b] = toScreen(bx + w / 2, by + w / 2); V.tx += VW / 2 - a; V.ty += VH / 2 - b;
@@ -4848,7 +4848,7 @@ function buildTabs() {
     if (i === tabIdx && DOC.placeholder) return null;
     const nm = i === tabIdx ? docName() : (t && (t.name || (t.sheet ? 'Emote sheet' : 'Untitled'))) || 'Canvas';
     const b = el('div', { class: 'dtab' + (i === tabIdx ? ' on' : ''), role: 'tab', 'aria-selected': i === tabIdx, title: nm },
-      el('button', { class: 'dtab-name', text: nm, onclick: () => switchTab(i), ondblclick: async () => { if (i !== tabIdx) return; const v = await askName('Canvas name', DOC.name || ''); if (v != null) { DOC.name = v; buildTabs(); saveNow(); } } }),
+      el('button', { class: 'dtab-name', text: nm, onclick: () => switchTab(i), ondblclick: async () => { if (i !== tabIdx) return; const v = await askName('Canvas name', DOC.name || ''); if (v != null) { DOC.name = v; buildTabs(); sheetTitle(); saveNow(); } } }),
       el('button', { class: 'dtab-x', 'aria-label': 'Close ' + nm, title: 'Close', text: '×', onclick: () => closeTab(i) }));
     return b;
   }).filter(Boolean), el('button', { class: 'dtab-add', title: 'New canvas or emote sheet', 'aria-label': 'New canvas', text: '+', onclick: () => openNew() }));
@@ -4992,7 +4992,7 @@ async function openProjectBytes(u8, fname) {
   const o = await unpackObj(u8.subarray(8)); if (!o || o.kind !== 'project' || !o.rec) throw new Error('This isn’t a beleaf project file');
   const blobs = {}; for (const [k, v] of Object.entries(o.blobs || {})) blobs[k] = new Blob([unb64u(v)], { type: 'image/png' });
   if (fname && !o.rec.name) o.rec.name = fname.replace(/\.beleaf$/i, '');
-  await openRecord(o.rec, true, k => blobs[k] || null); DOC.name = o.rec.name || DOC.name.replace(/ \(restored\)$/, ''); buildTabs(); toast(`Opened “${o.rec.name || 'project'}” in a new tab`);
+  await openRecord(o.rec, true, k => blobs[k] || null); DOC.name = o.rec.name || DOC.name.replace(/ \(restored\)$/, ''); buildTabs(); sheetTitle(); toast(`Opened “${o.rec.name || 'project'}” in a new tab`);
 }
 function openProjectFile() { closeMenu(); $('#projIn').click(); }
 $('#projIn').onchange = async e => { for (const f of e.target.files) { try { await openProjectBytes(new Uint8Array(await f.arrayBuffer()), f.name); } catch (err) { toast(`${f.name}: ${err.message || err}`); } } e.target.value = ''; };
@@ -7275,14 +7275,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.04-0853' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.11-0136' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.04-0853';
+const BELEAF_BUILD = '2026.11.11-0136';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
