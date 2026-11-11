@@ -156,6 +156,8 @@ pub struct App {
     finger_start: HashMap<i32, (f32, f32)>,
     /// messages from saving/exporting threads, shown when they finish
     notes: std::sync::Arc<std::sync::Mutex<Vec<String>>>,
+    /// the part of the screen not covered by the phone's own bars (left, top, right, bottom px)
+    pub safe: [f32; 4],
 }
 
 fn now_ms() -> f64 {
@@ -238,6 +240,7 @@ impl App {
             surface_format: wgpu::TextureFormat::Rgba8Unorm,
             finger_start: HashMap::new(),
             notes: Default::default(),
+            safe: [0.0, 0.0, 0.0, 0.0],
         }
     }
 
@@ -286,14 +289,21 @@ impl App {
 
     pub fn fit_view(&mut self) {
         let Some(g) = self.gfx.as_ref() else { return };
-        let (sw, sh) = (self.screen.0 as f32, self.screen.1 as f32);
-        let top = 70.0 * self.ppp;
-        let bot = 80.0 * self.ppp;
-        let avail = (sw - 24.0 * self.ppp, sh - top - bot);
+        let sf = self.safe_rect();
+        let top = sf[1] + 70.0 * self.ppp;
+        let bot = sf[3] - 80.0 * self.ppp;
+        let avail = (sf[2] - sf[0] - 24.0 * self.ppp, bot - top);
         let s = (avail.0 / g.cw as f32).min(avail.1 / g.ch as f32).max(0.01);
-        self.view = View { s, r: 0.0, tx: (sw - g.cw as f32 * s) / 2.0, ty: top + (avail.1 - g.ch as f32 * s) / 2.0 };
+        self.view = View { s, r: 0.0, tx: (sf[0] + sf[2] - g.cw as f32 * s) / 2.0, ty: top + (avail.1 - g.ch as f32 * s) / 2.0 };
         self.view_fitted = true;
         self.dirty = true;
+    }
+
+    /// The usable part of the screen in px (the whole screen until the phone tells us its bars).
+    pub fn safe_rect(&self) -> [f32; 4] {
+        let (w, h) = (self.screen.0 as f32, self.screen.1 as f32);
+        let s = self.safe;
+        if s[2] > s[0] + 50.0 && s[3] > s[1] + 50.0 { [s[0].max(0.0), s[1].max(0.0), s[2].min(w), s[3].min(h)] } else { [0.0, 0.0, w, h] }
     }
 
     /* ---------------- undo ---------------- */
@@ -696,7 +706,8 @@ impl App {
         let ppp = self.ppp;
         let (sw, sh) = self.screen;
         // the controls
-        let mut raw = egui::RawInput { screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(sw as f32 / ppp, sh as f32 / ppp))), time: Some(now_ms() / 1000.0), ..Default::default() };
+        let sf = self.safe_rect();
+        let mut raw = egui::RawInput { screen_rect: Some(Rect::from_min_max(Pos2::new(sf[0] / ppp, sf[1] / ppp), Pos2::new(sf[2] / ppp, sf[3] / ppp))), time: Some(now_ms() / 1000.0), ..Default::default() };
         raw.viewports.entry(egui::ViewportId::ROOT).or_default().native_pixels_per_point = Some(ppp);
         raw.events = std::mem::take(&mut self.egui_events);
         let ctx = self.ctx.clone();

@@ -103,6 +103,21 @@ mod android {
         gpu.surface = Some((surface, config));
     }
 
+    /// Keep the controls out from under the phone's own bars (navigation buttons, gesture bar).
+    fn update_safe(app: &AndroidApp, appx: &mut App) {
+        let r = app.content_rect();
+        let (w, h) = (appx.screen.0 as f32, appx.screen.1 as f32);
+        let mut s = if r.right > r.left && r.bottom > r.top { [r.left as f32, r.top as f32, r.right as f32, r.bottom as f32] } else { [0.0, 0.0, w, h] };
+        // if Android says the whole screen is ours, the navigation bar still sits on top at the bottom: leave room for it
+        if s[3] >= h - 1.0 {
+            s[3] = h - 48.0 * appx.ppp;
+        }
+        if s != appx.safe {
+            appx.safe = s;
+            appx.dirty = true;
+        }
+    }
+
     fn resize(gpu: &mut Gpu, appx: &mut App, w: u32, h: u32) {
         if let (Some((s, c)), Some(g)) = (gpu.surface.as_mut(), appx.gfx.as_ref()) {
             if (c.width, c.height) != (w, h) && w > 0 && h > 0 {
@@ -263,6 +278,8 @@ mod android {
                         MainEvent::InitWindow { .. } => {
                             if let Some(w) = app.native_window() {
                                 make_surface(&mut gpu, &mut appx, w);
+                                update_safe(&app, &mut appx);
+                                appx.fit_view();
                             }
                         }
                         MainEvent::TerminateWindow { .. } => {
@@ -273,6 +290,7 @@ mod android {
                             if let Some(w) = app.native_window() {
                                 resize(&mut gpu, &mut appx, w.width() as u32, w.height() as u32);
                             }
+                            update_safe(&app, &mut appx);
                         }
                         MainEvent::RedrawNeeded { .. } => appx.dirty = true,
                         MainEvent::InputAvailable => need_input = true,
