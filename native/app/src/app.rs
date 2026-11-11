@@ -149,7 +149,13 @@ pub struct App {
     show_new: bool,
     new_size: (u32, u32),
     toast: Option<(String, f64)>,
-    open_list: Vec<std::path::PathBuf>,
+    open_list: Vec<(std::path::PathBuf, bool)>,
+    browse_dir: std::path::PathBuf,
+    /// beleaf may read every file on the phone (Android's "All files access")
+    pub files_ok: bool,
+    /// ask the platform to check / to show the permission page
+    pub check_files: bool,
+    pub ask_files: bool,
     pub files: Files,
     pub want_save: bool,
     pub surface_format: wgpu::TextureFormat,
@@ -235,6 +241,10 @@ impl App {
             new_size: (2048, 2048),
             toast: None,
             open_list: Vec::new(),
+            browse_dir: std::path::PathBuf::from("/storage/emulated/0/Download"),
+            files_ok: false,
+            check_files: true,
+            ask_files: false,
             files,
             want_save: false,
             surface_format: wgpu::TextureFormat::Rgba8Unorm,
@@ -300,6 +310,17 @@ impl App {
     }
 
     /// The usable part of the screen in px (the whole screen until the phone tells us its bars).
+    /// The platform checked "All files access": refresh the open window's list if it changed.
+    pub fn set_files_ok(&mut self, ok: bool) {
+        if ok != self.files_ok {
+            self.files_ok = ok;
+            if self.show_open {
+                self.open_list = list_dir(&self.browse_dir);
+            }
+            self.dirty = true;
+        }
+    }
+
     pub fn safe_rect(&self) -> [f32; 4] {
         let (w, h) = (self.screen.0 as f32, self.screen.1 as f32);
         let s = self.safe;
@@ -948,7 +969,8 @@ impl App {
                     self.show_menu = false;
                 }
                 Some(2) => {
-                    self.open_list = list_files(&self.files.shared);
+                    self.check_files = true;
+                    self.open_list = list_dir(&self.browse_dir);
                     self.show_open = true;
                     self.show_menu = false;
                 }
@@ -989,19 +1011,50 @@ impl App {
         if self.show_open {
             let mut open = true;
             let mut pick = None;
-            let r = egui::Window::new("Open").open(&mut open).collapsible(false).show(ctx, |ui| {
+            let mut go: Option<std::path::PathBuf> = None;
+            let r = egui::Window::new("Open a .beleaf file").open(&mut open).collapsible(false).default_width(sr.width() - 24.0).default_pos(Pos2::new(sr.left() + 12.0, sr.top() + 60.0)).show(ctx, |ui| {
+                if !self.files_ok {
+                    ui.label("To open files you saved from the browser or got from someone else, beleaf needs Android's “All files access”. Files this app saved itself open either way.");
+                    if ui.button("Allow beleaf to open your files").clicked() {
+                        self.ask_files = true;
+                    }
+                    ui.separator();
+                }
+                ui.horizontal_wrapped(|ui| {
+                    for (label, p) in [("Download", "/storage/emulated/0/Download"), ("beleaf saves", "/storage/emulated/0/Download/beleaf"), ("Documents", "/storage/emulated/0/Documents"), ("Phone", "/storage/emulated/0")] {
+                        if ui.selectable_label(self.browse_dir == std::path::Path::new(p), label).clicked() {
+                            go = Some(p.into());
+                        }
+                    }
+                });
+                ui.horizontal(|ui| {
+                    if ui.add_enabled(self.browse_dir.parent().is_some() && self.browse_dir != std::path::Path::new("/storage/emulated/0"), egui::Button::new("⬆ Up")).clicked() {
+                        go = self.browse_dir.parent().map(|p| p.to_path_buf());
+                    }
+                    ui.label(egui::RichText::new(self.browse_dir.display().to_string()).small().weak());
+                });
+                ui.separator();
                 if self.open_list.is_empty() {
-                    ui.label("No .beleaf files in Downloads/beleaf yet. Files saved by this app show here.");
+                    ui.label(if self.files_ok { "No folders or .beleaf files here." } else { "Nothing beleaf can see here yet." });
                 }
                 egui::ScrollArea::vertical().max_height(sr.height() * 0.5).show(ui, |ui| {
-                    for p in &self.open_list {
+                    for (p, dir) in &self.open_list {
                         let n = p.file_name().map(|s| s.to_string_lossy().to_string()).unwrap_or_default();
-                        if ui.button(n).clicked() {
-                            pick = Some(p.clone());
+                        let label = if *dir { format!("📁  {n}") } else { format!("🍃  {n}") };
+                        if ui.add_sized([ui.available_width(), 40.0], egui::Button::new(label).wrap_mode(egui::TextWrapMode::Truncate)).clicked() {
+                            if *dir {
+                                go = Some(p.clone());
+                            } else {
+                                pick = Some(p.clone());
+                            }
                         }
                     }
                 });
             });
+            if let Some(d) = go {
+                self.browse_dir = d;
+                self.open_list = list_dir(&self.browse_dir);
+            }
             if let Some(r) = r {
                 rects.push(r.response.rect);
             }
@@ -1137,9 +1190,26 @@ fn sanitize(s: &str) -> String {
     let t: String = s.chars().map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { '-' }).collect();
     if t.is_empty() { "beleaf".into() } else { t }
 }
-fn list_files(dir: &std::path::Path) -> Vec<std::path::PathBuf> {
-    let mut v: Vec<std::path::PathBuf> = std::fs::read_dir(dir).map(|r| r.filter_map(|e| e.ok().map(|e| e.path())).filter(|p| p.extension().map(|x| x == "beleaf").unwrap_or(false)).collect()).unwrap_or_default();
-    v.sort();
-    v.reverse();
-    v
+/// Folders (not hidden ones) first, then .beleaf files, newest first.
+fn list_dir(dir: &std::path::Path) -> Vec<(std::path::PathBuf, bool)> {
+    let mut dirs = Vec::new();
+    let mut files = Vec::new();
+    if let Ok(r) = std::fs::read_dir(dir) {
+        for e in r.flatten() {
+            let p = e.path();
+            let name = p.file_name().map(|s| s.to_string_lossy().to_string()).unwrap_or_default();
+            if name.starts_with('.') {
+                continue;
+            }
+            if p.is_dir() {
+                dirs.push(p);
+            } else if p.extension().map(|x| x.eq_ignore_ascii_case("beleaf")).unwrap_or(false) {
+                let t = e.metadata().and_then(|m| m.modified()).ok();
+                files.push((p, t));
+            }
+        }
+    }
+    dirs.sort_by_key(|p| p.file_name().map(|s| s.to_string_lossy().to_lowercase()));
+    files.sort_by(|a, b| b.1.cmp(&a.1));
+    dirs.into_iter().map(|p| (p, true)).chain(files.into_iter().map(|(p, _)| (p, false))).collect()
 }

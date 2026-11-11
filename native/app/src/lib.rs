@@ -118,6 +118,43 @@ mod android {
         }
     }
 
+    /* ---- Android's "All files access", through Java ---- */
+    fn with_java<R>(app: &AndroidApp, f: impl FnOnce(&mut jni::JNIEnv, &jni::objects::JObject) -> jni::errors::Result<R>) -> Option<R> {
+        let vm = unsafe { jni::JavaVM::from_raw(app.vm_as_ptr() as *mut jni::sys::JavaVM) }.ok()?;
+        let mut env = vm.attach_current_thread().ok()?;
+        let act = unsafe { jni::objects::JObject::from_raw(app.activity_as_ptr() as jni::sys::jobject) };
+        let r = f(&mut env, &act);
+        if env.exception_check().unwrap_or(false) {
+            let _ = env.exception_clear();
+        }
+        r.ok()
+    }
+    fn files_allowed(app: &AndroidApp) -> bool {
+        if AndroidApp::sdk_version() < 30 {
+            return true;
+        }
+        with_java(app, |env, _| env.call_static_method("android/os/Environment", "isExternalStorageManager", "()Z", &[])?.z()).unwrap_or(false)
+    }
+    fn ask_files(app: &AndroidApp) {
+        let ok = with_java(app, |env, act| {
+            let action = env.new_string("android.settings.MANAGE_APP_ALL_FILES_ACCESS_PERMISSION")?;
+            let us = env.new_string("package:com.cozycoded.beleaf")?;
+            let uri = env.call_static_method("android/net/Uri", "parse", "(Ljava/lang/String;)Landroid/net/Uri;", &[(&us).into()])?.l()?;
+            let intent = env.new_object("android/content/Intent", "(Ljava/lang/String;Landroid/net/Uri;)V", &[(&action).into(), (&uri).into()])?;
+            env.call_method(act, "startActivity", "(Landroid/content/Intent;)V", &[(&intent).into()])?;
+            Ok(())
+        });
+        if ok.is_none() {
+            // some phones don't have the per-app page: open the list of all apps with that permission
+            with_java(app, |env, act| {
+                let action = env.new_string("android.settings.MANAGE_ALL_FILES_ACCESS_PERMISSION")?;
+                let intent = env.new_object("android/content/Intent", "(Ljava/lang/String;)V", &[(&action).into()])?;
+                env.call_method(act, "startActivity", "(Landroid/content/Intent;)V", &[(&intent).into()])?;
+                Ok(())
+            });
+        }
+    }
+
     fn resize(gpu: &mut Gpu, appx: &mut App, w: u32, h: u32) {
         if let (Some((s, c)), Some(g)) = (gpu.surface.as_mut(), appx.gfx.as_ref()) {
             if (c.width, c.height) != (w, h) && w > 0 && h > 0 {
@@ -293,6 +330,7 @@ mod android {
                             update_safe(&app, &mut appx);
                         }
                         MainEvent::RedrawNeeded { .. } => appx.dirty = true,
+                        MainEvent::Resume { .. } | MainEvent::GainedFocus => appx.check_files = true,
                         MainEvent::InputAvailable => need_input = true,
                         MainEvent::Pause | MainEvent::SaveState { .. } | MainEvent::Stop => save_now = true,
                         MainEvent::Destroy => {
@@ -305,6 +343,15 @@ mod android {
             });
             if need_input || appx.gfx.is_some() {
                 handle_input(&app, &mut appx);
+            }
+            if appx.check_files {
+                appx.check_files = false;
+                let ok = files_allowed(&app);
+                appx.set_files_ok(ok);
+            }
+            if appx.ask_files {
+                appx.ask_files = false;
+                ask_files(&app);
             }
             if appx.want_save {
                 appx.want_save = false;
