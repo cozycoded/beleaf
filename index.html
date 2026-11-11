@@ -264,7 +264,7 @@ input[type=range]{width:100%;accent-color:var(--fg);height:24px;margin:0;min-wid
   .drawer-btn{display:none}
   .dock{display:contents}
   .panel{position:fixed;left:0;right:0;bottom:calc(60px + env(safe-area-inset-bottom,0px));max-height:66vh;background:var(--panel-3);border-top:1px solid var(--line);border-radius:16px 16px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.55);z-index:40;transform:translateY(110%);transition:transform .2s ease;padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);overflow-y:auto}
-  .app[data-open="brush"] #brushPanel,.app[data-open="color"] #colorPanel,.app[data-open="layers"] #layersPanel,.app[data-open="nav"] #navPanel,.app[data-open="emotes"] #emotePanel,.app[data-open="ref"] #refPanel{transform:none}
+  .app[data-open="brush"] #brushPanel,.app[data-open="color"] #colorPanel,.app[data-open="layers"] #layersPanel,.app[data-open="nav"] #navPanel,.app[data-open="emotes"] #emotePanel,.app[data-open="ref"] #refPanel,.app[data-open="notes"] #notesPanel{transform:none}
   .panel[data-collapsed="true"] > :not(.ph):not(.sheet-grab){display:none!important}
   .panel[data-collapsed="true"]{height:auto!important}
   .ph .close{display:grid}
@@ -339,13 +339,13 @@ input[type=range]{accent-color:var(--accent)}
 .wheel.compact{max-width:170px}
 .wheel.fit{max-width:none;flex-shrink:0}
 /* phone tool bar: main + sub colour discs and a transparent strip, as compact as the desktop chips */
-.pchips{position:relative;flex:0 0 76px;height:50px;align-self:center}
+.pchips{position:relative;flex:0 0 92px;height:52px;align-self:center}
 .pchip{position:absolute;border:0;background:transparent;padding:0;display:grid;place-items:center;-webkit-tap-highlight-color:transparent}
-.pchip.main{left:0;top:0;width:38px;height:38px;z-index:2}
-.pchip.sub{left:22px;top:14px;width:36px;height:36px;z-index:1}
-.pchip.clear{right:0;top:2px;width:20px;height:46px}
-.pchip.main span{width:30px;height:30px;border-radius:50%;border:3px solid var(--fg);box-sizing:border-box;display:block}
-.pchip.sub span{width:24px;height:24px;border-radius:50%;border:2px solid var(--line2);box-sizing:border-box;display:block}
+.pchip.main{left:0;top:0;width:44px;height:44px;z-index:2}
+.pchip.sub{left:30px;top:16px;width:36px;height:36px;z-index:1}
+.pchip.clear{right:0;top:4px;width:26px;height:44px}
+.pchip.main span{width:34px;height:34px;border-radius:50%;border:3px solid var(--fg);box-sizing:border-box;display:block}
+.pchip.sub span{width:26px;height:26px;border-radius:50%;border:2px solid var(--line2);box-sizing:border-box;display:block}
 .pchip.clear span{width:12px;height:38px;border-radius:5px;border:1px solid var(--line2);display:block;background:repeating-conic-gradient(#bbb 0 25%,#fff 0 50%) 0 0/8px 8px}
 .pchip[aria-pressed="true"] span{box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--accent)}
 .pchip.sub[aria-pressed="true"]{z-index:3}
@@ -1390,7 +1390,7 @@ button.logo[aria-expanded="true"]{box-shadow:0 0 0 2px var(--accent)}
 /* ===== phone: floating side panel ===== */
 @media (max-width:699px){
   .app[data-mlay="float"] .panel{left:auto!important;right:8px;top:62px;bottom:calc(68px + env(safe-area-inset-bottom,0px));width:min(310px,70vw);max-height:none!important;height:auto!important;border-radius:16px;border:1px solid var(--line);box-shadow:0 12px 34px rgba(0,0,0,.55);transform:translateX(calc(100% + 24px));transition:transform .2s ease;display:flex;flex-direction:column}
-  .app[data-mlay="float"][data-open="ref"] #refPanel,.app[data-mlay="float"][data-open="brush"] #brushPanel,.app[data-mlay="float"][data-open="color"] #colorPanel,.app[data-mlay="float"][data-open="layers"] #layersPanel,.app[data-mlay="float"][data-open="nav"] #navPanel,.app[data-mlay="float"][data-open="emotes"] #emotePanel{transform:none}
+  .app[data-mlay="float"][data-open="ref"] #refPanel,.app[data-mlay="float"][data-open="notes"] #notesPanel,.app[data-mlay="float"][data-open="brush"] #brushPanel,.app[data-mlay="float"][data-open="color"] #colorPanel,.app[data-mlay="float"][data-open="layers"] #layersPanel,.app[data-mlay="float"][data-open="nav"] #navPanel,.app[data-mlay="float"][data-open="emotes"] #emotePanel{transform:none}
   .app[data-mlay="float"] .panel > .sheet-grab{display:none!important}
   .app[data-mlay="float"] .scrim,.app[data-mlay="rails"] .scrim{display:none!important}
   .app[data-mlay="float"] .panel > .ph{position:static!important}
@@ -1593,6 +1593,49 @@ button.logo[aria-expanded="true"]{box-shadow:0 0 0 2px var(--accent)}
 .adj-pill{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:9;max-width:calc(100% - 24px);background:color-mix(in srgb,var(--panel) 94%,transparent);border:1px solid var(--line2);border-radius:999px;padding:7px 14px;font-size:calc(12.5px*var(--fz,1));font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .4s}
 .adj-pill.dim{opacity:.55}
 .app[data-adjusting] #view{cursor:ew-resize}
+/* phones: no text-selection or long-press pop-ups on the bars; tools shrink while held; vertical swipes on the tool bar are ours (swipe up = settings) */
+html,body{overscroll-behavior:none} /* no pull-to-refresh or swipe-back bounce while drawing */
+.bottombar,.toolrail,.mobbar,.qa{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.bottombar .bar-scroll{touch-action:pan-x}
+.btool,.tool,.all-tile{position:relative}
+.btool.pressing,.tool.pressing,.all-tile.pressing{transform:scale(.92);transition:transform var(--hold,300ms) ease-out}
+.btool.pressing::after,.tool.pressing::after,.all-tile.pressing::after{content:"";position:absolute;inset:3px;border-radius:12px;border:2px solid var(--accent);opacity:0;animation:holdring var(--hold,300ms) ease-out forwards;pointer-events:none}
+@keyframes holdring{to{opacity:1}}
+.bb-all{flex:0 0 auto;color:var(--fg)!important;border-right:1px solid var(--line)!important;border-radius:0!important;margin-right:2px}
+@media (min-width:700px){.bb-all{display:none}}
+/* Everything sheet */
+.allcard{width:min(720px,100%);max-height:min(88vh,900px);display:flex;flex-direction:column;gap:10px}
+.all-q{width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid var(--line2);background:var(--panel-2);color:var(--fg);padding:0 14px;font:inherit;font-size:16px}
+.all-body{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:16px;padding-bottom:8px}
+.all-sec h3{margin:0 0 8px;font-size:calc(12px*var(--fz,1));color:var(--muted);font-weight:600;letter-spacing:.02em}
+.all-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:6px}
+.all-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:70px;padding:8px 4px;border:1px solid var(--line);background:var(--panel-2);color:var(--fg2);border-radius:12px;font-size:calc(11.5px*var(--fz,1));line-height:1.2;text-align:center}
+.all-tile .ic{width:22px;height:22px}
+.all-tile[aria-pressed="true"]{border-color:var(--accent);color:var(--fg);background:color-mix(in srgb,var(--accent) 16%,var(--panel-2))}
+.all-menus{display:flex;flex-direction:column;gap:6px}
+.all-menu{border:1px solid var(--line);border-radius:12px;background:var(--panel-2);overflow:hidden}
+.all-menu summary{padding:12px 14px;font-weight:600;cursor:pointer;list-style:none;display:flex;justify-content:space-between}
+.all-menu summary::after{content:"›";color:var(--muted);transition:transform .15s}.all-menu[open] summary::after{transform:rotate(90deg)}
+.all-list{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.all-list button,.all-results button{display:flex;align-items:center;gap:10px;min-height:44px;padding:0 14px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--fg);text-align:left;font:inherit;font-size:calc(14px*var(--fz,1))}
+.all-results{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel-2)}
+.all-results button span{flex:1}.all-results small{color:var(--muted);font-size:calc(11.5px*var(--fz,1))}
+@media (max-width:699px){#allModal{align-items:flex-end;padding:0}#allModal .allcard{width:100%;max-height:92vh;border-radius:18px 18px 0 0}}
+/* Quick Access on phones */
+.qa.qa-phone{width:auto;max-width:calc(100vw - 16px);max-height:none;z-index:58}
+.qa-phone .qa-h{display:flex;align-items:center;gap:6px;padding:4px 4px 4px 6px;touch-action:none;cursor:move}
+.qa-phone .qa-h b{flex:1;font-size:calc(12.5px*var(--fz,1))}
+.qa-grip .ic{width:16px;height:16px;fill:currentColor;stroke:none;color:var(--muted)}
+.qa-grid{display:grid;grid-template-columns:repeat(4,64px);gap:4px;padding:6px;max-height:50vh;overflow:auto}
+.qa-grid button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;height:58px;border:0;border-radius:10px;background:var(--panel-2);color:var(--fg);font-size:10.5px;line-height:1.1;padding:2px;text-align:center;overflow:hidden}
+.qa-grid button span{max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qa-grid .qa-edit{color:var(--muted);background:transparent;border:1px dashed var(--line2)}
+.qa.qa-fab{width:auto;border-radius:50%;background:transparent;border:0;box-shadow:none;overflow:visible}
+.qa-fabbtn{width:52px;height:52px;border-radius:50%;border:1px solid var(--line2);background:var(--panel);color:var(--fg);display:grid;place-items:center;box-shadow:0 8px 24px rgba(0,0,0,.5);touch-action:none}
+.qa-fabbtn .ic{width:24px;height:24px}
+/* phone tips */
+.tips{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.tips li{display:flex;flex-direction:column;gap:2px}.tips li span{color:var(--fg2);font-size:calc(13px*var(--fz,1))}
 #adjWin.aw[data-wmode="sheet"]:not(.min){height:auto!important;max-height:min(46vh,var(--sheet-max,46vh))!important}
 .touchy .detail-body .setchips{flex-direction:row;flex-wrap:wrap;border-right:0}
 </style>
@@ -6971,15 +7014,25 @@ function toolSettings(id) {
   if (BRUSHLIKE.has(id)) openDetail(); else openPanel('brush');
   toast(BRUSHLIKE.has(id) ? (id === 'brush' && phone() ? 'Brushes and settings' : 'Brush settings') : 'Tool settings');
 }
+// hold (about a third of a second) or swipe up on a tool to open its settings; it shrinks a little while you hold so you know it's coming
+const HOLD_MS = () => Math.max(150, Math.min(900, +store.get('holdMs', 300) || 300));
 function holdToOpen(root, sel) {
   let h = null;
+  const fire = () => { if (!h || h.fired) return; const b = h.b; h.fired = true; clearTimeout(h.t); b.classList.remove('pressing'); b.classList.add('held'); try { navigator.vibrate && navigator.vibrate(12); } catch { } if (typeof rdragT !== 'undefined' && rdragT) rdragT = null; const m = b.closest('.modal'); if (m) m.hidden = true; toolSettings(b.dataset.tool); };
   root.addEventListener('pointerdown', e => {
     const b = e.target.closest(sel); if (!b || e.button !== 0 || !b.dataset.tool) return;
-    h = { b, x: e.clientX, y: e.clientY, id: e.pointerId, t: setTimeout(() => { if (!h) return; h.fired = true; b.classList.add('held'); try { navigator.vibrate && navigator.vibrate(12); } catch { } if (typeof rdragT !== 'undefined' && rdragT) rdragT = null; toolSettings(b.dataset.tool); }, 480) };
+    h = { b, x: e.clientX, y: e.clientY, id: e.pointerId, t: setTimeout(fire, HOLD_MS()) }; b.style.setProperty('--hold', HOLD_MS() + 'ms'); b.classList.add('pressing');
   });
-  const stop = e => { if (!h || (e && e.pointerId !== h.id)) return; clearTimeout(h.t); h.b.classList.remove('held');
-    if (h.fired) window.addEventListener('click', ev => { ev.stopPropagation(); ev.preventDefault(); }, { capture: true, once: true }); h = null; };
-  window.addEventListener('pointermove', e => { if (h && !h.fired && e.pointerId === h.id && Math.hypot(e.clientX - h.x, e.clientY - h.y) > 8) { clearTimeout(h.t); h = null; } });
+  const stop = e => { if (!h || (e && e.pointerId !== h.id)) return; clearTimeout(h.t); h.b.classList.remove('held', 'pressing');
+    // after a hold, drop the browser's own tap that follows lifting the finger, but only that one: if none comes, the next real tap still works
+    if (h.fired) { const until = performance.now() + 600, eat = ev => { window.removeEventListener('click', eat, true); if (!ev.isTrusted || performance.now() > until) return; ev.stopPropagation(); ev.preventDefault(); }; window.addEventListener('click', eat, true); setTimeout(() => window.removeEventListener('click', eat, true), 650); }
+    h = null; };
+  window.addEventListener('pointermove', e => {
+    if (!h || h.fired || e.pointerId !== h.id) return; const dx = e.clientX - h.x, dy = e.clientY - h.y;
+    const up = dy < 0 && -dy > Math.abs(dx) * 1.2;
+    if (up && dy < -22) return fire(); // swipe up = settings
+    if (!up && Math.hypot(dx, dy) > (e.pointerType === 'mouse' ? 8 : 14)) { clearTimeout(h.t); h.b.classList.remove('pressing'); h = null; }
+  });
   window.addEventListener('pointerup', stop); window.addEventListener('pointercancel', stop);
   root.addEventListener('contextmenu', e => { if (e.target.closest(sel)) e.preventDefault(); });
 }
@@ -7078,8 +7131,8 @@ function placeSecX(u, sh, x) {
 }
 /* ---- phones: panels slide up from the bottom; swipe them down to close, drag the top bar up to make them taller ---- */
 const sheetH = store.get('sheetH', {});
-function sheetOf(t) { return t.closest('#brushPanel, #colorPanel, #layersPanel, #navPanel, #emotePanel, #refPanel, #detailWin'); }
-$$('#brushPanel, #colorPanel, #layersPanel, #navPanel, #emotePanel, #refPanel, #detailWin').forEach(p => { if (!p.querySelector(':scope > .sheet-grab')) p.prepend(el('div', { class: 'sheet-grab', 'aria-hidden': 'true' })); if (sheetH[p.id]) p.style.setProperty('--sheet-h', sheetH[p.id] + 'px'); });
+function sheetOf(t) { return t.closest('#brushPanel, #colorPanel, #layersPanel, #navPanel, #emotePanel, #refPanel, #notesPanel, #detailWin'); }
+$$('#brushPanel, #colorPanel, #layersPanel, #navPanel, #emotePanel, #refPanel, #notesPanel, #detailWin').forEach(p => { if (!p.querySelector(':scope > .sheet-grab')) p.prepend(el('div', { class: 'sheet-grab', 'aria-hidden': 'true' })); if (sheetH[p.id]) p.style.setProperty('--sheet-h', sheetH[p.id] + 'px'); });
 let sw = null;
 document.addEventListener('pointerdown', e => {
   if (!phone()) return; const p = sheetOf(e.target); if (!p) return;
@@ -7103,7 +7156,7 @@ document.addEventListener('pointerup', swEnd); document.addEventListener('pointe
 // a sheet is never taller than the room between its bottom edge and the top bar, so its title bar and × always stay on screen
 function fitSheets() {
   if (!phone()) return; const hb = $('.menubar').getBoundingClientRect().bottom;
-  $$('#brushPanel, #colorPanel, #layersPanel, #navPanel, #emotePanel, #refPanel, #detailWin').forEach(p => {
+  $$('#brushPanel, #colorPanel, #layersPanel, #navPanel, #emotePanel, #refPanel, #notesPanel, #detailWin').forEach(p => {
     const cs = getComputedStyle(p), b = parseFloat(cs.bottom); if (!isFinite(b) || (cs.position !== 'fixed' && cs.position !== 'absolute')) return;
     const box = cs.position === 'fixed' || !p.offsetParent ? { top: 0, bottom: innerHeight } : p.offsetParent.getBoundingClientRect();
     p.style.setProperty('--sheet-max', Math.max(160, Math.round(box.bottom - b - Math.max(hb, box.top) - 8)) + 'px');
@@ -7275,14 +7328,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.11-0136' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.11-0228' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.11-0136';
+const BELEAF_BUILD = '2026.11.11-0228';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
@@ -7514,7 +7567,7 @@ const _kc = keysChanged; keysChanged = function () { _kc(); buildCB(); buildQA()
 /* ================= phones: panels you can use while drawing ================= */
 // Floating side panel (portrait): the open panel floats on the right with tabs on top; the canvas stays live around it.
 const MTABS = [['brush', 'Brush', ICON.brushes], ['color', 'Color', UNITS.color[2]], ['layers', 'Layers', ICON.layers], ['emotes', 'Emotes', ICON.emotes], ['nav', 'Navigator', ICON.nav], ['ref', 'Reference', UNITS.ref[2]]];
-const PANEL_OF = { brush: '#brushPanel', color: '#colorPanel', layers: '#layersPanel', emotes: '#emotePanel', nav: '#navPanel', ref: '#refPanel' };
+const PANEL_OF = { brush: '#brushPanel', color: '#colorPanel', layers: '#layersPanel', emotes: '#emotePanel', nav: '#navPanel', ref: '#refPanel', notes: '#notesPanel' };
 // the reference window is in View on every screen size (on phones it opens like the other panels)
 { const v = MENUS.view, i = v.findIndex(it => Array.isArray(it) && it[0] === 'Navigator'); v.splice(i + 1, 0, ['Reference window', '', () => { if (!docked()) return openPanel('ref'); const u = unitEl('ref'); if (u.hidden) showUnit('ref'); else hideUnit('ref'); }]); }
 let fpMin = !!store.get('panelMin', false);
@@ -7980,6 +8033,157 @@ function chamfer(src, w, h) {
 }
 function rgb2hsv(r, g, b) { r /= 255; g /= 255; b /= 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn; let h = 0; if (d) { h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h /= 6; if (h < 0) h += 1; } return [h, mx ? d / mx : 0, mx]; }
 function hsv2rgb(h, s, v) { const i = Math.floor(h * 6), f = h * 6 - i, p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s); const [r, g, b] = [[v, t, p], [q, v, p], [p, v, t], [p, q, v], [t, p, v], [v, p, q]][((i % 6) + 6) % 6]; return [r * 255, g * 255, b * 255]; }
+
+/* ================= phones and tablets: everything in reach =================
+   - an "All" button at the start of the tool bar opens one sheet with every tool, panel, quick command and menu, plus search
+   - tool bar buttons react on the finger lifting (some phone browsers drop taps on a scrolling bar)
+   - Quick Access works on phones as a small floating button that opens into a grid of your commands
+   - first time on a phone: a short card with the gestures */
+const openOnPhone = n => { if (docked()) return openPanel(n); if (app.dataset.open !== n) openPanel(n); };
+const phColorTab = id => { openOnPhone('color'); setTimeout(() => { const t = $(id); t && t.click(); }, 30); };
+const PANEL_ITEMS = [
+  ['Brushes and settings', ICON.brushes, () => openOnPhone('brush')],
+  ['Brush studio', ICON.brush, () => openDetail()],
+  ['Color wheel', UNITS.color[2], () => phColorTab('#tabWheel')],
+  ['Mixing', UNITS.mix[2], () => phColorTab('#tabMix')],
+  ['Color set', UNITS.saved[2], () => phColorTab('#tabSaved')],
+  ['Layers', ICON.layers, () => openOnPhone('layers')],
+  ['Emotes', ICON.emotes, () => openOnPhone('emotes')],
+  ['Navigator', ICON.nav, () => openOnPhone('nav')],
+  ['Reference', UNITS.ref[2], () => openOnPhone('ref')],
+  ['Notes', UNITS.notes[2], () => openOnPhone('notes')],
+  ['Timeline', CI['anim.timeline'], () => runAction('anim.timeline')],
+  ['Quick Access', '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><path d="M17.5 14v7M14 17.5h7"/>', () => { if (!QA.on) toggleQA(); else { QA.pmin = false; saveQA(); buildQA(); } }],
+  ['Focus timer', CI['app.pomo'], () => typeof openPomo === 'function' && openPomo()],
+];
+const QUICK_IDS = ['undo', 'redo', 'clear', 'transform', 'cut', 'copy', 'paste', 'sel.all', 'sel.none', 'view.flip', 'view.rot0', 'view.fit', 'color.swap', 'layer.new', 'app.export', 'app.save'];
+const MENU_LABELS = { file: 'File', emote: 'Emotes', edit: 'Edit', select: 'Select', adjust: 'Adjust', layer: 'Layer', anim: 'Animation', view: 'View', help: 'Help', window: 'Window' };
+const ICO = s => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${s}</svg>`;
+
+/* ---- the Everything sheet ---- */
+const allM = el('div', { class: 'modal', id: 'allModal', hidden: '' }); document.body.append(allM);
+allM.addEventListener('click', e => { if (e.target === allM) allM.hidden = true; });
+holdToOpen(allM, '.all-tile[data-tool]');
+function openAll(focusSearch) {
+  closeMenu(); app.dataset.open = '';
+  const q = el('input', { type: 'search', class: 'all-q', placeholder: 'Search tools, menus and settings', 'aria-label': 'Search everything', autocomplete: 'off' });
+  const body = el('div', { class: 'all-body' });
+  const run = fn => () => { allM.hidden = true; setTimeout(fn, 10); };
+  const tile = (label, icon, fn, extra = {}) => { const b = el('button', { class: 'all-tile', type: 'button', onclick: run(fn), ...extra }); b.innerHTML = ICO(icon); b.append(el('span', { text: label })); return b; };
+  const tools = TOOLS.filter(t => t !== '|' && t[0] !== 'colors').map(([id, label]) => { const b = tile(label, ICON[id] || '', () => setTool(id), { 'data-tool': id, 'aria-pressed': tool === id }); b.classList.add('btool-like'); return b; });
+  const panels = PANEL_ITEMS.map(([l, i, f]) => tile(l, i, f));
+  const quick = QUICK_IDS.filter(id => ACT[id]).map(id => tile(cmdName(id), cmdIcon(id), () => runCmd(id)));
+  // every menu, the same as the ☰ menu and the computer's menu bar
+  const menuRows = [];
+  for (const [k, items] of Object.entries(MENUS)) {
+    if (k === 'window' && !docked()) continue;
+    for (const it of items) { if (!Array.isArray(it) || !it[2]) continue; menuRows.push({ menu: MENU_LABELS[k] || k, label: String(it[0]).replace(/^[✓ ]+/, ''), fn: it[2] }); }
+  }
+  const menus = Object.entries(menuRows.reduce((a, r) => ((a[r.menu] = a[r.menu] || []).push(r), a), {})).map(([m, rows]) => {
+    const d = el('details', { class: 'all-menu' }, el('summary', { text: m }), el('div', { class: 'all-list' }, ...rows.map(r => el('button', { type: 'button', text: r.label, onclick: run(r.fn) }))));
+    return d;
+  });
+  const sec = (title, kids, cls) => el('section', { class: 'all-sec' }, el('h3', { text: title }), el('div', { class: cls || 'all-grid' }, ...kids));
+  const home = [sec('Tools · hold or swipe up on one for its settings', tools), sec('Panels', panels), sec('Quick commands', quick), sec('Menus', menus, 'all-menus')];
+  body.replaceChildren(...home);
+  // search across everything at once
+  const index = [
+    ...TOOLS.filter(t => t !== '|' && t[0] !== 'colors').map(([id, label]) => ({ label, where: 'Tool', icon: ICON[id], fn: () => setTool(id) })),
+    ...PANEL_ITEMS.map(([label, icon, fn]) => ({ label, where: 'Panel', icon, fn })),
+    ...Object.values(ACT).map(a => ({ label: a.label.replace(/…$/, ''), where: a.group, icon: cmdIcon(a.id), fn: () => runAction(a.id) })),
+    ...menuRows.map(r => ({ label: r.label.replace(/…$/, ''), where: r.menu, icon: '', fn: r.fn })),
+  ];
+  q.oninput = () => {
+    const s = q.value.trim().toLowerCase(); if (!s) { body.replaceChildren(...home); return; }
+    const seen = new Set(), hits = index.filter(x => { const k = x.label.toLowerCase(); if (!k.includes(s) && !(x.where || '').toLowerCase().includes(s)) return false; const key = k + '|' + x.where; if (seen.has(key)) return false; seen.add(key); return true; }).slice(0, 60);
+    body.replaceChildren(hits.length ? el('div', { class: 'all-results' }, ...hits.map(h => { const b = el('button', { type: 'button', onclick: run(h.fn) }); b.innerHTML = h.icon ? ICO(h.icon) : ICO('<circle cx="12" cy="12" r="2"/>'); b.append(el('span', { text: h.label }), el('small', { text: h.where || '' })); return b; })) : el('p', { class: 'note', text: `Nothing called “${q.value}”. Try another word, like blur, layer or export.` }));
+  };
+  q.onkeydown = e => { if (e.key === 'Enter') { const f = body.querySelector('.all-results button'); f && f.click(); } };
+  allM.replaceChildren(el('div', { class: 'card allcard', role: 'dialog', 'aria-label': 'Everything' }, el('h2', { text: 'Everything' }), q, body));
+  allM.hidden = false;
+  if (focusSearch) setTimeout(() => q.focus(), 60);
+}
+// the All button pinned at the start of the tool bar
+{
+  const b = el('button', { class: 'btool bb-all', id: 'bbAll', type: 'button', 'aria-label': 'All tools, panels and menus', title: 'Everything: every tool, panel and menu, with search' });
+  b.innerHTML = ICO('<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/>');
+  b.append(el('span', { text: 'All' })); b.onclick = () => openAll(false);
+  $('#barTools').before(b);
+}
+// in the View menu too, and Quick Access on every screen size
+{ const v = MENUS.view; v.unshift(['Everything (all tools and menus)…', '', () => openAll(true)], ['Quick Access', '', () => toggleQA()], '-'); }
+
+/* ---- taps on the tool bar count when the finger lifts (a scrolling bar can swallow the browser's own tap) ---- */
+function fastTap(root) {
+  let d = null;
+  root.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse') return; const b = e.target.closest('button'); d = b ? { b, x: e.clientX, y: e.clientY, id: e.pointerId, t: performance.now() } : null; }, true);
+  root.addEventListener('pointerup', e => {
+    if (!d || e.pointerId !== d.id) return; const b = d.b; const far = Math.hypot(e.clientX - d.x, e.clientY - d.y) > 12, slow = performance.now() - d.t > 700; d = null;
+    if (far || slow || b.classList.contains('held') || b.disabled) return;
+    fastAt = performance.now(); b.click();
+  }, true);
+  root.addEventListener('pointercancel', () => { d = null; }, true);
+}
+// the browser's own tap arrives a moment later, possibly on whatever just opened under the finger: drop it
+let fastAt = 0;
+addEventListener('click', e => { if (e.isTrusted && fastAt && performance.now() - fastAt < 700) { fastAt = 0; e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+fastTap($('.bottombar')); fastTap($('#mobBar'));
+
+/* ---- Quick Access on phones: a floating button that opens into a grid ---- */
+{
+  const build0 = buildQA;
+  const within = (x, y, w, h) => { const top = ($('.menubar').getBoundingClientRect().bottom || 0) + 4, bb = $('.bottombar'), bot = (bb && bb.offsetParent ? bb.getBoundingClientRect().top : innerHeight) - 4; return [Math.max(4, Math.min(innerWidth - w - 4, x)), Math.max(top, Math.min(bot - h, y))]; };
+  const dragBy = (handle, onTap) => {
+    handle.addEventListener('pointerdown', e => {
+      if (e.target.closest('button') && e.target.closest('button') !== handle) return;
+      const r = qa.getBoundingClientRect(), sx = e.clientX, sy = e.clientY; let moved = false; try { handle.setPointerCapture(e.pointerId); } catch { }
+      const mv = ev => { if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 8) return; moved = true; const [x, y] = within(r.left + ev.clientX - sx, r.top + ev.clientY - sy, r.width, r.height); qa.style.left = x + 'px'; qa.style.top = y + 'px'; QA.px = x; QA.py = y; };
+      const up = () => { handle.removeEventListener('pointermove', mv); handle.removeEventListener('pointerup', up); handle.removeEventListener('pointercancel', up); if (moved) saveQA(); else if (onTap) onTap(); };
+      handle.addEventListener('pointermove', mv); handle.addEventListener('pointerup', up); handle.addEventListener('pointercancel', up); e.preventDefault();
+    });
+  };
+  buildQA = function () {
+    if (docked()) { qa.classList.remove('qa-phone', 'qa-fab'); return build0.apply(this, arguments); }
+    qa.hidden = !QA.on; if (!QA.on) return; if (QA.set >= QA.sets.length) QA.set = 0;
+    qa.classList.add('qa-phone'); qa.classList.toggle('qa-fab', !!QA.pmin);
+    if (QA.pmin) {
+      const fab = el('button', { class: 'qa-fabbtn', type: 'button', 'aria-label': 'Open Quick Access', title: 'Quick Access: tap to open, drag to move' }); fab.innerHTML = ICO(PANEL_ITEMS.find(p => p[0] === 'Quick Access')[1]);
+      qa.replaceChildren(fab); dragBy(fab, () => { QA.pmin = false; saveQA(); buildQA(); });
+    } else {
+      const grip = el('span', { class: 'qa-grip', 'aria-hidden': 'true' }); grip.innerHTML = ICO('<circle cx="9" cy="7" r="1.3"/><circle cx="15" cy="7" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="9" cy="17" r="1.3"/><circle cx="15" cy="17" r="1.3"/>');
+      const min = el('button', { class: 'ibtn', type: 'button', 'aria-label': 'Shrink Quick Access to a button', title: 'Shrink', onclick: () => { QA.pmin = true; saveQA(); buildQA(); } }); min.innerHTML = IC_MIN;
+      const x = el('button', { class: 'ibtn', type: 'button', 'aria-label': 'Close Quick Access', title: 'Close (View › Quick Access brings it back)', onclick: () => toggleQA() }); x.innerHTML = IC_X;
+      const head = el('div', { class: 'qa-h' }, grip, el('b', { text: 'Quick Access' }), min, x);
+      const sets = QA.sets.length > 1 ? el('div', { class: 'qa-sets', role: 'tablist' }, ...QA.sets.map((s, i) => el('button', { role: 'tab', 'aria-selected': i === QA.set, text: s.name, onclick: () => { QA.set = i; saveQA(); buildQA(); } }))) : '';
+      const list = el('div', { class: 'qa-grid' }, ...QA.sets[QA.set].items.filter(id => id !== '|' && ACT[id]).map(id => { const b = el('button', { type: 'button', title: cmdName(id), onclick: () => runCmd(id) }); b.innerHTML = cmdSvg(id); b.append(el('span', { text: cmdName(id) })); return b; }),
+        (() => { const s = el('button', { type: 'button', class: 'qa-edit', title: 'Choose the commands', onclick: () => openQASettings() }); s.innerHTML = ICO('<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>'); s.append(el('span', { text: 'Edit' })); return s; })());
+      qa.replaceChildren(head, sets, list); dragBy(head);
+    }
+    requestAnimationFrame(() => { const r = qa.getBoundingClientRect(); const [x, y] = within(QA.px == null ? innerWidth - r.width - 10 : QA.px, QA.py == null ? 120 : QA.py, r.width, r.height); qa.style.left = x + 'px'; qa.style.top = y + 'px'; });
+  };
+  buildQA();
+  new MutationObserver(() => buildQA()).observe(app, { attributes: true, attributeFilter: ['data-mlay'] });
+}
+
+/* ---- first time on a phone: the gestures, once (Help › Phone tips brings it back) ---- */
+function openPhoneTips() {
+  closeMenu(); let m = $('#tipsModal');
+  if (!m) { m = el('div', { class: 'modal', id: 'tipsModal', hidden: '' }); document.body.append(m); m.addEventListener('click', e => { if (e.target === m) m.hidden = true; }); }
+  const row = (k, v) => el('li', {}, el('b', { text: k }), el('span', { text: v }));
+  m.replaceChildren(el('div', { class: 'card tips-card', role: 'dialog', 'aria-label': 'Phone tips' }, el('h2', { text: 'Getting around on a phone' }),
+    el('ul', { class: 'tips' },
+      row('All button (bottom left)', 'Every tool, panel and menu in one place, with search.'),
+      row('Tap a tool', 'Pick it. The tool bar scrolls sideways for more.'),
+      row('Hold or swipe up on a tool', 'Open its settings (brushes, size, shape…).'),
+      row('Top bar', 'Menu ☰, undo, redo, your colour and layers. Slide it sideways for more.'),
+      row('Two fingers tap', 'Undo. Three fingers: redo. Four fingers: hide the panels.'),
+      row('Pinch', 'Zoom and turn the canvas. A small button straightens it again.'),
+      row('Quick Access', 'View › Quick Access: a floating button with your favourite commands.')),
+    el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Open everything', onclick: () => { m.hidden = true; openAll(false); } }), el('button', { class: 'btn primary', text: 'Got it', 'data-dismiss': '', onclick: () => { m.hidden = true; } }))));
+  m.hidden = false;
+}
+MENUS.help.unshift(['Phone tips and gestures…', '', () => openPhoneTips()]);
+setTimeout(() => { if (!docked() && !store.get('phoneTipsSeen', false)) { store.set('phoneTipsSeen', true); const t = () => { if ($('#startScreen') && !$('#startScreen').hidden) return setTimeout(t, 1500); openPhoneTips(); }; t(); } }, 2500);
 
 
 /* ================= sample: a blinking cat ================= */
