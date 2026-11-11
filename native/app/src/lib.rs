@@ -76,9 +76,11 @@ mod android {
             let p = appx.autosave_path();
             if p.exists() {
                 appx.open_path(&p);
-                appx.say("Welcome back");
-            } else {
+            }
+            if appx.gfx.as_ref().map(|g| g.layers.is_empty()).unwrap_or(true) {
                 appx.new_doc(2048, 2048);
+            } else {
+                appx.say("Welcome back");
             }
             gpu.adapter = Some(adapter);
         }

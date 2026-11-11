@@ -154,6 +154,8 @@ pub struct App {
     pub want_save: bool,
     pub surface_format: wgpu::TextureFormat,
     finger_start: HashMap<i32, (f32, f32)>,
+    /// messages from saving/exporting threads, shown when they finish
+    notes: std::sync::Arc<std::sync::Mutex<Vec<String>>>,
 }
 
 fn now_ms() -> f64 {
@@ -235,6 +237,7 @@ impl App {
             want_save: false,
             surface_format: wgpu::TextureFormat::Rgba8Unorm,
             finger_start: HashMap::new(),
+            notes: Default::default(),
         }
     }
 
@@ -551,9 +554,10 @@ impl App {
                     self.fingers.insert(p.id, (p.x, p.y));
                     self.finger_start.insert(p.id, (p.x, p.y));
                     let n = self.fingers.len();
-                    match &mut self.tap {
-                        None => self.tap = Some((now_ms(), 1, false)),
-                        Some(t) => t.1 = t.1.max(n),
+                    if let Some(t) = self.tap.as_mut() {
+                        t.1 = t.1.max(n);
+                    } else {
+                        self.tap = Some((now_ms(), 1, false));
                     }
                     if n >= 2 {
                         // a second finger: it's a gesture, not a line (drop a stroke the first finger just began)
@@ -997,6 +1001,14 @@ impl App {
                 self.show_open = false;
             }
         }
+        // messages from saving
+        let got: Vec<String> = self.notes.lock().map(|mut n| n.drain(..).collect()).unwrap_or_default();
+        if let Some(m) = got.last() {
+            self.toast = Some((m.clone(), now_ms() + 3500.0));
+        }
+        if self.toast.is_some() {
+            ctx.request_repaint_after(std::time::Duration::from_millis(250));
+        }
         // ---- toast ----
         if let Some((t, until)) = self.toast.clone() {
             if now_ms() < until {
@@ -1016,7 +1028,7 @@ impl App {
             let r = (pr.size * self.view.s / 2.0 / ppp).max(2.0);
             let p = ctx.layer_painter(egui::LayerId::new(egui::Order::Foreground, egui::Id::new("cursor")));
             p.circle_stroke(Pos2::new(x / ppp, y / ppp), r, egui::Stroke::new(1.5, Color32::from_black_alpha(160)));
-            p.circle_stroke(Pos2::new(x / ppp, y / ppp), r + 1.0, egui::Stroke::new(1.0, Color32::from_white_alpha(200)));
+            p.circle_stroke(Pos2::new(x / ppp, y / ppp), r + 1.0f32, egui::Stroke::new(1.0, Color32::from_white_alpha(200)));
         }
         self.ui_rects = rects;
     }
@@ -1043,7 +1055,10 @@ impl App {
     pub fn save_to(&mut self, path: std::path::PathBuf, quiet: bool) {
         let Some(d) = self.snapshot() else { return };
         self.changed = false;
-        let msg = if quiet { None } else { Some(path.display().to_string()) };
+        let notes = self.notes.clone();
+        if !quiet {
+            self.say("Saving…");
+        }
         std::thread::spawn(move || {
             if let Some(dir) = path.parent() {
                 let _ = std::fs::create_dir_all(dir);
@@ -1051,13 +1066,19 @@ impl App {
             let bytes = doc::save(&d);
             let tmp = path.with_extension("tmp");
             let ok = std::fs::write(&tmp, &bytes).and_then(|_| std::fs::rename(&tmp, &path));
-            if let Err(e) = ok {
-                log::error!("save failed: {e}");
+            let m = match ok {
+                Ok(_) => format!("Saved: {}", path.display()),
+                Err(e) => {
+                    log::error!("save failed: {e}");
+                    format!("Couldn't save there ({e})")
+                }
+            };
+            if !quiet || m.starts_with("Couldn") {
+                if let Ok(mut n) = notes.lock() {
+                    n.push(m);
+                }
             }
         });
-        if let Some(m) = msg {
-            self.say(format!("Saved to {m}"));
-        }
     }
     pub fn save_shared(&mut self) {
         let name = if self.doc_name.is_empty() { format!("beleaf-{}", now_secs()) } else { sanitize(&self.doc_name) };
@@ -1068,16 +1089,20 @@ impl App {
         let Some(d) = self.snapshot() else { return };
         let name = if self.doc_name.is_empty() { format!("beleaf-{}", now_secs()) } else { sanitize(&self.doc_name) };
         let p = self.files.shared.join(format!("{name}.png"));
-        let shown = p.display().to_string();
+        let notes = self.notes.clone();
+        self.say("Exporting…");
         std::thread::spawn(move || {
             let _ = std::fs::create_dir_all(p.parent().unwrap());
             let px = doc::flatten(&d);
             let rgba: Vec<u8> = px.chunks_exact(4).flat_map(|c| [c[0], c[1], c[2], 255]).collect();
-            if let Err(e) = std::fs::write(&p, doc::png_encode(d.w, d.h, &rgba)) {
-                log::error!("png export failed: {e}");
+            let m = match std::fs::write(&p, doc::png_encode(d.w, d.h, &rgba)) {
+                Ok(_) => format!("Exported: {}", p.display()),
+                Err(e) => format!("Couldn't export there ({e})"),
+            };
+            if let Ok(mut n) = notes.lock() {
+                n.push(m);
             }
         });
-        self.say(format!("Exported {shown}"));
     }
     pub fn open_path(&mut self, p: &std::path::Path) {
         let max = self.gfx.as_ref().map(|g| g.device.limits().max_texture_dimension_2d).unwrap_or(4096);
