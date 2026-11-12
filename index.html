@@ -604,15 +604,33 @@ html.sb-reset *{overflow:hidden!important}
   [data-unit] > .sec-b,#emotePanel > .emote-body,#emotePanel > .emote-none,#navPanel > .nav-body,#colorPanel > .color-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden}
   #layersPanel > .scroll{flex:1 1 auto;min-height:0}
   .emote-grid{max-height:none!important;grid-template-columns:repeat(auto-fill,minmax(50px,1fr))!important}
-  .ugrip{position:absolute;left:0;right:0;bottom:0;height:7px;cursor:row-resize;z-index:4;touch-action:none}
-  .ugrip:hover,.ugrip.on{background:linear-gradient(transparent 3px,var(--accent) 3px,var(--accent) 5px,transparent 5px)}
-  .cgrip{position:absolute;top:0;bottom:0;width:6px;cursor:col-resize;z-index:25;touch-action:none}
-  .dock-left:has(> .cgrip){padding-right:6px;box-sizing:border-box}
-  .dock-r1:has(> .cgrip),.dock-right:has(> .cgrip){padding-left:6px;box-sizing:border-box}
+  .ugrip{position:absolute;left:0;right:0;bottom:0;height:9px;cursor:row-resize;z-index:4;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+  .ugrip.last{display:none}
+  .ugrip:hover,.ugrip.on{background:linear-gradient(transparent 4px,var(--accent) 4px,var(--accent) 6px,transparent 6px)}
+  .cgrip{position:absolute;top:0;bottom:0;width:8px;cursor:col-resize;z-index:25;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+  .dock-left:has(> .cgrip){padding-right:8px;box-sizing:border-box}
+  .dock-r1:has(> .cgrip),.dock-right:has(> .cgrip){padding-left:8px;box-sizing:border-box}
+  /* a grabbable handle you can see, so the lines between panels are easy to find */
+  .ugrip::after{content:'';position:absolute;left:50%;top:50%;width:34px;height:3px;margin:-1.5px 0 0 -17px;border-radius:2px;background:var(--line2);opacity:.55;pointer-events:none}
+  .cgrip::after{content:'';position:absolute;left:50%;top:50%;width:3px;height:34px;margin:-17px 0 0 -1.5px;border-radius:2px;background:var(--line2);opacity:.55;pointer-events:none}
+  .ugrip.on::after,.cgrip.on::after{opacity:0}
+  /* touch screens and pens (also a phone with a drawing tablet plugged in): much bigger lines to grab */
+  @media (any-pointer:coarse){
+    .ugrip{height:16px}
+    .ugrip:hover,.ugrip.on{background:linear-gradient(transparent 6px,var(--accent) 6px,var(--accent) 10px,transparent 10px)}
+    .ugrip::after{width:44px;height:5px;margin:-2.5px 0 0 -22px;opacity:.8}
+    .cgrip{width:16px}
+    .cgrip::after{width:5px;height:44px;margin:-22px 0 0 -2.5px;opacity:.8}
+    .cgrip:hover,.cgrip.on{background:linear-gradient(90deg,transparent 6px,var(--accent) 6px,var(--accent) 10px,transparent 10px)!important}
+    .dock-left:has(> .cgrip){padding-right:16px}
+    .dock-r1:has(> .cgrip),.dock-right:has(> .cgrip){padding-left:16px}
+    .dbody > [data-unit],#brushPanel > .scroll > [data-unit]{padding-bottom:16px;box-sizing:border-box}
+    .dbody > [data-unit]:has(> .ugrip.last),#brushPanel > .scroll > [data-unit]:has(> .ugrip.last){padding-bottom:0}
+  }
   .dock[data-mini="1"]{padding-left:0!important;padding-right:0!important}
   .dock-left > .cgrip{right:0}
   .dock-r1 > .cgrip,.dock-right > .cgrip{left:0}
-  .cgrip:hover,.cgrip.on{background:linear-gradient(90deg,transparent 2px,var(--accent) 2px,var(--accent) 4px,transparent 4px)}
+  .cgrip:hover,.cgrip.on{background:linear-gradient(90deg,transparent 3px,var(--accent) 3px,var(--accent) 5px,transparent 5px)}
   .dock[data-mini="1"] > .cgrip{display:none}
   .fwin .ugrip{display:none}
   .sizes{grid-template-columns:repeat(auto-fill,minmax(36px,1fr))}
@@ -1638,6 +1656,45 @@ html,body{overscroll-behavior:none} /* no pull-to-refresh or swipe-back bounce w
 .tips li{display:flex;flex-direction:column;gap:2px}.tips li span{color:var(--fg2);font-size:calc(13px*var(--fz,1))}
 #adjWin.aw[data-wmode="sheet"]:not(.min){height:auto!important;max-height:min(46vh,var(--sheet-max,46vh))!important}
 .touchy .detail-body .setchips{flex-direction:row;flex-wrap:wrap;border-right:0}
+
+/* ---- change image resolution / canvas size ---- */
+.ds-card{width:min(560px,100%);display:flex;flex-direction:column;gap:12px}
+.ds-card .note{margin:0}
+.ds-now{color:var(--fg2)}
+.ds-row{display:grid;align-items:end;gap:8px}
+.ds-row label.f,.ds-meth,.ds-nres label.f{display:flex;flex-direction:column;gap:4px;color:var(--fg2);font-size:calc(12px*var(--fz,1));min-width:0}
+.ds-card input[type=number],.ds-card select,.ds-nres select{box-sizing:border-box;height:36px;background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:0 8px;font-size:calc(13px*var(--fz,1));min-width:0;width:100%;color:var(--fg)}
+.ds-card input:disabled,.ds-card select:disabled{opacity:.45}
+.ds-px{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) minmax(0,.8fr)}
+.ds-px2{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)}
+.ds-pr{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) minmax(0,.9fr)}
+.ds-x{color:var(--muted);padding-bottom:9px}
+.ds-link{margin-bottom:3px;border-radius:8px}
+.ds-link[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.ds-dpi{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:8px}
+.ds-rs{align-items:flex-start;gap:12px}.ds-rs small{color:var(--muted)}
+.ds-rs input{margin-top:3px;width:20px;height:20px;flex-shrink:0}
+.ds-warn{color:var(--warn,#E2A03F)!important}
+.ds-info{font-weight:600;color:var(--fg)}
+.ds-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
+.ds-colA{display:flex;flex-direction:column;gap:10px;min-width:0}
+.ds-colB{display:flex;flex-direction:column;gap:4px;min-width:0}
+.ds-prev{width:100%;height:220px;background:var(--panel-2);border-radius:10px;touch-action:none;cursor:grab}
+.ds-pvn{color:var(--muted);text-align:center;font-size:calc(11px*var(--fz,1))}
+.ds-anchor{display:grid;grid-template-columns:repeat(3,40px);grid-template-rows:repeat(3,40px);gap:4px}
+.ds-anchor button{border:1px solid var(--line);border-radius:8px;background:var(--panel-2);color:var(--fg2);font-size:16px;padding:0}
+.ds-anchor button[aria-checked="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.ds-quick{display:flex;flex-wrap:wrap;gap:6px}
+.ds-quick .btn{min-height:32px;padding:4px 10px;font-size:calc(12px*var(--fz,1))}
+.ds-nres{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-bottom:4px}
+.ds-ninfo{grid-column:1/-1;color:var(--muted);font-size:calc(11.5px*var(--fz,1))}
+@media (max-width:560px){
+  .ds-cols{grid-template-columns:1fr}
+  .ds-prev{height:170px}
+  .ds-px{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)}
+  .ds-px > label:last-child{grid-column:1/-1}
+}
+@media (max-height:520px) and (min-width:561px){ .ds-prev{height:150px} }
 </style>
 
 <div class="app" id="app" data-open="" data-timeline="" data-quick="on" data-dl="open" data-dr="open">
@@ -3432,6 +3489,7 @@ let undoGuard = null; // something in progress (an adjustment) can catch undo/re
 function undo() { if (undoGuard && undoGuard('undo')) return; if (xform) { cancelXform(); return; } const e = history.pop(); if (!e) return; applyH(e, true); future.push(e); syncUndo(); }
 function redo() { if (undoGuard && undoGuard('redo')) return; if (xform) return; const e = future.pop(); if (!e) return; applyH(e, false); history.push(e); syncUndo(); }
 function applyH(e, back) {
+  if (e.kind === 'docsize') { applyDocsize(e, back); return; }
   if (e.sel) setSelCanvas(back ? e.sel.prev : e.sel.next);
   if (e.kind === 'sel') return;
   if (e.px) { e.px.S.ctx.putImageData(unpack(back ? e.px.before : e.px.after), 0, 0); markDirty(e.px.S); }
@@ -3533,8 +3591,9 @@ view.addEventListener('pointerdown', e => {
     if (penOnly.checked && penSeen) { panDrag = { x: p[0], y: p[1], tx: V.tx, ty: V.ty }; return; }
   }
   if (e.button === 1 || spaceDown || tool === 'hand') { panDrag = { x: p[0], y: p[1], tx: V.tx, ty: V.ty }; view.style.cursor = 'grabbing'; return; }
+  // zoom tool: the other button (right click, or the pen's side button) zooms the other way
+  if (tool === 'zoom' && (e.button === 0 || e.button === 2 || e.button === 5)) { const flip = e.altKey || e.button === 2 || e.button === 5; zdrag = { x: p[0], y: p[1], s: V.s, moved: false, out: (zoomOpt.tap === 'out') !== flip }; return; }
   if (e.button === 2) return;
-  if (tool === 'zoom') { zdrag = { x: p[0], y: p[1], s: V.s, moved: false, out: e.altKey }; return; }
   if (tool === 'rotate') { rdrag = { a0: Math.atan2(p[1] - VH / 2, p[0] - VW / 2), r0: V.r }; return; }
   stopPlay();
   if (xform) { xfDown(p, e); return; }
@@ -4170,7 +4229,7 @@ function drawBoxHighlight(x) {
   const [bx, by, w] = boxRect(curBox), q = [[bx, by], [bx + w, by], [bx + w, by + w], [bx, by + w]].map(([a, b]) => toScreen(a, b));
   x.save(); x.beginPath(); q.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.lineWidth = 2; x.strokeStyle = accentCol; x.globalAlpha = .7; x.stroke(); x.restore();
 }
-function sheetTitle() { const s = DOC.sheet; $('#docTitle').textContent = s ? `Emote sheet · ${s.cols} × ${s.rows} · ${s.box} px boxes` : `${DOC.name || 'Untitled'} · ${DOC.w} × ${DOC.h} px`; }
+function sheetTitle() { const s = DOC.sheet; $('#docTitle').textContent = s ? `Emote sheet · ${s.cols} × ${s.rows} · ${s.box} px boxes` : `${DOC.name || 'Untitled'} · ${DOC.w} × ${DOC.h} px${DOC.dpi && DOC.dpi !== 72 ? ` · ${Math.round(DOC.dpi * 100) / 100} dpi` : ''}`; }
 function focusBox(i) {
   if (!DOC.sheet) return; curBox = Math.max(0, Math.min(boxCount() - 1, i)); const [bx, by, w] = boxRect(curBox);
   V.r = 0; V.s = Math.max(.05, Math.min(32, Math.min(VW, VH) * .78 / w)); const [a, b] = toScreen(bx + w / 2, by + w / 2); V.tx += VW / 2 - a; V.ty += VH / 2 - b;
@@ -4185,7 +4244,7 @@ const SHEET_MAX_SIDE = 8192, SHEET_MAX_PX = 40e6;
 function newSheet(o, withAnim) {
   stopPlay(); if (xform) xform = null;
   const s = { cols: o.cols, rows: o.rows, box: o.box, gap: gapFor(o.box), labels: [], bg: o.bg || gutterFor(theme.box), boxCol: o.boxCol || theme.box };
-  DOC.sheet = s; DOC.paper = null; const [W, H] = sheetSize(s); allocDoc(W, H); setPlaceholder(false);
+  DOC.sheet = s; DOC.paper = null; DOC.dpi = 72; const [W, H] = sheetSize(s); allocDoc(W, H); setPlaceholder(false);
   anim.n = 1; anim.cur = 0; anim.holds = [1];
   layers = [newLayer('Sketch'), newLayer('Color'), newLayer('Line art')]; layers[0].draft = true; layers[0].opacity = .5; lcount = 1; acount = 1; active = 2;
   if (withAnim) { layers.push(newAnimLayer('Animation 1')); acount = 2; active = 3; app.dataset.timeline = 'on'; $('#tlBtn').setAttribute('aria-pressed', 'true'); }
@@ -4388,6 +4447,7 @@ $('#cMain').onclick = () => useSlot('main'); $('#cSub').onclick = () => useSlot(
 /* ================= per-tool options ================= */
 const opt = (k, d) => { const o = Object.assign(d, store.get(k, {})); o._k = k; return o; };
 const saveOpt = o => { const c = { ...o }; delete c._k; store.set(o._k, c); };
+const zoomOpt = opt('zoomOpt', { tap: 'in' });
 const fillOpt = opt('fillOpt', { refer: 'all', tol: 10, grow: 1, opacity: 100 });
 const gradOpt = opt('gradOpt', { mode: 'fade', shape: 'linear', opacity: 100 });
 const shapeOpt = opt('shapeOpt', { fill: false });
@@ -4458,7 +4518,8 @@ function pressStatus(e) {
 function viewProps() {
   return [ctlRange('Zoom', () => Math.round(V.s * 100), v => zoomAt(v / 100 / V.s), 5, 3200, 1, '%'), ctlRange('Rotation', () => Math.round(V.r * 180 / Math.PI), v => rotateTo(v), -180, 180, 1, '°'),
     btnRow(['Fit', fit], ['100%', () => zoomAt(1 / V.s)], ['Reset rotation', () => rotateTo(0)], ['Flip view', flipView]),
-    note(tool === 'hand' ? 'Drag to move around. Hold Space with any tool to pan.' : tool === 'zoom' ? 'Drag up or down to zoom, tap to zoom in, Alt+tap to zoom out.' : 'Drag around the canvas to turn it.')];
+    tool === 'zoom' ? optSeg(zoomOpt, 'tap', 'A tap', [['in', 'Zooms in'], ['out', 'Zooms out']]) : null,
+    note(tool === 'hand' ? 'Drag to move around. Hold Space with any tool to pan.' : tool === 'zoom' ? 'Right-click, the pen’s side button or Alt+tap zooms the other way. Drag up or down to zoom smoothly.' : 'Drag around the canvas to turn it.')].filter(Boolean);
 }
 function toolPropFor(t) {
   switch (t) {
@@ -4863,12 +4924,12 @@ const newPid = () => 'p' + Date.now().toString(36) + Math.random().toString(36).
 function docName() { return DOC.name || (DOC.sheet ? 'Emote sheet' : 'Untitled'); }
 function makeThumb() { const th = mk(160, Math.max(40, Math.round(160 * DOC.h / DOC.w))); compose(anim.cur, { exp: true }); const g = th.getContext('2d'); if (DOC.sheet) { g.save(); g.scale(160 / DOC.w, 160 / DOC.w); drawSheetBack(g, false); g.restore(); } else if (DOC.paper && DOC.paper.on) { g.fillStyle = DOC.paper.col; g.fillRect(0, 0, th.width, th.height); } g.drawImage(comp, 0, 0, th.width, th.height); compDirty = true; return th; }
 function snapDoc() {
-  return { thumbC: makeThumb(), pid: DOC.pid, name: DOC.name, w: DOC.w, h: DOC.h, sheet: DOC.sheet, paper: DOC.paper, layers, active, anim: { n: anim.n, cur: anim.cur, holds: anim.holds.slice(), fps: anim.fps, onion: anim.onion, loop: anim.loop },
+  return { thumbC: makeThumb(), pid: DOC.pid, name: DOC.name, w: DOC.w, h: DOC.h, dpi: DOC.dpi || 72, sheet: DOC.sheet, paper: DOC.paper, layers, active, anim: { n: anim.n, cur: anim.cur, holds: anim.holds.slice(), fps: anim.fps, onion: anim.onion, loop: anim.loop },
     history: history.slice(), future: future.slice(), V: { ...V }, curBox, lcount, acount, lfcount, ver, tl: tlFrames };
 }
 function loadDoc(t) {
   stopPlay(); if (xform) xform = null; liveOp = null;
-  DOC.pid = t.pid; DOC.name = t.name; DOC.sheet = t.sheet || null; DOC.paper = t.paper || null; allocDoc(t.w, t.h); setPlaceholder(false);
+  DOC.pid = t.pid; DOC.name = t.name; DOC.sheet = t.sheet || null; DOC.paper = t.paper || null; DOC.dpi = t.dpi || 72; allocDoc(t.w, t.h); setPlaceholder(false);
   layers = t.layers; active = Math.min(t.active, layers.length - 1); Object.assign(anim, t.anim, { playing: false }); $('#fps').value = anim.fps;
   history.length = 0; history.push(...(t.history || [])); future.length = 0; future.push(...(t.future || [])); histBytes = [...history, ...future].reduce((n, e) => n + (e._b || 0), 0);
   lcount = t.lcount || 1; acount = t.acount || 1; lfcount = t.lfcount || 1; curBox = t.curBox || 0; tlFrames = t.tl || {};
@@ -4913,7 +4974,7 @@ async function serialize(t, keyFn = surfKey) {
     L.push(m);
   }
   const thumbBlob = t.thumbC ? await new Promise(r => t.thumbC.toBlob(r, 'image/png')) : null;
-  return { pid: t.pid, name: t.name || '', w: t.w, h: t.h, sheet: t.sheet || null, paper: t.paper || null, anim: t.anim, active: t.active, layers: L, counters: [t.lcount, t.acount, t.lfcount], updated: Date.now(), thumb: thumbBlob, v: 1 };
+  return { pid: t.pid, name: t.name || '', w: t.w, h: t.h, dpi: t.dpi || 72, sheet: t.sheet || null, paper: t.paper || null, anim: t.anim, active: t.active, layers: L, counters: [t.lcount, t.acount, t.lfcount], updated: Date.now(), thumb: thumbBlob, v: 1 };
 }
 let snapCur = null;
 let saveQ = Promise.resolve();
@@ -4960,7 +5021,7 @@ async function deserialize(rec, asCopy, src) {
   }
   DOC.w = save.w; DOC.h = save.h;
   const tl = asCopy || src ? {} : (await IDB.get('timelapse', rec.pid).catch(() => null)) || {};
-  return { pid, name: rec.name + (asCopy ? ' (restored)' : ''), w: rec.w, h: rec.h, sheet: rec.sheet, paper: rec.paper || null, layers: out, active: rec.active || 0, anim: rec.anim, history: [], future: [], V: null, curBox: 0, lcount: rec.counters[0], acount: rec.counters[1], lfcount: rec.counters[2], tl };
+  return { pid, name: rec.name + (asCopy ? ' (restored)' : ''), w: rec.w, h: rec.h, dpi: rec.dpi || 72, sheet: rec.sheet, paper: rec.paper || null, layers: out, active: rec.active || 0, anim: rec.anim, history: [], future: [], V: null, curBox: 0, lcount: rec.counters[0], acount: rec.counters[1], lfcount: rec.counters[2], tl };
 }
 async function openRecord(rec, asCopy, src) {
   if (rec && rec.pid && !asCopy) { const o = store.get('recentOpened', {}); o[rec.pid] = Date.now(); const ks = Object.keys(o).sort((a, b) => o[b] - o[a]); ks.slice(30).forEach(k => delete o[k]); store.set('recentOpened', o); }
@@ -5923,7 +5984,9 @@ async function encodeOne(frames, w, h, transparent) {
   if (exFmt === 'gif') return encodeGIF(frames, w, h, { transparent, matte: $('#exMatte').value === 'none' ? null : $('#exMatte').value, cutoff: $('#exCut').value / 100, dither: $('#exDither').checked, loop: $('#exLoop').checked, bgRGB: exBgRGB() });
   if (exFmt === 'apng') { if (typeof CompressionStream === 'undefined') throw new Error('This browser cannot make animated PNGs. Try GIF, or update the browser.'); return encodeAPNG(frames, w, h, $('#exLoop').checked); }
   const o = mk(w, h); o.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(frames[0].data), w, h), 0, 0);
-  return new Promise(r => o.toBlob(r, 'image/png'));
+  // the DPI goes in the file; a smaller export keeps the same print size
+  const dpi = (DOC.dpi || 72) * (DOC.sheet ? 1 : w / DOC.w);
+  return pngDpi(await new Promise(r => o.toBlob(r, 'image/png')), dpi);
 }
 function exBgRGB() { if ($('#exBg').value === 'canvas' && DOC.paper) return hexRgb(DOC.paper.col); if ($('#exBg').value === 'box' && DOC.sheet) return hexRgb(sheetBox(DOC.sheet)); const P = layers.find(L => L.paper); if ($('#exBg').value === 'paper' && P) { const p = P.s.ctx.getImageData(0, 0, 1, 1).data; return [p[0], p[1], p[2]]; } if ($('#exBg').value === 'sheet') return hexRgb(DOC.sheet.bg); return [255, 255, 255]; }
 const fmtKB = n => { const kb = n / 1024; return kb < 1024 ? kb.toFixed(1) + ' KB' : (kb / 1024).toFixed(2) + ' MB'; };
@@ -6010,11 +6073,11 @@ function nCustomInfo() { $('#nCustomInfo').textContent = $('#nSizeRow').hidden ?
 $('#nCustomBtn').onclick = () => { const was = !$('#nSizeRow').hidden; nPick($('#nCustom')); if (!was) setTimeout(() => { $('#nW').focus(); $('#nW').select(); }, 0); };
 ['#nW', '#nH'].forEach(q => $(q).addEventListener('input', nCustomInfo));
 $('#nSwap').onclick = () => { const w = $('#nW').value; $('#nW').value = $('#nH').value; $('#nH').value = w; $('#nW').dispatchEvent(new Event('input')); };
-$('#nGo').onclick = () => { newTab(); const w = Math.max(16, Math.min(4096, +$('#nW').value || 512)), h = Math.max(16, Math.min(4096, +$('#nH').value || 512)); newDocument(w, h, $('#nAnim').checked); $('#newModal').hidden = true; buildTabs(); saveNow(true); toast(`New canvas ${w} × ${h}`); };
+$('#nGo').onclick = () => { newTab(); const w = Math.max(16, Math.min(DS_MAX, +$('#nW').value || 512)), h = Math.max(16, Math.min(DS_MAX, +$('#nH').value || 512)); newDocument(w, h, $('#nAnim').checked); $('#newModal').hidden = true; buildTabs(); saveNow(true); toast(`New canvas ${w} × ${h}`); };
 // the start screen sits over an empty placeholder canvas until you make or open something
 function setPlaceholder(on) { DOC.placeholder = !!on; const s = $('#startScreen'); if (s) s.hidden = !on; app.classList.toggle('blank', !!on); if (on) $('#docTitle').textContent = ''; else sheetTitle(); }
 function newDocument(w, h, withAnim) {
-  stopPlay(); DOC.sheet = null; allocDoc(w, h); setPlaceholder(false);
+  stopPlay(); DOC.sheet = null; DOC.dpi = dsTakeDpi(); allocDoc(w, h); setPlaceholder(false);
   anim.n = 1; anim.cur = 0; anim.holds = [1];
   DOC.paper = { ...newPaper };
   layers = [newLayer('Layer 1')]; lcount = 2; acount = 1; active = 0;
@@ -6358,25 +6421,35 @@ applySizes(); window.addEventListener('resize', applySizes);
 let sq = null;
 document.addEventListener('pointerdown', e => {
   const g = e.target.closest('.ugrip, .cgrip'); if (!g || !docked()) return;
-  e.preventDefault(); e.stopPropagation(); g.setPointerCapture(e.pointerId); g.classList.add('on');
+  e.preventDefault(); e.stopPropagation(); try { g.setPointerCapture(e.pointerId); } catch { } g.classList.add('on');
   if (g.dataset.grip) {
-    const u = unitEl(g.dataset.grip), open = x => x.dataset.unit && !x.hidden && x.dataset.collapsed !== 'true' && !(x.matches('.sec') && x.querySelector('.sec-h').getAttribute('aria-expanded') === 'false');
+    const u = unitEl(g.dataset.grip), open = x => x.dataset.unit && !x.hidden && x.getClientRects().length > 0 && x.dataset.collapsed !== 'true' && !(x.matches('.sec') && x.querySelector('.sec-h').getAttribute('aria-expanded') === 'false');
     let nb = u.nextElementSibling; while (nb && !open(nb)) nb = nb.nextElementSibling;
-    if (!nb || !open(u)) { sq = null; g.classList.remove('on'); return; }
+    if (!nb || !open(u)) { sq = null; g.classList.remove('on'); toast('This is the bottom of the column. Drag the line above a panel to make it taller or shorter.'); return; }
     [...u.parentElement.children].filter(open).forEach(x => { lay.h[x.dataset.unit] = x.offsetHeight; x.style.setProperty('--uflex', `${x.offsetHeight} 1 0px`); });
-    sq = { g, kind: 'h', id: g.dataset.grip, y0: e.clientY, a: u, b: nb, ha: u.offsetHeight, hb: nb.offsetHeight };
+    sq = { pid: e.pointerId, g, kind: 'h', id: g.dataset.grip, y0: e.clientY, a: u, b: nb, ha: u.offsetHeight, hb: nb.offsetHeight };
   }
-  else { const D = dockEl(g.dataset.cgrip); sq = { g, kind: 'w', id: g.dataset.cgrip, x0: e.clientX, w0: D.offsetWidth, D }; }
+  else { const D = dockEl(g.dataset.cgrip); sq = { pid: e.pointerId, g, kind: 'w', id: g.dataset.cgrip, x0: e.clientX, w0: D.offsetWidth, D }; }
 }, true);
 document.addEventListener('pointermove', e => {
-  if (!sq) return;
+  if (!sq || e.pointerId !== sq.pid) return; e.preventDefault();
   if (sq.kind === 'h') {
     const tot = sq.ha + sq.hb, ha = Math.max(74, Math.min(tot - 74, Math.round(sq.ha + e.clientY - sq.y0))), hb = tot - ha;
     lay.h[sq.a.dataset.unit] = ha; lay.h[sq.b.dataset.unit] = hb; sq.a.style.setProperty('--uflex', `${ha} 1 0px`); sq.b.style.setProperty('--uflex', `${hb} 1 0px`);
   }
   else { const dx = e.clientX - sq.x0, w = Math.max(170, Math.min(560, Math.round(sq.id === 'left' ? sq.w0 + dx : sq.w0 - dx))); lay.w[sq.id] = w; sq.D.style.width = w + 'px'; }
 });
-document.addEventListener('pointerup', () => { if (!sq) return; sq.g.classList.remove('on'); sq = null; saveLay(); queueThumbs(120); dirty(false); });
+// (pens and tablets can end a drag with pointercancel or by losing the capture instead of pointerup)
+const sqEnd = e => { if (!sq || (e && e.pointerId !== undefined && e.pointerId !== sq.pid)) return; sq.g.classList.remove('on'); sq = null; saveLay(); queueThumbs(120); dirty(false); };
+document.addEventListener('pointerup', sqEnd); document.addEventListener('pointercancel', sqEnd); document.addEventListener('lostpointercapture', e => { if (sq && e.target === sq.g) sqEnd(e); }, true);
+// the bottom panel of a column has nothing under it to trade space with, so its line is hidden
+function markGrips() {
+  const open = x => x.dataset.unit && !x.hidden && x.getClientRects().length > 0 && x.dataset.collapsed !== 'true' && !(x.matches('.sec') && x.querySelector('.sec-h') && x.querySelector('.sec-h').getAttribute('aria-expanded') === 'false');
+  $$('.ugrip').forEach(g => { const u = g.parentElement; let nb = u.nextElementSibling; while (nb && !open(nb)) nb = nb.nextElementSibling; g.classList.toggle('last', !nb); });
+}
+let mgT = 0; const mgO = new MutationObserver(() => { if (!mgT) mgT = requestAnimationFrame(() => { mgT = 0; markGrips(); }); });
+$$('.dock').forEach(d => mgO.observe(d, { subtree: true, attributes: true, attributeFilter: ['hidden', 'data-collapsed', 'aria-expanded', 'class', 'data-mini'], childList: true }));
+markGrips(); window.addEventListener('resize', () => requestAnimationFrame(markGrips));
 document.addEventListener('dblclick', e => {
   const g = e.target.closest('.ugrip, .cgrip'); if (!g) return;
   if (g.dataset.grip) [...unitEl(g.dataset.grip).parentElement.children].forEach(x => x.dataset.unit && delete lay.h[x.dataset.unit]); else delete lay.w[g.dataset.cgrip];
@@ -7328,14 +7401,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.11-0228' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.12-0353' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.11-0228';
+const BELEAF_BUILD = '2026.11.12-0353';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
@@ -8033,6 +8106,295 @@ function chamfer(src, w, h) {
 }
 function rgb2hsv(r, g, b) { r /= 255; g /= 255; b /= 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn; let h = 0; if (d) { h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h /= 6; if (h < 0) h += 1; } return [h, mx ? d / mx : 0, mx]; }
 function hsv2rgb(h, s, v) { const i = Math.floor(h * 6), f = h * 6 - i, p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s); const [r, g, b] = [[v, t, p], [q, v, p], [p, v, t], [p, q, v], [t, p, v], [v, p, q]][((i % 6) + 6) % 6]; return [r * 255, g * 255, b * 255]; }
+
+/* ================= image resolution + canvas size (Edit menu), and DPI for print ================= */
+// Change image resolution: every layer and animation frame is scaled up or down (or only the DPI changes).
+// Change canvas size: the art stays exactly as it is; the edges move out (more room) or in (cropped).
+// Both are one undo step: undo puts every layer back as it was, pixel for pixel.
+if (!DOC.dpi) DOC.dpi = 72;
+const DS_MAX = 8192, DS_AREA = 40e6, DS_WARN = 16.7e6;
+const DPI_LIST = [72, 96, 144, 150, 300, 350, 600, 1200];
+const PUNITS = { in: 1, cm: 2.54, mm: 25.4 };
+const punit = () => PUNITS[store.get('printUnit', 'in')] ? store.get('printUnit', 'in') : 'in';
+const r2 = v => Math.round(v * 100) / 100;
+const printTxt = (w, h, dpi, u = punit()) => `${r2(w / dpi * PUNITS[u])} × ${r2(h / dpi * PUNITS[u])} ${u}`;
+const mbTxt = (w, h) => { const m = w * h * 4 / 1048576; return m >= 10 ? Math.round(m) + ' MB' : r2(m) + ' MB'; };
+function dsTooBig(w, h) { return w > DS_MAX || h > DS_MAX || w * h > DS_AREA; }
+function dsWarn(w, h) {
+  if (dsTooBig(w, h)) return `Too big: the most beleaf can hold is ${DS_MAX} px a side and ${Math.round(DS_AREA / 1e6)} million pixels in all.`;
+  if (w * h > DS_WARN) return `Very big canvas (${mbTxt(w, h)} for every layer). It may be slow, and phones and iPads may not have the memory for it. Save a copy first.`;
+  return '';
+}
+// every picture the document holds: each layer, and each animation frame
+function docSurfaces() { const out = new Set(); layers.forEach(L => { if (L.kind === 'anim') L.cels.forEach(S => S && out.add(S)); else if (L.s) out.add(L.s); }); return [...out]; }
+// smooth scaling; big reductions go down in halves so thin lines don't break into dots
+function scaleInto(src, g, nw, nh, crisp) {
+  if (crisp) { g.imageSmoothingEnabled = false; g.drawImage(src, 0, 0, nw, nh); return; }
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+  let c = src, w = src.width, h = src.height;
+  while (w >= nw * 2 && h >= nh * 2) { const w2 = Math.round(w / 2), h2 = Math.round(h / 2), t = mk(w2, h2), x = t.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(c, 0, 0, w2, h2); c = t; w = w2; h = h2; }
+  g.drawImage(c, 0, 0, nw, nh);
+}
+function resizeDoc(nw, nh, o) {
+  if (xform) applyXform(); if (liveOp) cancelLive(); stopPlay();
+  const same = nw === DOC.w && nh === DOC.h;
+  const surfs = same ? [] : docSurfaces(), paper = new Set(layers.filter(L => L.paper && L.s).map(L => L.s));
+  const olds = surfs.map(S => ({ c: S.c, ctx: S.ctx }));
+  const news = surfs.map(S => {
+    const c = mk(nw, nh), g = c.getContext('2d');
+    if (o.scale) scaleInto(S.c, g, nw, nh, o.crisp);
+    else {
+      // a filled paper layer keeps covering the whole canvas
+      if (paper.has(S)) { const d = S.ctx.getImageData(0, 0, 1, 1).data; g.fillStyle = `rgba(${d[0]},${d[1]},${d[2]},${d[3] / 255})`; g.fillRect(0, 0, nw, nh); }
+      g.drawImage(S.c, Math.round(o.ox), Math.round(o.oy));
+    }
+    return { c, ctx: g };
+  });
+  const e = { kind: 'docsize', surfs, olds, news, from: [DOC.w, DOC.h, DOC.dpi || 72], to: [nw, nh, o.dpi || DOC.dpi || 72], how: o.scale ? 'scale' : 'canvas' };
+  applyDocsize(e, false); record(e);
+  // count the kept pictures toward the undo memory limit
+  const b = olds.reduce((n, x) => n + x.c.width * x.c.height, 0); e._b = b; histBytes += b;
+  while (history.length > 1 && histBytes > HIST_MAX) histBytes -= history.shift()._b || 0;
+}
+function applyDocsize(e, back) {
+  const [w, h, dpi] = back ? e.from : e.to, set = back ? e.olds : e.news, ow = DOC.w;
+  e.surfs.forEach((S, i) => { S.c = set[i].c; S.ctx = set[i].ctx; markDirty(S); });
+  DOC.dpi = dpi;
+  if (w !== DOC.w || h !== DOC.h) {
+    const VS = { ...V };
+    allocDoc(w, h);
+    if (e.how === 'scale') { Object.assign(V, VS); V.s = Math.max(.05, Math.min(32, V.s * ow / w)); } else fit();
+  }
+  ver++; onionKey = ''; buildLayers(); buildTimeline(); sheetTitle(); dirty();
+}
+function dsTakeDpi() { const d = dsNextDpi || 72; dsNextDpi = 0; return d; }
+let dsNextDpi = 0;
+
+/* ---- shared bits for the two windows ---- */
+function dsModal(id, title) {
+  let m = $('#' + id);
+  if (!m) { m = el('div', { class: 'modal', id, hidden: '' }); document.body.append(m); }
+  const card = el('div', { class: 'card ds-card', role: 'dialog', 'aria-label': title }, el('h2', { text: title }));
+  m.replaceChildren(card); return [m, card];
+}
+const numIn = (val, min, max, step = 1) => { const i = el('input', { type: 'number', min, max, step, inputmode: 'decimal' }); i.value = val; return i; };
+const LINK_SVG = '<svg class="ic" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>';
+function linkBtn(get, set) {
+  const b = el('button', { class: 'ibtn sm ds-link', type: 'button', title: 'Keep the shape (width and height change together)', 'aria-label': 'Keep the shape' }); b.innerHTML = LINK_SVG;
+  const sync = () => b.setAttribute('aria-pressed', String(!!get())); b.onclick = () => { set(!get()); sync(); }; sync(); return b;
+}
+function unitSel(onchange) {
+  const s = el('select', { 'aria-label': 'Print size unit' }, ...Object.keys(PUNITS).map(u => el('option', { value: u, text: u })));
+  s.value = punit(); s.onchange = () => { store.set('printUnit', s.value); onchange(); }; return s;
+}
+function dpiSel(get, set) {
+  const sel = el('select', { 'aria-label': 'Resolution presets' }, ...DPI_LIST.map(d => el('option', { value: d, text: d + ' dpi' })), el('option', { value: 'c', text: 'Other…' }));
+  const inp = numIn(get(), 1, 4800, 1); inp.setAttribute('aria-label', 'Resolution (dots per inch)');
+  const sync = () => { const d = get(); if (document.activeElement !== inp) inp.value = r2(d); sel.value = DPI_LIST.includes(Math.round(d * 100) / 100) ? String(d) : 'c'; };
+  sel.onchange = () => { if (sel.value === 'c') { inp.focus(); inp.select(); return; } set(+sel.value); };
+  inp.oninput = () => { const v = +inp.value; if (v >= 1 && v <= 4800) set(v); };
+  return { el: el('div', { class: 'ds-dpi' }, inp, sel), sync };
+}
+
+/* ---- Change image resolution ---- */
+function openResolution() {
+  closeMenu(); if (DOC.placeholder) return toast('Make or open a canvas first');
+  if (xform) applyXform();
+  const W0 = DOC.w, H0 = DOC.h, D0 = DOC.dpi || 72, sheet = DOC.sheet;
+  const st = { w: W0, h: H0, dpi: D0, lock: true, resample: true, crisp: store.get('resCrisp', false) };
+  const [m, card] = dsModal('resModal', 'Change image resolution');
+  const iw = numIn(W0, 1, DS_MAX), ih = numIn(H0, 1, DS_MAX), ip = numIn(100, 1, 2000, 'any'), pw = numIn(0, 0, 9999, 'any'), ph = numIn(0, 0, 9999, 'any');
+  const dpi = dpiSel(() => st.dpi, d => { const k = d / st.dpi; if (st.resample) { st.w = Math.max(1, Math.round(st.w * k)); st.h = Math.max(1, Math.round(st.h * k)); } st.dpi = d; render(); });
+  const us = unitSel(() => render());
+  const rs = el('input', { type: 'checkbox' }); rs.checked = true;
+  const crisp = el('select', { 'aria-label': 'How to scale' }, el('option', { value: 'smooth', text: 'Smooth (drawings and paintings)' }), el('option', { value: 'crisp', text: 'Crisp pixels (pixel art)' })); crisp.value = st.crisp ? 'crisp' : 'smooth';
+  const info = el('p', { class: 'note ds-info' }), warn = el('p', { class: 'note ds-warn' }), go = el('button', { class: 'btn primary', text: 'Apply' });
+  const lk = linkBtn(() => st.lock, v => { st.lock = v; if (v) { st.h = Math.max(1, Math.round(st.w * H0 / W0)); render(); } });
+  const lab = (t, ...k) => el('label', { class: 'f' }, el('span', { text: t }), ...k);
+  const pxRow = el('div', { class: 'ds-row ds-px' }, lab('Width (px)', iw), lk, lab('Height (px)', ih), lab('Scale (%)', ip));
+  const prRow = el('div', { class: 'ds-row ds-pr' }, lab('Print width', pw), el('span', { class: 'ds-x', text: '×' }), lab('Print height', ph), lab('Unit', us));
+  card.append(
+    el('p', { class: 'note ds-now', text: `Now ${W0} × ${H0} px at ${r2(D0)} dpi (prints ${printTxt(W0, H0, D0)}).` }),
+    el('div', { class: 'field' }, el('span', { class: 'flabel', text: 'Resolution (DPI)' }), dpi.el),
+    el('label', { class: 'check wide ds-rs' }, el('span', {}, el('b', { text: 'Resample' }), el('small', { text: ' change the pixels too. Off: only the DPI (print size) changes; your drawing stays exactly the same.' })), rs),
+    el('div', { class: 'field' }, el('span', { class: 'flabel', text: 'Size in pixels' }), pxRow),
+    el('div', { class: 'field' }, el('span', { class: 'flabel', text: 'Print size' }), prRow),
+    el('label', { class: 'f ds-meth' }, el('span', { text: 'Scaling' }), crisp),
+    ...(sheet ? [el('p', { class: 'note', text: 'Emote sheets scale by their box size, and this can’t be undone (save a copy first if you’re unsure).' })] : []),
+    info, warn,
+    el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Cancel', 'data-dismiss': '', onclick: () => { m.hidden = true; } }), go));
+  const set = (i, v) => { if (document.activeElement !== i) i.value = v; };
+  function render() {
+    const u = punit(); set(iw, st.w); set(ih, st.h); set(ip, r2(st.w / W0 * 100)); set(pw, r2(st.w / st.dpi * PUNITS[u])); set(ph, r2(st.h / st.dpi * PUNITS[u])); dpi.sync();
+    [iw, ih, ip].forEach(i => i.disabled = !st.resample); crisp.disabled = !st.resample;
+    const changed = st.w !== W0 || st.h !== H0;
+    info.textContent = `New: ${st.w} × ${st.h} px at ${r2(st.dpi)} dpi, prints ${printTxt(st.w, st.h, st.dpi)}.` + (changed ? ` Every layer and frame is ${st.w > W0 ? 'scaled up' : 'scaled down'} to fit.` : st.dpi !== D0 ? ' Only the DPI changes; the drawing stays as it is.' : '');
+    const w = changed ? dsWarn(st.w, st.h) : ''; warn.textContent = w; warn.hidden = !w;
+    go.disabled = dsTooBig(st.w, st.h) || (!changed && st.dpi === D0);
+  }
+  const num = i => { const v = +i.value; return isFinite(v) && v > 0 ? v : 0; };
+  iw.oninput = () => { const v = Math.round(num(iw)); if (!v) return; st.w = v; if (st.lock) st.h = Math.max(1, Math.round(v * H0 / W0)); render(); };
+  ih.oninput = () => { const v = Math.round(num(ih)); if (!v) return; st.h = v; if (st.lock) st.w = Math.max(1, Math.round(v * W0 / H0)); render(); };
+  ip.oninput = () => { const v = num(ip); if (!v) return; st.w = Math.max(1, Math.round(W0 * v / 100)); st.h = Math.max(1, Math.round(H0 * v / 100)); render(); };
+  // print size: with Resample on it changes the pixels, with it off it changes the DPI
+  const onPrint = (v, side) => {
+    if (!v) return; const inch = v / PUNITS[punit()];
+    if (st.resample) { if (side === 'w') { st.w = Math.max(1, Math.round(inch * st.dpi)); if (st.lock) st.h = Math.max(1, Math.round(st.w * H0 / W0)); } else { st.h = Math.max(1, Math.round(inch * st.dpi)); if (st.lock) st.w = Math.max(1, Math.round(st.h * W0 / H0)); } }
+    else st.dpi = Math.max(1, Math.min(4800, r2((side === 'w' ? st.w : st.h) / inch)));
+    render();
+  };
+  pw.oninput = () => onPrint(num(pw), 'w'); ph.oninput = () => onPrint(num(ph), 'h');
+  rs.onchange = () => { st.resample = rs.checked; if (!st.resample) { st.w = W0; st.h = H0; } render(); };
+  crisp.onchange = () => { st.crisp = crisp.value === 'crisp'; store.set('resCrisp', st.crisp); };
+  [iw, ih, ip, pw, ph].forEach(i => i.addEventListener('blur', render));
+  go.onclick = () => {
+    if (go.disabled) return; m.hidden = true;
+    if (sheet && (st.w !== W0 || st.h !== H0)) {
+      const box = Math.max(28, Math.min(1000, Math.round(sheet.box * st.w / W0)));
+      reshapeSheet({ cols: sheet.cols, rows: sheet.rows, box, bg: sheet.bg, boxCol: sheet.boxCol }, true); DOC.dpi = st.dpi; sheetTitle(); dirty();
+      toast(`Boxes are now ${box} px (${DOC.w} × ${DOC.h} px)`); return;
+    }
+    const busy = st.w * st.h > 4e6; if (busy) toast('Resizing…');
+    setTimeout(() => {
+      try { resizeDoc(st.w, st.h, { scale: true, crisp: st.crisp, dpi: st.dpi }); }
+      catch (err) { console.warn(err); return toast('Couldn’t resize: this device ran out of memory. Try a smaller size.'); }
+      toast(st.w === W0 && st.h === H0 ? `Resolution is now ${r2(st.dpi)} dpi (prints ${printTxt(DOC.w, DOC.h, DOC.dpi)})` : `Image is now ${DOC.w} × ${DOC.h} px at ${r2(DOC.dpi)} dpi`);
+    }, busy ? 40 : 0);
+  };
+  render(); m.hidden = false;
+}
+
+/* ---- Change canvas size ---- */
+function openCanvasSize() {
+  closeMenu(); if (DOC.placeholder) return toast('Make or open a canvas first');
+  if (DOC.sheet) { toast('Emote sheets change size with their boxes and rows'); return openSheet('edit'); }
+  if (xform) applyXform();
+  const W0 = DOC.w, H0 = DOC.h, D = DOC.dpi || 72;
+  const st = { w: W0, h: H0, ax: .5, ay: .5, ox: 0, oy: 0, free: false, lock: false };
+  const [m, card] = dsModal('canvasSizeModal', 'Change canvas size');
+  const iw = numIn(W0, 1, DS_MAX), ih = numIn(H0, 1, DS_MAX), pw = numIn(0, 0, 9999, 'any'), ph = numIn(0, 0, 9999, 'any');
+  const us = unitSel(() => render());
+  const lk = linkBtn(() => st.lock, v => { st.lock = v; });
+  const lab = (t, ...k) => el('label', { class: 'f' }, el('span', { text: t }), ...k);
+  const grid = el('div', { class: 'ds-anchor', role: 'radiogroup', 'aria-label': 'Where your drawing sits' });
+  const AN = [[0, 0, '↖'], [.5, 0, '↑'], [1, 0, '↗'], [0, .5, '←'], [.5, .5, '•'], [1, .5, '→'], [0, 1, '↙'], [.5, 1, '↓'], [1, 1, '↘']];
+  AN.forEach(([x, y, t]) => grid.append(el('button', { type: 'button', role: 'radio', 'data-ax': x, 'data-ay': y, 'aria-label': `Keep the drawing ${y === 0 ? 'top' : y === 1 ? 'bottom' : 'middle'} ${x === 0 ? 'left' : x === 1 ? 'right' : 'centre'}`, text: t, onclick: () => { st.ax = x; st.ay = y; st.free = false; render(); } })));
+  const pv = el('canvas', { class: 'ds-prev', width: 300, height: 200, title: 'Drag the drawing to place it' });
+  const info = el('p', { class: 'note ds-info' }), warn = el('p', { class: 'note ds-warn' }), go = el('button', { class: 'btn primary', text: 'Apply' });
+  const quick = el('div', { class: 'ds-quick' }, ...[['+10%', 1.1], ['+25%', 1.25], ['+50%', 1.5], ['×2', 2], ['Square', 0]].map(([t, k]) => el('button', { class: 'btn sm', type: 'button', text: t, onclick: () => { if (k) { st.w = Math.round(W0 * k); st.h = Math.round(H0 * k); } else st.w = st.h = Math.max(W0, H0); render(); } })),
+    el('button', { class: 'btn sm', type: 'button', text: 'Reset', onclick: () => { st.w = W0; st.h = H0; st.free = false; st.ax = st.ay = .5; render(); } }));
+  card.append(
+    el('p', { class: 'note ds-now', text: `Now ${W0} × ${H0} px (prints ${printTxt(W0, H0, D)} at ${r2(D)} dpi). Your drawing isn’t scaled: the edges just move.` }),
+    el('div', { class: 'ds-cols' },
+      el('div', { class: 'ds-colA' },
+        el('div', { class: 'field' }, el('span', { class: 'flabel', text: 'New size in pixels' }), el('div', { class: 'ds-row ds-px2' }, lab('Width', iw), lk, lab('Height', ih))),
+        el('div', { class: 'field' }, el('span', { class: 'flabel', text: 'Or print size' }), el('div', { class: 'ds-row ds-pr' }, lab('Width', pw), el('span', { class: 'ds-x', text: '×' }), lab('Height', ph), lab('Unit', us))),
+        quick,
+        el('div', { class: 'field' }, el('span', { class: 'flabel', text: 'Keep the drawing at' }), grid)),
+      el('div', { class: 'ds-colB' }, pv, el('small', { class: 'ds-pvn', text: 'Drag the drawing to place it exactly' }))),
+    info, warn,
+    el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Cancel', 'data-dismiss': '', onclick: () => { m.hidden = true; } }), go));
+  // a small picture of the whole drawing for the preview
+  const art = mk(Math.max(1, Math.round(W0 * Math.min(1, 600 / Math.max(W0, H0)))), Math.max(1, Math.round(H0 * Math.min(1, 600 / Math.max(W0, H0)))));
+  { const g = art.getContext('2d'); g.imageSmoothingQuality = 'high'; try { g.drawImage(comp, 0, 0, art.width, art.height); } catch { } }
+  const off = () => st.free ? [st.ox, st.oy] : [Math.round((st.w - W0) * st.ax), Math.round((st.h - H0) * st.ay)];
+  let pvk = 1, pvx = 0, pvy = 0;
+  function draw() {
+    const dpr = Math.min(2, devicePixelRatio || 1), cw = pv.clientWidth || 300, ch = pv.clientHeight || 200; pv.width = cw * dpr; pv.height = ch * dpr;
+    const g = pv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, cw, ch);
+    const [ox, oy] = off(), x0 = Math.min(0, ox), y0 = Math.min(0, oy), x1 = Math.max(st.w, ox + W0), y1 = Math.max(st.h, oy + H0);
+    pvk = Math.min((cw - 16) / (x1 - x0), (ch - 16) / (y1 - y0)); pvx = (cw - (x1 - x0) * pvk) / 2 - x0 * pvk; pvy = (ch - (y1 - y0) * pvk) / 2 - y0 * pvk;
+    const R = (x, y, w, h) => [pvx + x * pvk, pvy + y * pvk, w * pvk, h * pvk];
+    const cs = getComputedStyle(document.documentElement);
+    // the new canvas
+    g.fillStyle = DOC.paper && DOC.paper.on ? DOC.paper.col : '#FFFFFF'; g.fillRect(...R(0, 0, st.w, st.h));
+    // the drawing (faded where it will be cut off)
+    g.save(); g.globalAlpha = .35; g.drawImage(art, ...R(ox, oy, W0, H0)); g.restore();
+    g.save(); g.beginPath(); g.rect(...R(0, 0, st.w, st.h)); g.clip(); g.drawImage(art, ...R(ox, oy, W0, H0)); g.restore();
+    g.lineWidth = 1.5; g.setLineDash([4, 3]); g.strokeStyle = cs.getPropertyValue('--muted').trim() || '#888'; g.strokeRect(...R(ox, oy, W0, H0));
+    g.setLineDash([]); g.strokeStyle = cs.getPropertyValue('--accent').trim() || '#4C9AFF'; g.lineWidth = 2; g.strokeRect(...R(0, 0, st.w, st.h));
+  }
+  const set = (i, v) => { if (document.activeElement !== i) i.value = v; };
+  function render() {
+    const u = punit(); set(iw, st.w); set(ih, st.h); set(pw, r2(st.w / D * PUNITS[u])); set(ph, r2(st.h / D * PUNITS[u]));
+    [...grid.children].forEach(b => b.setAttribute('aria-checked', String(!st.free && +b.dataset.ax === st.ax && +b.dataset.ay === st.ay)));
+    const [ox, oy] = off(), cut = ox < 0 || oy < 0 || ox + W0 > st.w || oy + H0 > st.h;
+    info.textContent = `New: ${st.w} × ${st.h} px, prints ${printTxt(st.w, st.h, D)}.` + (st.w > W0 || st.h > H0 ? ' The new space is see-through on every layer.' : '') + (cut ? ' Anything past the new edges is cut off (Undo brings it back).' : '');
+    const w = dsWarn(st.w, st.h); warn.textContent = w; warn.hidden = !w;
+    go.disabled = dsTooBig(st.w, st.h) || (st.w === W0 && st.h === H0 && ox === 0 && oy === 0);
+    draw();
+  }
+  const num = i => { const v = +i.value; return isFinite(v) && v > 0 ? v : 0; };
+  iw.oninput = () => { const v = Math.round(num(iw)); if (!v) return; if (st.lock) st.h = Math.max(1, Math.round(st.h * v / st.w)); st.w = v; render(); };
+  ih.oninput = () => { const v = Math.round(num(ih)); if (!v) return; if (st.lock) st.w = Math.max(1, Math.round(st.w * v / st.h)); st.h = v; render(); };
+  pw.oninput = () => { const v = num(pw); if (!v) return; const n = Math.max(1, Math.round(v / PUNITS[punit()] * D)); if (st.lock) st.h = Math.max(1, Math.round(st.h * n / st.w)); st.w = n; render(); };
+  ph.oninput = () => { const v = num(ph); if (!v) return; const n = Math.max(1, Math.round(v / PUNITS[punit()] * D)); if (st.lock) st.w = Math.max(1, Math.round(st.w * n / st.h)); st.h = n; render(); };
+  [iw, ih, pw, ph].forEach(i => i.addEventListener('blur', render));
+  // drag the drawing in the preview
+  let pd = null;
+  pv.addEventListener('pointerdown', e => { e.preventDefault(); try { pv.setPointerCapture(e.pointerId); } catch { } const [ox, oy] = off(); pd = { id: e.pointerId, x: e.clientX, y: e.clientY, ox, oy, k: pvk }; });
+  pv.addEventListener('pointermove', e => { if (!pd || e.pointerId !== pd.id) return; st.free = true; st.ox = Math.round(pd.ox + (e.clientX - pd.x) / pd.k); st.oy = Math.round(pd.oy + (e.clientY - pd.y) / pd.k);
+    // clicks into place at the edges and the middle
+    const sn = 8 / pd.k; [[0, 'ox', st.w, W0], [0, 'oy', st.h, H0]].forEach(([, k, N, O]) => { for (const t of [0, N - O, Math.round((N - O) / 2)]) if (Math.abs(st[k] - t) < sn) { st[k] = t; break; } });
+    render(); });
+  const pend = e => { if (pd && e.pointerId === pd.id) pd = null; };
+  pv.addEventListener('pointerup', pend); pv.addEventListener('pointercancel', pend);
+  go.onclick = () => {
+    if (go.disabled) return; m.hidden = true; const [ox, oy] = off();
+    try { resizeDoc(st.w, st.h, { scale: false, ox, oy }); } catch (err) { console.warn(err); return toast('Couldn’t change the size: this device ran out of memory.'); }
+    toast(`Canvas is now ${DOC.w} × ${DOC.h} px`);
+  };
+  pv.addEventListener('ds-redraw', render);
+  m.hidden = false; requestAnimationFrame(render);
+}
+
+/* ---- menu ---- */
+{
+  const i = MENUS.edit.findIndex(x => Array.isArray(x) && x[0] === 'Transform…');
+  MENUS.edit.splice(i + 1, 0, '-', ['Change image resolution…', '', () => openResolution()], ['Change canvas size…', '', () => openCanvasSize()]);
+}
+window.addEventListener('resize', () => { const m = $('#canvasSizeModal'); if (m && !m.hidden) { const c = m.querySelector('.ds-prev'); c && c.dispatchEvent(new Event('ds-redraw')); } });
+
+/* ---- New canvas: resolution and print sizes ---- */
+{
+  const PRINTS = [['A4', 8.27, 11.69], ['A5', 5.83, 8.27], ['A6', 4.13, 5.83], ['US Letter', 8.5, 11], ['4 × 6 in photo', 4, 6], ['5 × 7 in', 5, 7], ['Trading card (2.5 × 3.5 in)', 2.5, 3.5], ['Sticker 3 × 3 in', 3, 3]];
+  const nd = el('select', { id: 'nDpi', 'aria-label': 'Resolution' }, ...DPI_LIST.map(d => el('option', { value: d, text: `${d} dpi${d === 72 ? ' (screen)' : d === 300 ? ' (print)' : d === 350 ? ' (print, like Clip Studio)' : d === 600 ? ' (fine line art print)' : ''}` })));
+  nd.value = String(store.get('newDpi', 72));
+  const np = el('select', { id: 'nPrint', 'aria-label': 'Print size' }, el('option', { value: '', text: 'Choose…' }), ...PRINTS.map(([n], i) => el('option', { value: i, text: n })));
+  const nInfo = el('small', { class: 'ds-ninfo', id: 'nPrintInfo' });
+  const row = el('div', { class: 'ds-nres' }, el('label', { class: 'f' }, el('span', { text: 'Resolution' }), nd), el('label', { class: 'f' }, el('span', { text: 'Paper size' }), np), nInfo);
+  const opts = $('#newModal .nopts'); if (opts) opts.prepend(row);
+  const upd = () => { const w = +$('#nW').value || 0, h = +$('#nH').value || 0, d = +nd.value; nInfo.textContent = w && h ? `${w} × ${h} px prints ${printTxt(w, h, d)}` + (dsWarn(w, h) ? ' · ' + dsWarn(w, h) : '') : ''; };
+  nd.onchange = () => { store.set('newDpi', +nd.value); if (np.value !== '') np.onchange(); upd(); };
+  np.onchange = () => {
+    if (np.value === '') return; const [, wi, hi] = PRINTS[+np.value], d = +nd.value;
+    let w = Math.round(wi * d), h = Math.round(hi * d); if (dsTooBig(w, h)) { const k = Math.min(DS_MAX / Math.max(w, h), Math.sqrt(DS_AREA / (w * h))); w = Math.floor(w * k); h = Math.floor(h * k); toast('That is bigger than beleaf can hold, so it was made a little smaller'); }
+    if ($('#nSizeRow').hidden) $('#nCustomBtn').click();
+    $('#nW').value = w; $('#nH').value = h; $('#nW').dispatchEvent(new Event('input')); upd();
+  };
+  ['#nW', '#nH'].forEach(q => { const i = $(q); i.max = DS_MAX; i.addEventListener('input', upd); });
+  $('#presets').addEventListener('click', e => { if (e.target.closest('#nCustom')) return; setTimeout(() => { np.value = ''; upd(); }, 0); });
+  new MutationObserver(() => { if (!$('#newModal').hidden) upd(); }).observe($('#newModal'), { attributes: true, attributeFilter: ['hidden'] });
+  const go0 = $('#nGo').onclick;
+  $('#nGo').onclick = e => {
+    let w = +$('#nW').value || 512, h = +$('#nH').value || 512;
+    if (dsTooBig(w, h)) { const k = Math.min(DS_MAX / Math.max(w, h), Math.sqrt(DS_AREA / (w * h))); $('#nW').value = Math.floor(w * k); $('#nH').value = Math.floor(h * k); }
+    dsNextDpi = +nd.value; go0.call($('#nGo'), e);
+  };
+}
+
+/* ---- PNG files carry the DPI, so print shops and other apps see the right size ---- */
+async function pngDpi(blob, dpi) {
+  try {
+    if (!blob || !dpi) return blob;
+    const u = new Uint8Array(await blob.arrayBuffer());
+    if (u.length < 33 || String.fromCharCode(...u.subarray(12, 16)) !== 'IHDR') return blob;
+    // already has one?
+    let p = 8; while (p + 8 <= u.length) { const n = (u[p] << 24 | u[p + 1] << 16 | u[p + 2] << 8 | u[p + 3]) >>> 0, t = String.fromCharCode(...u.subarray(p + 4, p + 8)); if (t === 'pHYs') return blob; if (t === 'IDAT' || t === 'IEND') break; p += 12 + n; }
+    const ppm = Math.round(dpi / .0254), d = new Uint8Array(9), dv = new DataView(d.buffer); dv.setUint32(0, ppm); dv.setUint32(4, ppm); d[8] = 1;
+    return new Blob([u.subarray(0, 33), chunk('pHYs', d), u.subarray(33)], { type: 'image/png' });
+  } catch { return blob; }
+}
 
 /* ================= phones and tablets: everything in reach =================
    - an "All" button at the start of the tool bar opens one sheet with every tool, panel, quick command and menu, plus search
