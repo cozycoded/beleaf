@@ -279,7 +279,13 @@ pub struct Stroke {
     next_dual: f32,
     last: Option<Pt>,
     smooth: Option<Pt>,
+    /// the last pen sample, where the path bends (it curves through the samples)
+    cq: Option<Pt>,
+    /// shapes: straight lines between the points, no curving
+    pub raw: bool,
     heading: Option<f32>,
+    /// the direction the pen is moving; the tip turns toward it gradually, dab by dab
+    htgt: Option<f32>,
     anchor: Option<(f32, f32)>,
     speed: Option<f32>,
     t_last: Option<f64>,
@@ -298,6 +304,11 @@ pub struct Stroke {
 }
 
 
+/// the shortest turn from angle `h` to angle `tg`, in degrees (-180..180)
+fn turn(h: f32, tg: f32) -> f32 {
+    (tg - h + 180.0).rem_euclid(360.0) - 180.0
+}
+
 impl Stroke {
     pub fn new(b: Brush, seed: u32) -> Stroke {
         Stroke {
@@ -307,7 +318,10 @@ impl Stroke {
             next_dual: 0.0,
             last: None,
             smooth: None,
+            cq: None,
+            raw: false,
             heading: None,
+            htgt: None,
             anchor: None,
             speed: None,
             t_last: None,
@@ -591,33 +605,63 @@ impl Stroke {
             if let Some(dl) = &self.b.dual {
                 self.next_dual = (s0 * dl.size / 100.0 * (dl.spacing / 100.0).max(0.01)).max(0.3);
             }
+            self.cq = Some(cur);
             return out;
         };
-        let (dx, dy) = (cur.x - last.x, cur.y - last.y);
-        let d = (dx * dx + dy * dy).sqrt();
-        if d < 0.01 {
+        let q = self.cq.unwrap_or(last);
+        let dr = ((cur.x - q.x).powi(2) + (cur.y - q.y).powi(2)).sqrt();
+        if dr < 0.01 {
             return out;
         }
-        // drawing speed in px/ms, smoothed (for "taper by speed")
+        // drawing speed in px/ms, smoothed (for "taper by speed"), from the real pen samples
         if let Some(tl) = self.t_last {
-            let inst = d / ((t_ms - tl).max(1.0) as f32);
+            let inst = dr / ((t_ms - tl).max(1.0) as f32);
             self.speed = Some(match self.speed { None => inst, Some(s) => s * 0.85 + inst * 0.15 });
         }
         self.t_last = Some(t_ms);
+        if self.raw {
+            self.cq = None;
+            self.seg(cur, &mut out);
+            return out;
+        }
+        // the path curves through the pen samples (from the middle of one gap to the middle of the next, bending at
+        // the sample) instead of joining them with straight lines; with few samples those showed as corners
+        self.cq = Some(cur);
+        let m = Pt { x: (q.x + cur.x) / 2.0, y: (q.y + cur.y) / 2.0, p: (q.p + cur.p) / 2.0, tilt: cur.tilt };
+        let len = ((q.x - last.x).powi(2) + (q.y - last.y).powi(2)).sqrt() + ((m.x - q.x).powi(2) + (m.y - q.y).powi(2)).sqrt();
+        let n = ((len / 4.0).ceil() as usize).clamp(1, 48);
+        for i in 1..=n {
+            let t = i as f32 / n as f32;
+            let (a, c, e) = ((1.0 - t) * (1.0 - t), 2.0 * (1.0 - t) * t, t * t);
+            let pt = Pt { x: a * last.x + c * q.x + e * m.x, y: a * last.y + c * q.y + e * m.y, p: a * last.p + c * q.p + e * m.p, tilt: cur.tilt };
+            self.seg(pt, &mut out);
+        }
+        out
+    }
+
+    /// One straight piece of the path: dabs every `spacing` along it.
+    fn seg(&mut self, cur: Pt, out: &mut Vec<Dab>) {
+        let tilt = cur.tilt;
+        let Some(last) = self.last else { return };
+        let (dx, dy) = (cur.x - last.x, cur.y - last.y);
+        let d = (dx * dx + dy * dy).sqrt();
+        if d < 0.01 {
+            return;
+        }
         // direction from the movement since the last check, so tiny slow circles still get one
         let (ax, ay) = *self.anchor.get_or_insert((last.x, last.y));
         let (hx, hy) = (cur.x - ax, cur.y - ay);
         if (hx * hx + hy * hy).sqrt() > 1.2 {
             let hd = hy.atan2(hx) * 180.0 / PI;
-            self.heading = Some(match self.heading {
-                None => hd,
-                Some(h) => h + (((hd - h + 540.0) % 360.0) - 180.0) * 0.35,
-            });
+            self.htgt = Some(hd);
+            if self.heading.is_none() {
+                self.heading = Some(hd);
+            }
             self.anchor = Some((cur.x, cur.y));
         }
         if self.heading.is_some() {
             if let Some(q) = self.pending.take() {
-                self.emit(q, &mut out);
+                self.emit(q, out);
             }
         }
         // main tip: one dab every `spacing` along the path
@@ -633,8 +677,14 @@ impl Stroke {
             t += need;
             self.dist += need;
             self.next_dab = self.dist + step;
+            // turn the tip toward the direction of travel over a short distance instead of all at once at each
+            // pen sample: with few samples (a busy device, a finger) a jump there showed as saw teeth along the edge
+            if let (Some(h), Some(tg)) = (self.heading, self.htgt) {
+                let a = 1.0 - (-step / (size * 0.35).clamp(3.0, 60.0)).exp();
+                self.heading = Some(h + turn(h, tg) * a);
+            }
             let f = t / d;
-            self.emit(Pt { x: last.x + dx * f, y: last.y + dy * f, p: last.p + (cur.p - last.p) * f, tilt }, &mut out);
+            self.emit(Pt { x: last.x + dx * f, y: last.y + dy * f, p: last.p + (cur.p - last.p) * f, tilt }, out);
         }
         // dual tip on its own spacing
         if let Some(dl) = self.b.dual.clone() {
@@ -649,17 +699,21 @@ impl Stroke {
                 let td = at.max(0.0);
                 self.next_dual = base + td + step;
                 let f = td / d;
-                self.emit_dual(Pt { x: last.x + dx * f, y: last.y + dy * f, p: last.p + (cur.p - last.p) * f, tilt }, &mut out);
+                self.emit_dual(Pt { x: last.x + dx * f, y: last.y + dy * f, p: last.p + (cur.p - last.p) * f, tilt }, out);
             }
         }
         self.dist = self.dist - t + d;
         self.last = Some(cur);
-        out
     }
 
     /// The pen lifted: returns *every* dab of the stroke with the final taper applied, so the
     /// renderer can redraw the stroke once (start taper fixed for short strokes, end taper added).
     pub fn finish(&mut self) -> Vec<Dab> {
+        // the last stretch of the curve, out to where the pen lifted
+        if let Some(q) = self.cq.take() {
+            let mut tmp = Vec::new();
+            self.seg(q, &mut tmp);
+        }
         if let Some(q) = self.pending.take() {
             if self.heading.is_none() {
                 self.heading = Some(0.0);
@@ -712,6 +766,53 @@ mod tests {
         }
         let fin = s.finish();
         (live, fin)
+    }
+
+    #[test]
+    fn few_samples_still_turn_the_tip_smoothly() {
+        // a big direction-following brush fed only a handful of samples around a bend (a finger on a busy phone):
+        // the tip must turn a little at a time, not jump at each sample (that drew saw teeth along the edge)
+        let mut b = Brush::plain(250.0);
+        b.follow = true;
+        b.spacing = 10.0;
+        let mut s = Stroke::new(b, 7);
+        let pts = [(0.0, 0.0), (300.0, 0.0), (600.0, 150.0), (800.0, 450.0), (850.0, 800.0)];
+        let mut dabs = Vec::new();
+        for (i, (x, y)) in pts.iter().enumerate() {
+            dabs.extend(s.add(*x, *y, 1.0, i as f64 * 16.0));
+        }
+        let main: Vec<f32> = dabs.iter().filter(|d| !d.dual).map(|d| d.angle.to_degrees()).collect();
+        let worst = main.windows(2).map(|w| turn(w[0], w[1]).abs()).fold(0.0f32, f32::max);
+        assert!(main.len() > 20, "{} dabs", main.len());
+        assert!(worst < 12.0, "the tip jumped {worst} degrees between two dabs");
+        let total = turn(main[0], *main.last().unwrap()).abs();
+        assert!(total > 40.0, "the tip should still follow the bend: turned only {total} degrees");
+    }
+
+    #[test]
+    fn the_path_curves_through_sparse_samples_and_reaches_the_end() {
+        let mut b = Brush::plain(10.0);
+        b.spacing = 10.0;
+        let mut s = Stroke::new(b, 1);
+        // a right angle drawn with only three samples
+        for (i, (x, y)) in [(0.0, 0.0), (200.0, 0.0), (200.0, 200.0)].iter().enumerate() {
+            s.add(*x, *y, 1.0, i as f64 * 16.0);
+        }
+        let fin: Vec<Dab> = s.finish().into_iter().filter(|d| !d.dual).collect();
+        let last = fin.last().unwrap();
+        assert!((last.x - 200.0).abs() < 2.0 && (last.y - 200.0).abs() < 2.0, "stroke stops short at {} {}", last.x, last.y);
+        // the corner is rounded off: no dab sits right on it
+        let near = fin.iter().map(|d| ((d.x - 200.0).powi(2) + d.y.powi(2)).sqrt()).fold(f32::MAX, f32::min);
+        assert!(near > 20.0, "the corner is still sharp ({near} px from it)");
+        // a shape asks for straight lines
+        let mut s = Stroke::new(Brush::plain(10.0), 1);
+        s.raw = true;
+        for (i, (x, y)) in [(0.0, 0.0), (200.0, 0.0), (200.0, 200.0)].iter().enumerate() {
+            s.add(*x, *y, 1.0, i as f64 * 16.0);
+        }
+        let fin: Vec<Dab> = s.finish().into_iter().filter(|d| !d.dual).collect();
+        let near = fin.iter().map(|d| ((d.x - 200.0).powi(2) + d.y.powi(2)).sqrt()).fold(f32::MAX, f32::min);
+        assert!(near < 2.0, "a shape's corner got rounded");
     }
 
     #[test]

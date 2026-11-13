@@ -2573,10 +2573,10 @@ class StrokeEngine {
   /* ----- stroke driving ----- */
   begin(b, opts) {
     this.reset();
-    const S = this.st = { b, col: opts.color.slice(), load: opts.color.slice(), erase: !!opts.erase, sample: opts.sample || null, seed: opts.seed ?? (Math.random() * 1e9 | 0),
+    const S = this.st = { raw: !!opts.raw, cq: null, b, col: opts.color.slice(), load: opts.color.slice(), erase: !!opts.erase, sample: opts.sample || null, seed: opts.seed ?? (Math.random() * 1e9 | 0),
       tip: (!b.tip || b.tip === 'Round') ? { round: b.hardness ?? 100 } : tipOf(b.tip, b.hardness), aa: b.aa ?? 2, dualTip: b.dual && b.dual.on ? tipOf(b.dual.tip, 100) : null, dual: !!(b.dual && b.dual.on),
       tex: b.texture && b.texture.name ? texture(b.texture.name) : null, texDensity: b.texture ? b.texture.density / 100 : 0, texScale: b.texture ? Math.max(.25, b.texture.scale / 100) : 1,
-      dist: 0, nextDab: 0, nextDual: 0, k: 0, last: null, sx: null, heading: null, ha: null, spd: null, tl: null, dabs: [], replay: false };
+      dist: 0, nextDab: 0, nextDual: 0, k: 0, last: null, sx: null, heading: null, htgt: null, ha: null, spd: null, tl: null, dabs: [], replay: false };
     if (b.colorJitter && b.colorJitter.perStroke) S.col = this.jitterColor(S.col, rng(S.seed ^ 77));
   }
   jitterColor(col, R) {
@@ -2603,15 +2603,32 @@ class StrokeEngine {
       const s0 = Math.max(.5, b.size * this.sizeFactor(p, tilt));
       S.nextDab = Math.max(.3, s0 * Math.max(.01, b.spacing / 100));
       if (S.dual) S.nextDual = Math.max(.3, s0 * b.dual.size / 100 * Math.max(.01, b.dual.spacing / 100));
+      S.cq = { x, y, p, tilt };
       return;
     }
+    const q = S.cq || S.last, dr = Math.hypot(x - q.x, y - q.y);
+    if (dr < .01) return;
+    // drawing speed (px per ms, smoothed) for "taper by speed", from the real pen samples
+    const now = performance.now(); if (S.tl != null) { const inst = dr / Math.max(1, now - S.tl); S.spd = S.spd == null ? inst : S.spd * .85 + inst * .15; } S.tl = now;
+    if (S.raw) { S.cq = null; this.seg(x, y, p, tilt); return; }
+    // the path curves through the pen samples (from the middle of one gap to the middle of the next, bending at the
+    // sample) instead of joining them with straight lines; with few samples those showed as corners
+    S.cq = { x, y, p, tilt };
+    const mx = (q.x + x) / 2, my = (q.y + y) / 2, mp = (q.p + p) / 2, L0 = S.last;
+    const len = Math.hypot(q.x - L0.x, q.y - L0.y) + Math.hypot(mx - q.x, my - q.y), n = Math.max(1, Math.min(48, Math.ceil(len / 4)));
+    for (let i = 1; i <= n; i++) {
+      const t = i / n, u = 1 - t, a = u * u, c = 2 * u * t, e = t * t;
+      this.seg(a * L0.x + c * q.x + e * mx, a * L0.y + c * q.y + e * my, a * L0.p + c * q.p + e * mp, tilt);
+    }
+  }
+  // one straight piece of the path: dabs every `spacing` along it
+  seg(x, y, p, tilt) {
+    const S = this.st, b = S.b;
     const L = S.last, dx = x - L.x, dy = y - L.y, d = Math.hypot(dx, dy);
     if (d < .01) return;
-    // drawing speed (px per ms, smoothed) for "taper by speed"
-    const now = performance.now(); if (S.tl != null) { const inst = d / Math.max(1, now - S.tl); S.spd = S.spd == null ? inst : S.spd * .85 + inst * .15; } S.tl = now;
     // direction from the movement since the last direction check, so tiny slow circles still get a heading (they move < 1 px per step)
     if (!S.ha) S.ha = { x: L.x, y: L.y };
-    { const hx = x - S.ha.x, hy = y - S.ha.y; if (Math.hypot(hx, hy) > 1.2) { const hd = Math.atan2(hy, hx) * 180 / Math.PI; S.heading = S.heading == null ? hd : S.heading + (((hd - S.heading + 540) % 360) - 180) * .35; S.ha = { x, y }; } }
+    { const hx = x - S.ha.x, hy = y - S.ha.y; if (Math.hypot(hx, hy) > 1.2) { const hd = Math.atan2(hy, hx) * 180 / Math.PI; S.htgt = hd; if (S.heading == null) S.heading = hd; S.ha = { x, y }; } }
     if (S.pending && S.heading != null) { const q = S.pending; S.pending = null; this.emit(...q); }
     let t = 0;
     while (true) {
@@ -2620,6 +2637,9 @@ class StrokeEngine {
       const need = S.nextDab - S.dist;
       if (t + need > d) break;
       t += need; S.dist += need; S.nextDab = S.dist + step;
+      // the tip turns toward the direction of travel over a short distance, not all at once at each pen sample
+      // (with few samples, from a busy device or a finger, those jumps showed as saw teeth along the edge)
+      if (S.heading != null && S.htgt != null) { const a = 1 - Math.exp(-step / Math.min(60, Math.max(3, size * .35))); S.heading += ((((S.htgt - S.heading + 180) % 360) + 360) % 360 - 180) * a; }
       const f = t / d; this.emit(L.x + dx * f, L.y + dy * f, L.p + (p - L.p) * f, tilt);
     }
     if (S.dual) {
@@ -2697,6 +2717,8 @@ class StrokeEngine {
   /* finish: apply end taper by re-rasterizing recorded dabs */
   end() {
     const S = this.st; if (!S) return;
+    // the last stretch of the curve, out to where the pen lifted
+    if (S.cq && S.last && Math.hypot(S.cq.x - S.last.x, S.cq.y - S.last.y) > .01) { const q = S.cq; S.cq = null; this.seg(q.x, q.y, q.p, q.tilt); }
     if (S.pending) { if (S.heading == null) S.heading = 0; const q = S.pending; S.pending = null; this.emit(...q); }
     const T = S.b.taper || {}, total = S.dist, cap = total * (T.ratio || 45) / 100;
     const out = T.out ? Math.min(this.taperLen('out'), cap) : 0, inFix = T.in ? Math.min(this.taperLen('in'), cap) : 0;
@@ -3752,7 +3774,7 @@ function updateShape(x, y, sh) {
   if (tool === 'line') P = [[x0, y0], [x0 + w, y0 + h]];
   else if (tool === 'rect') P = [[x0, y0], [x0 + w, y0], [x0 + w, y0 + h], [x0, y0 + h], [x0, y0], [x0 + w * .02, y0]];
   else { const cx = x0 + w / 2, cy = y0 + h / 2; P = Array.from({ length: 97 }, (_, i) => { const a = i / 96 * Math.PI * 2 + .001; return [cx + Math.cos(a) * w / 2, cy + Math.sin(a) * h / 2]; }); }
-  eng.begin(b, { color: hexRgb(color.hex) }); P.forEach(([a, c]) => eng.add(a, c, 1, null)); eng.flush();
+  eng.begin(b, { color: hexRgb(color.hex), raw: true }); P.forEach(([a, c]) => eng.add(a, c, 1, null)); eng.flush();
   if (shapeOpt.fill && tool !== 'line') { const g = eng.octx; g.save(); g.globalCompositeOperation = 'destination-over'; g.fillStyle = color.hex; g.beginPath(); P.forEach(([a, c], i) => i ? g.lineTo(a, c) : g.moveTo(a, c)); g.closePath(); g.fill(); g.restore(); const xs = P.map(p => p[0]), ys = P.map(p => p[1]); eng.grow(Math.floor(Math.max(0, Math.min(...xs))), Math.floor(Math.max(0, Math.min(...ys))), Math.ceil(Math.min(DOC.w, Math.max(...xs))), Math.ceil(Math.min(DOC.h, Math.max(...ys)))); eng.dirty = null; }
   dirty();
 }
@@ -7739,14 +7761,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.13-0309' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.13-0614' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.13-0309';
+const BELEAF_BUILD = '2026.11.13-0614';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
