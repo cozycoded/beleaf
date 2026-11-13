@@ -7761,14 +7761,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.13-0614' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.13-0636' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.13-0614';
+const BELEAF_BUILD = '2026.11.13-0636';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
@@ -8768,6 +8768,30 @@ async function pngDpi(blob, dpi) {
     const ppm = Math.round(dpi / .0254), d = new Uint8Array(9), dv = new DataView(d.buffer); dv.setUint32(0, ppm); dv.setUint32(4, ppm); d[8] = 1;
     return new Blob([u.subarray(0, 33), chunk('pHYs', d), u.subarray(33)], { type: 'image/png' });
   } catch { return blob; }
+}
+
+/* ---- Layer menu: delete every empty layer, or every hidden layer, in one go (one undo step) ---- */
+function surfEmpty(S) { if (!S) return true; const d = new Uint32Array(S.ctx.getImageData(0, 0, S.c.width, S.c.height).data.buffer); for (let i = 0; i < d.length; i++) if (d[i] >>> 24) return false; return true; }
+function batchDelete(kind) {
+  closeMenu(); if (DOC.placeholder) return toast('Make or open a canvas first');
+  if (DOC.sheet) return toast('Emote sheets keep their layers; delete them one at a time');
+  const byId = new Map(layers.map(L => [L.id, L])), under = (L, set) => { let p = L.parent; while (p != null) { const F = byId.get(p); if (!F) break; if (set.has(F)) return true; p = F.parent; } return false; };
+  const kill = new Set();
+  if (kind === 'hidden') { layers.forEach(L => { if (!L.visible) kill.add(L); }); layers.forEach(L => { if (under(L, kill)) kill.add(L); }); }
+  else {
+    layers.forEach(L => { if (L.kind === 'folder' || L.paper) return; if (L.kind === 'anim' ? L.cels.every(surfEmpty) : surfEmpty(L.s)) kill.add(L); });
+    // a folder left with nothing inside goes too
+    let more = true; while (more) { more = false; layers.forEach(F => { if (F.kind === 'folder' && !kill.has(F) && !layers.some(L => L.parent === F.id && !kill.has(L))) { kill.add(F); more = true; } }); }
+  }
+  if (!kill.size) return toast(kind === 'hidden' ? 'No hidden layers' : 'No empty layers');
+  if (layers.filter(L => L.kind !== 'folder' && !kill.has(L)).length === 0) return toast(kind === 'hidden' ? 'Every layer is hidden; show the ones you want to keep first' : 'Every layer is empty, so nothing was deleted');
+  const keep = layers[active];
+  structChange(() => { layers = layers.filter(L => !kill.has(L)); active = Math.max(0, keep && !kill.has(keep) ? layers.indexOf(keep) : Math.min(active, layers.length - 1)); if (layers[active] && layers[active].kind === 'folder') { const i = layers.findIndex(L => L.kind !== 'folder'); if (i >= 0) active = i; } });
+  toast(`${kill.size} ${kind === 'hidden' ? 'hidden' : 'empty'} layer${kill.size === 1 ? '' : 's'} deleted (Undo brings them back)`);
+}
+{
+  const i = MENUS.layer.findIndex(x => Array.isArray(x) && x[0] === 'Delete layer');
+  MENUS.layer.splice(i + 1, 0, ['Delete empty layers', '', () => batchDelete('empty')], ['Delete hidden layers', '', () => batchDelete('hidden')]);
 }
 
 /* ================= phones and tablets: everything in reach =================
