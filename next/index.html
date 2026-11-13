@@ -1696,6 +1696,24 @@ html,body{overscroll-behavior:none} /* no pull-to-refresh or swipe-back bounce w
   .ds-px > label:last-child{grid-column:1/-1}
 }
 @media (max-height:520px) and (min-width:561px){ .ds-prev{height:150px} }
+
+/* ---- reference: ref sheets and their menus ---- */
+.ref-menu{position:fixed;z-index:400;min-width:240px;max-width:min(320px,calc(100vw - 12px));max-height:calc(100vh - 12px);overflow:auto;top:auto}
+.ref-menu .rm-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ref-menu .rm-h h3{margin:6px 10px 4px}
+.ref-menu .rm-x{width:30px;height:30px;flex-shrink:0}
+.ref-menu .rm-field{display:flex;flex-direction:column;gap:5px;padding:6px 10px}
+.ref-menu .rm-field small{color:var(--muted);font-size:calc(11px*var(--fz,1))}
+.ref-menu .rm-op > div{display:flex;align-items:center;gap:8px}.ref-menu .rm-op input{flex:1;min-width:0;accent-color:var(--accent)}.ref-menu .rm-op output{width:38px;text-align:right;color:var(--fg2);font-size:calc(12px*var(--fz,1))}
+.ref-menu .rm-seg{display:flex;gap:3px;background:var(--panel);border-radius:8px;padding:3px}
+.ref-menu .rm-seg button{flex:1;height:32px;justify-content:center;padding:0 6px;font-size:calc(12px*var(--fz,1));border-radius:6px;text-align:center}
+.ref-menu .rm-seg button[aria-checked="true"]{background:var(--accent);color:var(--on-accent)}
+.ref-menu .rm-note{margin:0 10px 6px;color:var(--muted);font-size:calc(11.5px*var(--fz,1));line-height:1.4}
+.ref-menu .rm-check[aria-checked="true"] span::after{content:' ✓';color:var(--accent)}
+.ref-menu select{margin:4px 10px;width:calc(100% - 20px);height:34px;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:0 8px;color:var(--fg);font-size:calc(13px*var(--fz,1))}
+.ref-menu.rm-sheet{left:0!important;right:0;bottom:0;top:auto!important;max-width:none;width:auto;border-radius:16px 16px 0 0;max-height:70vh;padding:8px 8px calc(8px + env(safe-area-inset-bottom))}
+.ref-menu.rm-sheet button{height:44px}
+#refPanel[data-sheet="yes"] #refCan{cursor:default}
 </style>
 
 <div class="app" id="app" data-open="" data-timeline="" data-quick="on" data-dl="open" data-dr="open">
@@ -5132,7 +5150,8 @@ async function gcBlobs() {
     (await IDB.all('projects')).forEach(([, r]) => add(r)); (await IDB.all('backups')).forEach(([, r]) => add(r));
     tabs.forEach(t => t && t.layers && t.layers.forEach(L => (L.cels || [L.s]).forEach(S => { const k = S && blobCache.get(S); if (k) keep.add(k); })));
     layers.forEach(L => (L.cels || [L.s]).forEach(S => { const k = S && blobCache.get(S); if (k) keep.add(k); }));
-    for (const k of await IDB.keys('blobs')) if (!keep.has(k)) await IDB.del('blobs', k);
+    // only layer pictures (keys like b + time + random) are cleaned up; references and the brush library stay
+    for (const k of await IDB.keys('blobs')) if (!keep.has(k) && /^b[0-9a-z]{12,}$/.test(k)) await IDB.del('blobs', k);
   } catch { }
 }
 setInterval(gcBlobs, 300000);
@@ -5249,51 +5268,311 @@ $('#tlGo').onclick = async () => {
   go.disabled = false; go.textContent = 'Create timelapse';
 };
 
-/* ================= reference window ================= */
-let refs = [], refIdx = 0, refV = { s: 1, x: 0, y: 0, flip: 1 }, refBmp = null, refPick = false;
-const refCan = $('#refCan'), refCtx = refCan.getContext('2d', { willReadFrequently: true });
-async function refLoad() { try { refs = (await IDB.get('blobs', 'refs')) || []; } catch { refs = []; } refIdx = Math.min(refIdx, Math.max(0, refs.length - 1)); await refShow(true); }
-const refSave = () => IDB.put('blobs', 'refs', refs).catch(() => toast('Could not keep the reference in this browser'));
+/* ================= reference window: pages, and ref sheets with many pictures on one page ================= */
+// A page can hold one picture (works like before: drag and zoom to look around it) or many (a ref sheet:
+// tap a picture to pick it up, drag to move, drag a corner to resize, right-click or ⋯ for its options).
+// Stacking: the picture you touched last comes to the top. Pictures can also be kept "always in front" or
+// "always behind"; several can be, and inside each of those groups the last one touched is on top.
+let book = { pages: [], cur: 0 }, refPick = false, refSel = null, refZc = 1;
+const refCan = $('#refCan'), refCtx = refCan.getContext('2d');
+const refBmps = new Map();
+const rid = () => 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const refPage = () => book.pages[book.cur] || null;
+const refView = () => { const p = refPage(); return p ? (p.view || (p.view = { s: 1, x: 0, y: 0 })) : { s: 1, x: 0, y: 0 }; };
+const isSheet = (p = refPage()) => !!p && (p.items.length > 1 || !!p.sheet);
+const refItem = (blob, o = {}) => Object.assign({ id: rid(), blob, x: 0, y: 0, s: 1, flip: 1, op: 1, pin: 0, z: refZc++, lock: false }, o);
+let refSaveT = 0;
+const refSave = () => { clearTimeout(refSaveT); refSaveT = setTimeout(() => IDB.put('blobs', 'refBook', book).catch(() => toast('Could not keep the references in this browser')), 350); };
+async function refLoad() {
+  let b = null; try { b = await IDB.get('blobs', 'refBook'); } catch { }
+  if (!b || !Array.isArray(b.pages)) {
+    // one-time move from the old list of pictures: each picture becomes its own page, as before
+    let old = []; try { old = (await IDB.get('blobs', 'refs')) || []; } catch { }
+    b = { pages: old.filter(Boolean).map(f => ({ id: rid(), items: [refItem(f)] })), cur: 0 };
+    book = b; if (b.pages.length) refSave();
+  }
+  book = b; book.cur = Math.max(0, Math.min(book.cur | 0, book.pages.length - 1));
+  book.pages.forEach(p => p.items.forEach(it => { refZc = Math.max(refZc, (it.z || 0) + 1); }));
+  await refShow(true);
+}
+async function refBmpsFor(p) {
+  if (!p) return;
+  await Promise.all(p.items.filter(it => !refBmps.has(it.id)).map(async it => { try { refBmps.set(it.id, await createImageBitmap(it.blob)); } catch { refBmps.set(it.id, null); } }));
+}
 async function refShow(fitIt) {
-  $('#refPanel').dataset.empty = refs.length ? 'no' : 'yes'; $('#refIdx').textContent = refs.length ? `${refIdx + 1}/${refs.length}` : '';
-  refBmp = refs.length ? await createImageBitmap(refs[refIdx]) : null; if (fitIt) refFit(); else refDraw();
+  const p = refPage(); if (refSel && (!p || !p.items.includes(refSel))) refSel = null;
+  $('#refPanel').dataset.empty = p && p.items.length ? 'no' : 'yes';
+  $('#refPanel').dataset.sheet = isSheet(p) ? 'yes' : 'no';
+  $('.ref-empty').textContent = p ? 'Empty ref sheet: use + to add pictures, or paste or drop them here' : 'Open, paste or drop an image here';
+  $('#refIdx').textContent = book.pages.length ? `${book.cur + 1}/${book.pages.length}${isSheet(p) ? ' · sheet' : ''}` : '';
+  await refBmpsFor(p); if (fitIt) refFit(); else refDraw();
 }
 function refSize() { const r = refCan.getBoundingClientRect(), d = devicePixelRatio || 1; if (r.width && (refCan.width !== Math.round(r.width * d) || refCan.height !== Math.round(r.height * d))) { refCan.width = Math.round(r.width * d); refCan.height = Math.round(r.height * d); } return d; }
-function refFit() { const d = refSize(); if (!refBmp) return refDraw(); refV.s = Math.min(refCan.width / refBmp.width, refCan.height / refBmp.height) * .96; refV.x = refCan.width / 2; refV.y = refCan.height / 2; refDraw(); }
-function refDraw() {
-  refSize(); refCtx.setTransform(1, 0, 0, 1, 0, 0); refCtx.clearRect(0, 0, refCan.width, refCan.height); if (!refBmp) return;
-  refCtx.translate(refV.x, refV.y); refCtx.scale(refV.s * refV.flip, refV.s); refCtx.imageSmoothingQuality = 'high'; refCtx.drawImage(refBmp, -refBmp.width / 2, -refBmp.height / 2);
+// page space -> canvas pixels: the view is kept around the middle of the window, so resizing the window keeps the picture centred
+const toScr = (x, y, v = refView()) => [refCan.width / 2 + v.x + x * v.s, refCan.height / 2 + v.y + y * v.s];
+const toPage = (sx, sy, v = refView()) => [(sx - refCan.width / 2 - v.x) / v.s, (sy - refCan.height / 2 - v.y) / v.s];
+function itemBox(it) { const b = refBmps.get(it.id); if (!b) return null; const hw = b.width * it.s / 2, hh = b.height * it.s / 2; return [it.x - hw, it.y - hh, it.x + hw, it.y + hh]; }
+const refOrder = p => [...p.items].sort((a, b) => (a.pin - b.pin) || (a.z - b.z));
+function refFit(only) {
+  refSize(); const p = refPage(), v = refView(); if (!p) return refDraw();
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  (only ? [only] : p.items).forEach(it => { const b = itemBox(it); if (b) { x0 = Math.min(x0, b[0]); y0 = Math.min(y0, b[1]); x1 = Math.max(x1, b[2]); y1 = Math.max(y1, b[3]); } });
+  if (x1 <= x0) { v.s = 1; v.x = v.y = 0; return refDraw(); }
+  v.s = Math.min(refCan.width / (x1 - x0), refCan.height / (y1 - y0)) * .94; v.x = -(x0 + x1) / 2 * v.s; v.y = -(y0 + y1) / 2 * v.s; v._base = v.s; $('#refZoom').value = 0; refDraw();
+}
+function refPaint(g, overlay) {
+  const W = refCan.width, H = refCan.height, v = refView(), p = refPage();
+  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H); if (!p) return;
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+  for (const it of refOrder(p)) {
+    const b = refBmps.get(it.id); if (!b) continue; const [sx, sy] = toScr(it.x, it.y, v);
+    g.globalAlpha = it.op; g.setTransform(v.s * it.s * it.flip, 0, 0, v.s * it.s, sx, sy); g.drawImage(b, -b.width / 2, -b.height / 2);
+  }
+  g.globalAlpha = 1; g.setTransform(1, 0, 0, 1, 0, 0);
+  if (!overlay || !refSel || !isSheet(p)) return;
+  const bx = itemBox(refSel); if (!bx) return;
+  const [ax, ay] = toScr(bx[0], bx[1], v), [cx, cy] = toScr(bx[2], bx[3], v), d = devicePixelRatio || 1, acc = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#4C9AFF';
+  g.lineWidth = 2 * d; g.strokeStyle = acc; g.setLineDash(refSel.lock ? [5 * d, 4 * d] : []); g.strokeRect(ax, ay, cx - ax, cy - ay); g.setLineDash([]);
+  if (!refSel.lock) for (const [hx, hy] of refCorners(refSel)) { g.beginPath(); g.arc(hx, hy, refHR() * .62, 0, 7); g.fillStyle = '#fff'; g.fill(); g.stroke(); }
+  if (refSel.pin) { g.font = `${11 * d}px system-ui`; g.fillStyle = acc; g.fillText(refSel.pin > 0 ? 'always in front' : 'always behind', ax + 4 * d, ay - 5 * d); }
+}
+let refPickC = null;
+function refDraw() { refSize(); refPaint(refCtx, true); refPickC = null; refMoreSync(); }
+// colour picking reads a clean copy without the selection box drawn on it
+function refPickPx(sx, sy) {
+  if (!refPickC) { refPickC = mk(refCan.width, refCan.height); refPaint(refPickC.getContext('2d', { willReadFrequently: true }), false); }
+  return refPickC.getContext('2d', { willReadFrequently: true }).getImageData(Math.round(sx), Math.round(sy), 1, 1).data;
 }
 new ResizeObserver(() => refDraw()).observe(refCan);
-async function refAdd(files) { let n = 0; for (const f of files) if (f.type && f.type.startsWith('image/')) { refs.push(f); n++; } if (!n) { toast('That isn’t an image'); return; } refIdx = refs.length - 1; await refSave(); refShow(true); showUnit('ref'); }
-$('#refOpen').onclick = () => $('#refFile').click();
-$('#refFile').onchange = e => { refAdd([...e.target.files]); e.target.value = ''; };
-$('#refPrev').onclick = () => { if (refs.length) { refIdx = (refIdx - 1 + refs.length) % refs.length; refShow(true); } };
-$('#refNext').onclick = () => { if (refs.length) { refIdx = (refIdx + 1) % refs.length; refShow(true); } };
-$('#refFitB').onclick = refFit; $('#refFlip').onclick = () => { refV.flip *= -1; refDraw(); };
-$('#refDel').onclick = async () => { if (!refs.length) return; refs.splice(refIdx, 1); refIdx = Math.max(0, refIdx - 1); await refSave(); refShow(true); };
-$('#refPickB').onclick = () => { refPick = !refPick; $('#refPickB').setAttribute('aria-pressed', refPick); toast(refPick ? 'Tap the reference to pick a color' : 'Color picking off'); };
+const refHR = () => (matchMedia('(any-pointer:coarse)').matches ? 15 : 9) * (devicePixelRatio || 1);
+function refCorners(it) { const b = itemBox(it); if (!b) return []; return [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]].map(([x, y]) => toScr(x, y)); }
+function refHit(sx, sy) { const p = refPage(); if (!p) return null; const [x, y] = toPage(sx, sy); const o = refOrder(p); for (let i = o.length - 1; i >= 0; i--) { const b = itemBox(o[i]); if (b && x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3] && o[i].op > .02) return o[i]; } return null; }
+// touching a picture brings it to the top of its own stack (pinned pictures stay in their group)
+function refSelect(it) { refSel = it; if (it) it.z = refZc++; refSave(); }
+
+/* ---- adding pictures ---- */
+const refDropTo = () => store.get('refDrop', 'page');
+async function refAdd(files, where = refDropTo()) {
+  const imgs = files.filter(f => f && f.type && f.type.startsWith('image/'));
+  if (!imgs.length) { toast('That isn’t an image'); return; }
+  let p = refPage();
+  if (where === 'sheet' && p) {
+    p.sheet = true; refSize(); const v = refView(), [cx, cy] = toPage(refCan.width / 2, refCan.height / 2), room = Math.min(refCan.width, refCan.height) * .55 / v.s;
+    let n = 0;
+    for (const f of imgs) {
+      const it = refItem(f); p.items.push(it); await refBmpsFor(p); const b = refBmps.get(it.id);
+      if (b) it.s = Math.min(1, room / Math.max(b.width, b.height));
+      it.x = cx + n * 24 / v.s; it.y = cy + n * 24 / v.s; n++; refSel = it;
+    }
+    refSave(); await refShow(false); toast(imgs.length > 1 ? `${imgs.length} pictures added to this sheet` : 'Added to this sheet');
+  } else {
+    for (const f of imgs) book.pages.push({ id: rid(), items: [refItem(f)] });
+    book.cur = book.pages.length - 1; refSel = null; refSave(); await refShow(true);
+  }
+  showUnit('ref');
+}
+const refAddVia = where => { const i = $('#refFile'); i.dataset.to = where; i.click(); };
+$('#refFile').onchange = e => { refAdd([...e.target.files], e.target.dataset.to || refDropTo()); e.target.value = ''; };
 $('#refPanel').addEventListener('dragover', e => e.preventDefault());
 $('#refPanel').addEventListener('drop', e => { e.preventDefault(); refAdd([...e.dataTransfer.files]); });
 $('#refPanel').addEventListener('paste', e => { const f = [...(e.clipboardData ? e.clipboardData.files : [])]; if (f.length) { e.preventDefault(); refAdd(f); } });
-$('#refPaste').onclick = async () => {
-  try { const items = await navigator.clipboard.read(), out = []; for (const it of items) for (const t of it.types) if (t.startsWith('image/')) out.push(new File([await it.getType(t)], 'ref', { type: t })); if (out.length) refAdd(out); else toast('No image on the clipboard'); }
+async function refPasteFrom(where) {
+  try { const items = await navigator.clipboard.read(), out = []; for (const it of items) for (const t of it.types) if (t.startsWith('image/')) out.push(new File([await it.getType(t)], 'ref', { type: t })); if (out.length) refAdd(out, where); else toast('No image on the clipboard'); }
   catch { toast('Click the reference area and press Ctrl+V to paste'); $('#refCan').focus(); }
+}
+$('#refPaste').onclick = () => refPasteFrom();
+
+/* ---- pages ---- */
+const refGo = d => { if (book.pages.length) { book.cur = (book.cur + d + book.pages.length) % book.pages.length; refSel = null; refSave(); refShow(true); } };
+$('#refPrev').onclick = () => refGo(-1);
+$('#refNext').onclick = () => refGo(1);
+$('#refFitB').onclick = () => refFit();
+function refNewSheet() { book.pages.push({ id: rid(), items: [], sheet: true }); book.cur = book.pages.length - 1; refSel = null; refSave(); refShow(true); toast('New empty ref sheet: add pictures with +, paste or drop'); }
+async function refDelPage() {
+  const p = refPage(); if (!p) return;
+  if (p.items.length > 1 && !(await confirmAsk('Remove this ref sheet?', `All ${p.items.length} pictures on it go.`, 'Remove'))) return;
+  p.items.forEach(it => refBmps.delete(it.id)); book.pages.splice(book.cur, 1); book.cur = Math.max(0, Math.min(book.cur, book.pages.length - 1)); refSel = null; refSave(); refShow(true);
+}
+function refDelItem(it) {
+  const p = refPage(); if (!p) return; const i = p.items.indexOf(it); if (i < 0) return;
+  p.items.splice(i, 1); refBmps.delete(it.id); if (refSel === it) refSel = null;
+  if (!p.items.length && !p.sheet) { book.pages.splice(book.cur, 1); book.cur = Math.max(0, Math.min(book.cur, book.pages.length - 1)); }
+  refSave(); refShow(!p.items.length);
+}
+// lay pictures out side by side when they are gathered onto one sheet
+function refLayout(items, startX = 0) { let x = startX; items.forEach(it => { const b = refBmps.get(it.id), w = b ? b.width * it.s : 200; it.x = x + w / 2; it.y = 0; x += w + 40; }); }
+async function refCombine() {
+  const p = refPage(); if (!p || book.pages.length < 2) return;
+  for (const q of book.pages) await refBmpsFor(q);
+  const others = book.pages.filter(q => q !== p).flatMap(q => q.items);
+  // bring them in at a similar size to what is already here
+  const ref = Math.max(...p.items.map(it => { const b = refBmps.get(it.id); return b ? Math.max(b.width, b.height) * it.s : 0; }), 600);
+  others.forEach(it => { const b = refBmps.get(it.id); if (b) it.s = Math.min(1, ref / Math.max(b.width, b.height)); it.pin = 0; it.z = refZc++; });
+  const bx = p.items.map(itemBox).filter(Boolean); refLayout(others, bx.length ? Math.max(...bx.map(b => b[2])) + 40 : 0);
+  p.items.push(...others); p.sheet = true; book.pages = [p]; book.cur = 0; refSel = null; refSave(); refShow(true); toast('Every reference is on this one sheet now');
+}
+function refSplit() {
+  const p = refPage(); if (!p || p.items.length < 2) return;
+  const pages = refOrder(p).map(it => ({ id: rid(), items: [Object.assign(it, { x: 0, y: 0, s: 1, pin: 0 })] }));
+  book.pages.splice(book.cur, 1, ...pages); refSel = null; refSave(); refShow(true); toast(`Split into ${pages.length} pages`);
+}
+async function refMoveTo(it, dest) {
+  const p = refPage(); if (!p) return; if (dest !== 'new') await refBmpsFor(book.pages[+dest]); p.items.splice(p.items.indexOf(it), 1); if (refSel === it) refSel = null;
+  let q; if (dest === 'new') { q = { id: rid(), items: [] }; book.pages.splice(book.cur + 1, 0, q); Object.assign(it, { x: 0, y: 0, s: 1 }); }
+  else { q = book.pages[+dest]; const bx = q.items.map(itemBox).filter(Boolean); it.x = bx.length ? Math.max(...bx.map(b => b[2])) + 40 + (refBmps.get(it.id) ? refBmps.get(it.id).width * it.s / 2 : 0) : 0; it.y = 0; q.sheet = q.items.length > 0 || q.sheet; }
+  it.pin = 0; it.z = refZc++; q.items.push(it);
+  if (!p.items.length && !p.sheet) book.pages.splice(book.pages.indexOf(p), 1);
+  book.cur = book.pages.indexOf(q); refSave(); refShow(true);
+}
+
+/* ---- toolbar ---- */
+$('#refFlip').onclick = () => { const p = refPage(); const it = refSel || (p && p.items.length === 1 ? p.items[0] : null); if (!it) return toast('Tap a picture on the sheet first'); it.flip *= -1; refSave(); refDraw(); };
+$('#refDel').onclick = () => { const p = refPage(); if (!p) return; if (isSheet(p) && refSel) refDelItem(refSel); else refDelPage(); };
+$('#refPickB').onclick = () => { refPick = !refPick; $('#refPickB').setAttribute('aria-pressed', refPick); toast(refPick ? 'Tap the reference to pick a color' : 'Color picking off'); };
+$('#refZoom').oninput = e => { const v = refView(), k = Math.pow(2, +e.target.value / 50), base = v._base || (v._base = v.s), ns = base * k; v.x *= ns / v.s; v.y *= ns / v.s; v.s = ns; refDraw(); refSave(); };
+function refMoreSync() { const b = $('#refMoreB'); if (b) b.title = refSel && isSheet() ? 'Options for the picked picture' : 'Page and picture options'; }
+
+/* ---- menus (right-click, or the ⋯ and + buttons) ---- */
+let refPop = null;
+const svgBtn = (props, path) => { const b = el('button', props); b.innerHTML = `<svg class="ic" viewBox="0 0 24 24">${path}</svg>`; return b; };
+function refMenuClose() { if (refPop) { refPop.remove(); refPop = null; } }
+document.addEventListener('pointerdown', e => { if (refPop && !refPop.contains(e.target) && !e.target.closest('#refMoreB,#refOpen')) refMenuClose(); }, true);
+document.addEventListener('keydown', e => { if (refPop && e.key === 'Escape') { e.stopPropagation(); refMenuClose(); } }, true);
+function refMenu(title, rows, at) {
+  refMenuClose();
+  const m = refPop = el('div', { class: 'menu-pop ref-menu', role: 'menu', 'aria-label': title },
+    el('div', { class: 'rm-h' }, el('h3', { text: title }), svgBtn({ class: 'ibtn rm-x', 'aria-label': 'Close', onclick: refMenuClose }, '<path d="M6 6l12 12M18 6L6 18"/>')));
+  rows.filter(Boolean).forEach(r => {
+    if (r === '-') return m.append(el('div', { class: 'msep', role: 'separator' }));
+    if (r instanceof Node) return m.append(r);
+    const [t, fn, o = {}] = r, b = el('button', { role: 'menuitem' }, el('span', { text: t }), o.kbd ? el('kbd', { text: o.kbd }) : '');
+    if (o.on !== undefined) b.setAttribute('aria-checked', String(!!o.on)), b.classList.add('rm-check');
+    b.disabled = !fn; b.onclick = () => { if (!o.keep) refMenuClose(); fn(); }; m.append(b);
+  });
+  document.body.append(m);
+  if (innerWidth < 700) m.classList.add('rm-sheet');
+  else { const w = m.offsetWidth, h = m.offsetHeight; m.style.left = Math.max(6, Math.min(innerWidth - w - 6, at[0])) + 'px'; m.style.top = Math.max(6, Math.min(innerHeight - h - 6, at[1])) + 'px'; }
+  const f = m.querySelector('button[role=menuitem]:not(:disabled)'); f && f.focus({ preventScroll: true });
+}
+function refSeg(label, opts, val, set) {
+  const row = el('div', { class: 'rm-seg', role: 'radiogroup', 'aria-label': label });
+  const paint = v => [...row.children].forEach(b => b.setAttribute('aria-checked', String(b.dataset.v === String(v))));
+  opts.forEach(([v, t]) => row.append(el('button', { type: 'button', role: 'radio', 'data-v': v, text: t, onclick: () => { set(v); paint(v); } })));
+  paint(val); return el('div', { class: 'rm-field' }, el('small', { text: label }), row);
+}
+function refItemMenu(it, at) {
+  const p = refPage(), sheet = isSheet(p), n = book.pages.length;
+  const op = el('input', { type: 'range', min: 5, max: 100, value: Math.round(it.op * 100), 'aria-label': 'Picture opacity' }), opo = el('output', { text: Math.round(it.op * 100) + '%' });
+  op.oninput = () => { it.op = +op.value / 100; opo.textContent = op.value + '%'; refDraw(); refSave(); };
+  const dest = el('select', { 'aria-label': 'Move this picture to' }, el('option', { value: '', text: 'Move to…' }), ...book.pages.map((q, i) => i === book.cur ? null : el('option', { value: i, text: `Page ${i + 1}${isSheet(q) ? ' (sheet)' : ''}` })).filter(Boolean), el('option', { value: 'new', text: 'Its own new page' }));
+  dest.onchange = () => { if (dest.value) { refMenuClose(); refMoveTo(it, dest.value); } };
+  refMenu(sheet ? 'Picture on this sheet' : 'Picture', [
+    el('label', { class: 'rm-field rm-op' }, el('small', { text: 'Opacity' }), el('div', {}, op, opo)),
+    sheet ? refSeg('Stacking', [[-1, 'Always behind'], [0, 'Normal'], [1, 'Always in front']], it.pin, v => { it.pin = +v; it.z = refZc++; refSave(); refDraw(); }) : null,
+    sheet ? el('p', { class: 'rm-note', text: 'Pictures you touch come to the top. Pinned ones stay in front of (or behind) the rest; if several are pinned, the one touched last is on top of its group.' }) : null,
+    sheet ? ['Bring to front', () => { it.z = refZc++; refSave(); refDraw(); }] : null,
+    sheet ? ['Send to back', () => { it.z = Math.min(...p.items.map(x => x.z)) - 1; refSave(); refDraw(); }] : null,
+    sheet ? [it.lock ? 'Unlock (let it move)' : 'Lock in place', () => { it.lock = !it.lock; refSave(); refDraw(); }, { on: it.lock }] : null,
+    '-',
+    ['Flip', () => { it.flip *= -1; refSave(); refDraw(); }],
+    sheet ? ['Actual size (100%)', () => { it.s = 1; refSave(); refDraw(); }] : null,
+    sheet ? ['Zoom to this picture', () => refFit(it)] : null,
+    ['Duplicate onto this page', () => { const b = refBmps.get(it.id), c = refItem(it.blob, { x: it.x + 30 / refView().s, y: it.y + 30 / refView().s, s: it.s, flip: it.flip, op: it.op }); p.items.push(c); p.sheet = true; if (b) refBmps.set(c.id, b); refSel = c; refSave(); refShow(false); }],
+    dest,
+    '-',
+    ['Remove this picture', () => refDelItem(it)],
+  ], at);
+}
+function refPageMenu(at) {
+  const p = refPage(), n = book.pages.length;
+  const it = p && (refSel && isSheet(p) ? refSel : !isSheet(p) && p.items.length === 1 ? p.items[0] : null);
+  refMenu(p ? `Page ${book.cur + 1} of ${n}${isSheet(p) ? ' · ref sheet' : ''}` : 'References', [
+    it ? [isSheet(p) ? 'Options for the picked picture…' : 'Picture options (opacity, flip, move to a sheet)…', () => setTimeout(() => refItemMenu(it, at), 0), { keep: true }] : null,
+    p && isSheet(p) && !refSel && p.items.length ? el('p', { class: 'rm-note', text: 'Tap a picture to pick it up, then come back here for its options. On a computer you can also right-click it.' }) : null,
+    p ? ['Fit everything in view', () => refFit()] : null,
+    ['New empty ref sheet', refNewSheet],
+    n > 1 && p ? ['Put every page onto this sheet', refCombine] : null,
+    p && p.items.length > 1 ? ['Split this sheet into pages', refSplit] : null,
+    refSeg('Pasted and dropped pictures go', [['page', 'On a new page'], ['sheet', 'Onto this page']], refDropTo(), v => store.set('refDrop', v)),
+    p ? '-' : null,
+    p ? [isSheet(p) ? 'Remove this sheet' : 'Remove this page', refDelPage] : null,
+  ], at);
+}
+const atBtn = b => { const r = b.getBoundingClientRect(); return [r.left, r.bottom + 4]; };
+$('#refOpen').onclick = e => {
+  const p = refPage();
+  refMenu('Add a reference', [
+    ['Picture on its own page', () => refAddVia('page')],
+    p ? [isSheet(p) ? 'Picture onto this sheet' : 'Picture onto this page (makes a ref sheet)', () => refAddVia('sheet')] : null,
+    ['Paste on its own page', () => refPasteFrom('page')],
+    p ? ['Paste onto this page', () => refPasteFrom('sheet')] : null,
+    '-',
+    ['New empty ref sheet', refNewSheet],
+  ], atBtn(e.currentTarget));
 };
-let refDrag = null;
-refCan.addEventListener('pointerdown', e => {
-  refCan.focus(); const d = devicePixelRatio || 1, r = refCan.getBoundingClientRect(), px = (e.clientX - r.left) * d, py = (e.clientY - r.top) * d;
-  if (refBmp && (refPick || e.altKey || tool === 'picker')) { const c = refCtx.getImageData(Math.round(px), Math.round(py), 1, 1).data; if (c[3] > 10) { setColor(toHex(c[0], c[1], c[2])); pushRecent(color.hex); } return; }
-  refDrag = { x: px, y: py, vx: refV.x, vy: refV.y }; refCan.setPointerCapture(e.pointerId);
+{
+  const more = svgBtn({ class: 'ibtn', id: 'refMoreB', title: 'Page and picture options', 'aria-label': 'Reference options' }, '<circle cx="5" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="19" cy="12" r="1.4" fill="currentColor"/>');
+  $('#refDel').after(more);
+  more.onclick = () => refPageMenu(atBtn(more));
+}
+refCan.addEventListener('contextmenu', e => {
+  e.preventDefault(); const d = devicePixelRatio || 1, r = refCan.getBoundingClientRect(), it = refHit((e.clientX - r.left) * d, (e.clientY - r.top) * d);
+  if (it) { if (isSheet()) { refSelect(it); refDraw(); } refItemMenu(it, [e.clientX, e.clientY]); } else refPageMenu([e.clientX, e.clientY]);
 });
-refCan.addEventListener('pointermove', e => { if (!refDrag) return; const d = devicePixelRatio || 1, r = refCan.getBoundingClientRect(); refV.x = refDrag.vx + (e.clientX - r.left) * d - refDrag.x; refV.y = refDrag.vy + (e.clientY - r.top) * d - refDrag.y; refDraw(); });
-refCan.addEventListener('pointerup', () => refDrag = null);
-refCan.addEventListener('wheel', e => { e.preventDefault(); const d = devicePixelRatio || 1, r = refCan.getBoundingClientRect(), px = (e.clientX - r.left) * d, py = (e.clientY - r.top) * d, k = Math.exp(-e.deltaY * .0015); refV.x = px + (refV.x - px) * k; refV.y = py + (refV.y - py) * k; refV.s *= k; refDraw(); }, { passive: false });
-$('#refZoom').oninput = e => { const k = Math.pow(2, +e.target.value / 50); const cx = refCan.width / 2, cy = refCan.height / 2, base = refV._base || (refV._base = refV.s); const ns = base * k; refV.x = cx + (refV.x - cx) * ns / refV.s; refV.y = cy + (refV.y - cy) * ns / refV.s; refV.s = ns; refDraw(); };
+
+/* ---- moving, resizing, zooming ---- */
+const refPtrs = new Map(); let refG = null;
+const refPt = e => { const d = devicePixelRatio || 1, r = refCan.getBoundingClientRect(); return [(e.clientX - r.left) * d, (e.clientY - r.top) * d]; };
+refCan.addEventListener('pointerdown', e => {
+  refCan.focus({ preventScroll: true }); if (e.button === 2) return;
+  const P = refPt(e), p = refPage();
+  if (refPage() && (refPick || e.altKey || tool === 'picker')) { const c = refPickPx(P[0], P[1]); if (c[3] > 10) { setColor(toHex(c[0], c[1], c[2])); pushRecent(color.hex); } return; }
+  refPtrs.set(e.pointerId, P); try { refCan.setPointerCapture(e.pointerId); } catch { }
+  const v = refView();
+  if (refPtrs.size === 2) {
+    // two fingers: resize the picture you're holding, or zoom the page
+    const [a, b] = [...refPtrs.values()], it = refG && (refG.kind === 'move' || refG.kind === 'scale') ? refG.it : null;
+    refG = { kind: 'pinch', it, d0: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, m0: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], s0: it ? it.s : v.s, vx: v.x, vy: v.y, ix: it && it.x, iy: it && it.y };
+    return;
+  }
+  if (refPtrs.size > 2) return;
+  if (isSheet(p)) {
+    if (refSel && !refSel.lock) { const hr = refHR(), c = refCorners(refSel).findIndex(([hx, hy]) => Math.hypot(hx - P[0], hy - P[1]) <= hr); if (c >= 0) { const [cx, cy] = toScr(refSel.x, refSel.y); refG = { kind: 'scale', it: refSel, c: [cx, cy], d0: Math.hypot(P[0] - cx, P[1] - cy) || 1, s0: refSel.s }; return; } }
+    const it = refHit(P[0], P[1]);
+    if (it) { refSelect(it); refDraw(); if (!it.lock) { refG = { kind: 'move', it, x0: P[0], y0: P[1], ix: it.x, iy: it.y }; return; } }
+    else if (refSel) { refSel = null; refDraw(); }
+  }
+  refG = { kind: 'pan', x0: P[0], y0: P[1], vx: v.x, vy: v.y };
+});
+refCan.addEventListener('pointermove', e => {
+  if (!refPtrs.has(e.pointerId) || !refG) return; const P = refPt(e); refPtrs.set(e.pointerId, P); const v = refView(), g = refG;
+  if (g.kind === 'pinch') {
+    if (refPtrs.size < 2) return; const [a, b] = [...refPtrs.values()], k = Math.hypot(a[0] - b[0], a[1] - b[1]) / g.d0, m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    if (g.it) { g.it.s = Math.max(.01, g.s0 * k); g.it.x = g.ix + (m[0] - g.m0[0]) / v.s; g.it.y = g.iy + (m[1] - g.m0[1]) / v.s; }
+    else { const s = Math.max(.02, Math.min(40, g.s0 * k)), qx = (g.m0[0] - refCan.width / 2 - g.vx) / g.s0, qy = (g.m0[1] - refCan.height / 2 - g.vy) / g.s0; v.s = s; v.x = m[0] - refCan.width / 2 - qx * s; v.y = m[1] - refCan.height / 2 - qy * s; }
+  } else if (g.kind === 'move') { g.it.x = g.ix + (P[0] - g.x0) / v.s; g.it.y = g.iy + (P[1] - g.y0) / v.s; g.moved = true; }
+  else if (g.kind === 'scale') g.it.s = Math.max(.01, g.s0 * Math.hypot(P[0] - g.c[0], P[1] - g.c[1]) / g.d0);
+  else { v.x = g.vx + P[0] - g.x0; v.y = g.vy + P[1] - g.y0; }
+  refDraw();
+});
+const refUp = e => { if (!refPtrs.delete(e.pointerId)) return; if (refG) refSave(); refG = null; };
+refCan.addEventListener('pointerup', refUp); refCan.addEventListener('pointercancel', refUp);
+refCan.addEventListener('wheel', e => {
+  e.preventDefault(); const P = refPt(e), k = Math.exp(-e.deltaY * .0015), v = refView();
+  // Shift + wheel resizes the picked picture on a sheet; otherwise the wheel zooms the page
+  if (e.shiftKey && refSel && isSheet() && !refSel.lock) { refSel.s = Math.max(.01, refSel.s * k); refDraw(); refSave(); return; }
+  const cx = refCan.width / 2, cy = refCan.height / 2; v.x = P[0] - cx + (v.x - (P[0] - cx)) * k; v.y = P[1] - cy + (v.y - (P[1] - cy)) * k; v.s *= k; refDraw(); refSave();
+}, { passive: false });
+refCan.addEventListener('keydown', e => {
+  if (!refSel || !isSheet()) return;
+  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); e.stopPropagation(); refDelItem(refSel); }
+  else if (e.key === 'Escape') { refSel = null; refDraw(); }
+  else if (e.key.startsWith('Arrow') && !refSel.lock) { e.preventDefault(); e.stopPropagation(); const st = (e.shiftKey ? 10 : 1) / refView().s; if (e.key === 'ArrowLeft') refSel.x -= st; if (e.key === 'ArrowRight') refSel.x += st; if (e.key === 'ArrowUp') refSel.y -= st; if (e.key === 'ArrowDown') refSel.y += st; refDraw(); refSave(); }
+});
 // pick colours: tap, or keep the pen down and drag to pick as you go; holding a finger still on the picture picks too
 {
-  let hold = null; const pickAt = (e, keep) => { const d = devicePixelRatio || 1, r = refCan.getBoundingClientRect(), c = refCtx.getImageData(Math.round((e.clientX - r.left) * d), Math.round((e.clientY - r.top) * d), 1, 1).data; if (c[3] > 10) { setColor(toHex(c[0], c[1], c[2])); if (keep) pushRecent(color.hex); } };
-  refCan.addEventListener('pointerdown', e => { if (!refBmp) return; clearTimeout(hold && hold.t); hold = { x: e.clientX, y: e.clientY, id: e.pointerId, picking: refPick || e.altKey || tool === 'picker', t: setTimeout(() => { if (!hold) return; hold.picking = true; refDrag = null; try { navigator.vibrate && navigator.vibrate(10); } catch { } pickAt(hold.e || e, false); toast('Picking from the reference: slide to choose, lift to keep'); }, 450) }; }, true);
+  let hold = null; const pickAt = (e, keep) => { const [x, y] = refPt(e), c = refPickPx(x, y); if (c[3] > 10) { setColor(toHex(c[0], c[1], c[2])); if (keep) pushRecent(color.hex); } };
+  refCan.addEventListener('pointerdown', e => { if (!refPage() || e.button === 2) return; clearTimeout(hold && hold.t); hold = { x: e.clientX, y: e.clientY, id: e.pointerId, picking: refPick || e.altKey || tool === 'picker', t: setTimeout(() => { if (!hold || refPtrs.size > 1) return; hold.picking = true; if (refG && refG.kind === 'move') { refG.it.x = refG.ix; refG.it.y = refG.iy; } refG = null; try { navigator.vibrate && navigator.vibrate(10); } catch { } pickAt(hold.e || e, false); toast('Picking from the reference: slide to choose, lift to keep'); }, 450) }; }, true);
   refCan.addEventListener('pointermove', e => { if (!hold || e.pointerId !== hold.id) return; hold.e = e; if (!hold.picking && Math.hypot(e.clientX - hold.x, e.clientY - hold.y) > 8) { clearTimeout(hold.t); hold = null; return; } if (hold.picking) { e.stopImmediatePropagation(); pickAt(e, false); } }, true);
   const up = e => { if (!hold || e.pointerId !== hold.id) return; clearTimeout(hold.t); if (hold.picking && hold.e) pushRecent(color.hex); hold = null; };
   refCan.addEventListener('pointerup', up, true); refCan.addEventListener('pointercancel', up, true);
@@ -5312,6 +5591,7 @@ $('#refFloatB').onclick = () => {
 };
 new MutationObserver(refFloatSync).observe($('.work'), { childList: true, subtree: false }); refFloatSync();
 refLoad();
+
 
 /* ================= sticky notes ================= */
 const NOTE_COLORS = [['', 'Plain'], ['#E9B949', 'Yellow'], ['#5CB85C', 'Green'], ['#E88AC4', 'Pink'], ['#A98BE0', 'Purple'], ['#5BC0EB', 'Blue'], ['#9A9A9A', 'Grey']];
@@ -7467,14 +7747,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.12-0353' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.13-0136' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.12-0353';
+const BELEAF_BUILD = '2026.11.13-0136';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
