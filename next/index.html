@@ -49,7 +49,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
 .ibtn:disabled{color:var(--dim);background:transparent}
 .ibtn[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
 .hamburger,.drawer-btn{display:none}
-.menu-pop{position:absolute;top:42px;min-width:250px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5);z-index:60}
+.menu-pop{position:fixed;top:48px;min-width:250px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5);z-index:450}
 .menu-pop[hidden]{display:none!important}
 .menu-pop h3{margin:6px 10px 4px;font-size:calc(11px*var(--fz,1));letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
 .menu-pop button{display:flex;width:100%;align-items:center;justify-content:space-between;gap:16px;height:36px;padding:0 10px;border:0;background:transparent;border-radius:6px;font-size:calc(13px*var(--fz,1));text-align:left}
@@ -1202,6 +1202,7 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
 .dock[data-mini="1"] .dhead .ibtn{width:calc(28px*var(--iz,1));height:calc(24px*var(--iz,1))}
 /* ===== tabs: panels sharing one slot ===== */
 .cpanel > .color-body{display:flex;flex-direction:column;gap:10px}
+#recentPanel .recent > span{display:none}#recentPanel .swatches{flex-wrap:wrap}
 @media (min-width:700px){ .cpanel > .color-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden} }
 [data-unit].tab-off{display:none!important}
 .color-body > .tabs[hidden]{display:none!important}
@@ -1286,7 +1287,7 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
 /* menu separators and sub-menus */
 .msep{height:1px;background:var(--line);margin:5px 8px}
 .menu-pop .hassub.open{background:var(--accent-soft)}
-.menu-sub{position:fixed!important;top:0;z-index:70;max-width:min(360px,calc(100vw - 12px));max-height:70vh;overflow:auto}
+.menu-sub{position:fixed!important;top:0;z-index:460;max-width:min(360px,calc(100vw - 12px));max-height:70vh;overflow:auto}
 .menu-sub button{height:auto!important;min-height:36px;padding:5px 10px!important}
 .msub-t{display:flex;flex-direction:column;min-width:0}.msub-t span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.msub-t small{color:var(--muted);font-size:calc(11px*var(--fz,1))}
 .msub-note{margin:8px 10px;color:var(--muted);font-size:13px}
@@ -1942,6 +1943,10 @@ html,body{overscroll-behavior:none} /* no pull-to-refresh or swipe-back bounce w
       </section>
       <section class="panel cpanel" id="savedPanel" aria-label="Saved colors" hidden>
         <div class="ph"><h2>Color set</h2><button class="ibtn collapse-btn" data-collapse aria-label="Collapse color set"><svg class="ic" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button><button class="ibtn close" data-close aria-label="Close"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+        <div class="color-body"></div>
+      </section>
+      <section class="panel cpanel" id="recentPanel" aria-label="Recent colors" hidden>
+        <div class="ph"><h2>Recent colors</h2><button class="ibtn collapse-btn" data-collapse aria-label="Collapse recent colors"><svg class="ic" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button><button class="ibtn close" data-close aria-label="Close"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
         <div class="color-body"></div>
       </section>
       <section class="panel layers" id="layersPanel" aria-label="Layers">
@@ -6493,7 +6498,8 @@ const MENUS = {
   help: [['Pen and tablet help (pressure)…', '', openPen], ['Performance stats (find lag)', '', () => setPerfHud(!PERF.on)], '-', ['About beleaf…', '', () => openAbout()]],
 };
 const kbText = kb => kb && kb[0] === '@' ? keyLabel(kb.slice(1)) : kb;
-const pop = $('#menuPop'); let openMenu = null;
+// the menus live on the page itself (not inside the top bar) so they open over floating windows like Reference and Notes
+const pop = $('#menuPop'); document.body.append(pop); let openMenu = null;
 // sub-menus (like File › Recent): a second list that opens beside the item
 const subPop = el('div', { class: 'menu-pop menu-sub', role: 'menu', hidden: '' }); document.body.append(subPop);
 const hideSub = () => { subPop.hidden = true; $$('.menu-pop .hassub.open').forEach(x => x.classList.remove('open')); };
@@ -6521,8 +6527,10 @@ function showMenu(keys, anchor) {
       pop.append(b);
     });
   });
-  const r = anchor.getBoundingClientRect(), hr = $('.menubar').getBoundingClientRect();
-  pop.style.left = Math.max(6, Math.min(r.left - hr.left, hr.width - 266)) + 'px'; pop.style.maxHeight = 'calc(100vh - 60px)'; pop.style.overflow = 'auto'; pop.hidden = false;
+  const r = anchor.getBoundingClientRect(); pop.style.overflow = 'auto'; pop.style.maxHeight = ''; pop.hidden = false;
+  const w = pop.offsetWidth, below = r.top < innerHeight / 2, room = below ? innerHeight - r.bottom - 12 : r.top - 12;
+  pop.style.maxHeight = room + 'px'; const h = Math.min(pop.scrollHeight, room);
+  pop.style.left = Math.max(6, Math.min(r.left, innerWidth - w - 6)) + 'px'; pop.style.top = (below ? r.bottom + 6 : r.top - h - 6) + 'px';
 }
 $$('.mbtn, #appLogo').forEach(b => b.onclick = e => { e.stopPropagation(); if (openMenu === b.dataset.menu) return closeMenu(); closeMenu(); openMenu = b.dataset.menu; b.setAttribute('aria-expanded', 'true'); showMenu([b.dataset.menu], b); });
 // like desktop apps: once a menu is open, moving to another menu name opens that one instead (nothing happens until a menu has been clicked open)
@@ -6548,7 +6556,7 @@ function openDrawer() { buildDrawer(); $('#drawer').hidden = false; $('#drawerSc
 function closeDrawer() { $('#drawer').hidden = true; $('#drawerScrim').hidden = true; }
 $('#hamb').onclick = e => { e.stopPropagation(); openDrawer(); };
 $('#drawerClose').onclick = closeDrawer; $('#drawerScrim').onclick = closeDrawer;
-document.addEventListener('pointerdown', e => { if (!pop.hidden && !pop.contains(e.target) && !e.target.closest('.mbtn,#hamb')) closeMenu(); });
+document.addEventListener('pointerdown', e => { if (!pop.hidden && !pop.contains(e.target) && !subPop.contains(e.target) && !e.target.closest('.mbtn,#hamb,#appLogo')) closeMenu(); });
 $('#fileIn').onchange = e => { const f = e.target.files[0]; if (f) openImageFile(f); e.target.value = ''; };
 async function openImageFile(f) {
   try {
@@ -6571,9 +6579,10 @@ const UNITS = {
   brushes: ['.sec[data-sec="brushes"]', 'Brushes', ICON.brush], sizes: ['.sec[data-sec="sizes"]', 'Brush size', '<circle cx="6" cy="12" r="2"/><circle cx="12" cy="12" r="3"/><circle cx="19" cy="12" r="4"/>'],
   settings: ['.sec[data-sec="settings"]', 'Brush settings', ICON.brushes],
   ref: ['#refPanel', 'Reference', '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 8"/>'],
+  recent: ['#recentPanel', 'Recent colors', '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'],
   notes: ['#notesPanel', 'Notes', '<path d="M5 4h11l3 3v13H5z"/><path d="M8 10h8M8 14h8M8 18h5"/>'],
 };
-const HOME = { left: ['brushes', 'settings', 'sizes'], r1: ['emotes', 'nav', 'ref', 'notes'], r2: ['color', 'mix', 'saved', 'layers'] };
+const HOME = { left: ['brushes', 'settings', 'sizes'], r1: ['emotes', 'nav', 'ref', 'notes'], r2: ['color', 'mix', 'saved', 'recent', 'layers'] };
 const DOCK_NAMES = { left: 'Brush', r1: 'Emotes', r2: 'Color' };
 const unitCache = {};
 const unitEl = id => { const e = unitCache[id] || (unitCache[id] = $(UNITS[id][0])); e.dataset.unit = id; return e; };
@@ -6582,13 +6591,13 @@ const bodyOf = d => d === 'left' ? $('#brushPanel > .scroll') : dockEl(d).queryS
 const homeOf = id => Object.keys(HOME).find(d => HOME[d].includes(id));
 const defaultGroups = () => [{ ids: ['color', 'mix', 'saved'], active: 'color' }];
 const defaultLayout = () => ({ docks: JSON.parse(JSON.stringify(HOME)), floats: {}, hidden: ['ref', 'notes'], known: Object.keys(UNITS), groups: defaultGroups(), mini: { r1: innerWidth < 1500 } });
-let lay = (() => { const s = store.get('layout2', null); if (!s || !s.docks) return defaultLayout(); const L = Object.assign(defaultLayout(), s); const known = s.known || ['emotes', 'nav', 'color', 'layers', 'brushes', 'sizes', 'settings']; Object.keys(UNITS).forEach(id => { if (!known.includes(id) && !L.hidden.includes(id)) L.hidden.push(id); }); if (!s.groups) { L.groups = defaultGroups(); L.hidden = L.hidden.filter(x => x !== 'mix' && x !== 'saved'); } L.known = Object.keys(UNITS); return L; })();
+let lay = (() => { const s = store.get('layout2', null); if (!s || !s.docks) return defaultLayout(); const L = Object.assign(defaultLayout(), s); const known = s.known || ['emotes', 'nav', 'color', 'layers', 'brushes', 'sizes', 'settings']; Object.keys(UNITS).forEach(id => { if (!known.includes(id) && !L.hidden.includes(id) && id !== 'recent') L.hidden.push(id); }); if (!known.includes('recent')) { /* recent colours used to sit under the wheel: they start right after the colour panels */ const d = Object.keys(L.docks).find(k => (L.docks[k] || []).some(x => x === 'color' || x === 'saved' || x === 'mix')) || 'r2', a = L.docks[d] || (L.docks[d] = []), at = Math.max(...['color', 'mix', 'saved'].map(x => a.indexOf(x))); a.splice(at + 1, 0, 'recent'); } if (!s.groups) { L.groups = defaultGroups(); L.hidden = L.hidden.filter(x => x !== 'mix' && x !== 'saved'); } L.known = Object.keys(UNITS); return L; })();
 const saveLay = () => { if (!layMode.startsWith('land')) store.set('layout2', lay); };
 let layMode = '';
 let deskLay = null;
 // sideways phones: panels as one column of tabs, one floating tab window, or tucked away behind the mini rails (your desktop layout is left alone)
 function landLayout(kind) {
-  const all = ['layers', 'color', 'mix', 'saved', 'settings', 'brushes', 'sizes', 'emotes', 'nav'], W = innerWidth, H = innerHeight;
+  const all = ['layers', 'color', 'mix', 'saved', 'recent', 'settings', 'brushes', 'sizes', 'emotes', 'nav'], W = innerWidth, H = innerHeight;
   const base = { docks: { left: [], r1: [], r2: [] }, floats: {}, hidden: ['ref', 'notes'], known: Object.keys(UNITS), groups: [{ ids: all.slice(), active: 'layers' }], mini: {}, h: {}, w: { left: Math.min(300, Math.round(W * .34)) } };
   if (kind === 'column') base.docks.left = all.slice();
   else if (kind === 'float') { base.docks.left = all.slice(); base.floats.layers = { x: W - Math.min(300, W * .36) - 12, y: 8, w: Math.min(300, W * .36), h: H - 120 }; }
@@ -6604,7 +6613,7 @@ function applyLayout(force) {
   for (const d of Object.keys(HOME)) for (const id of L.docks[d] || []) if (UNITS[id] && !placed.has(id) && !(desk && L.floats[id])) { bodyOf(d).append(unitEl(id)); placed.add(id); }
   for (const id of Object.keys(UNITS)) if (!placed.has(id) && !(desk && L.floats[id])) { bodyOf(homeOf(id)).append(unitEl(id)); placed.add(id); }
   if (desk) for (const id in L.floats) if (UNITS[id]) makeFloat(id, L.floats[id]);
-  for (const id of Object.keys(UNITS)) unitEl(id).hidden = desk ? L.hidden.includes(id) : (id === 'mix' || id === 'saved');
+  for (const id of Object.keys(UNITS)) unitEl(id).hidden = desk ? L.hidden.includes(id) : (id === 'mix' || id === 'saved' || id === 'recent');
   for (const d of Object.keys(HOME)) dockEl(d).dataset.mini = desk && L.mini[d] ? '1' : '';
   refreshDocks();
 }
@@ -6766,6 +6775,7 @@ function layoutGroups() {
 /* Wheel, Mixing and Color set are their own panels on desktop; on phones they go back inside the colour sheet's switcher */
 function placeColorBoxes(desk) {
   const cb = $('#colorPanel .color-body');
+  const rc = $('.recent'); if (desk) $('#recentPanel .color-body').append(rc); else cb.append(rc);
   if (desk) { $('#mixPanel .color-body').append($('#mixBox')); $('#savedPanel .color-body').append($('#savedBox')); $('#mixBox').hidden = $('#savedBox').hidden = $('#wheelBox').hidden = false; cb.querySelector(':scope > .tabs').hidden = true; }
   else { const rec = cb.querySelector(':scope > .recent'); cb.insertBefore($('#mixBox'), rec); cb.insertBefore($('#savedBox'), rec); cb.querySelector(':scope > .tabs').hidden = false; colorTab('wheel'); }
 }
@@ -6780,7 +6790,7 @@ MENU_ICONS.window = '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M
 
 /* ---- squish: drag column edges to resize columns, drag a section's bottom edge to resize it ---- */
 // each section's share of its column (like Clip Studio: dragging a divider trades height with the section below, and the column always fits the window)
-const UWEIGHT = { mix: 330, saved: 300, brushes: 220, settings: 330, sizes: 190, emotes: 330, nav: 240, color: 330, layers: 380, ref: 320, notes: 320 };
+const UWEIGHT = { recent: 110, mix: 330, saved: 300, brushes: 220, settings: 330, sizes: 190, emotes: 330, nav: 240, color: 330, layers: 380, ref: 320, notes: 320 };
 lay.h = lay.h || {}; lay.w = lay.w || {};
 function applySizes() {
   const desk = docked();
@@ -7792,14 +7802,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.13-0205' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.13-0212' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.13-0205';
+const BELEAF_BUILD = '2026.11.13-0212';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
