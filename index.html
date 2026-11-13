@@ -2979,7 +2979,20 @@ $('#mixSrc').onchange = () => { const v = $('#mixSrc').value; $('#wheelMix').hid
 $('#addToSet').onclick = () => palAddColor(color.hex);
 
 /* ---- saved color sets ---- */
-const store = { get(k, d) { try { const v = localStorage.getItem('nib.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('nib.' + k, JSON.stringify(v)); } catch { } } };
+// beleaf next keeps its own copy of everything; SIBLING is the official beleaf on the same site, used once to bring things over
+const LS_PFX = 'nib.', SIBLING = null;
+const store = { get(k, d) { try { const v = localStorage.getItem(LS_PFX + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v, strict) { try { localStorage.setItem(LS_PFX + k, JSON.stringify(v)); } catch (e) { if (strict) throw e; } } };
+// read something the other beleaf saved (never creates its database if it isn't there)
+function siblingGet(st, key) {
+  if (!SIBLING || typeof indexedDB === 'undefined') return Promise.resolve(null);
+  return new Promise(res => {
+    try {
+      const r = indexedDB.open(SIBLING.db); r.onupgradeneeded = () => { try { r.transaction.abort(); } catch { } };
+      r.onerror = () => res(null);
+      r.onsuccess = () => { const d = r.result; try { const q = d.transaction(st).objectStore(st).get(key); q.onsuccess = () => { res(q.result || null); d.close(); }; q.onerror = () => { res(null); d.close(); }; } catch { res(null); d.close(); } };
+    } catch { res(null); }
+  });
+}
 /* ================= performance readout: shows where time goes, so lag can be traced ================= */
 // PERF.time('brush', ms) is cheap and always on; the panel only draws when it's switched on.
 const PERF = { on: store.get('perfHud', false), t: {}, frames: [], long: [], job: '' };
@@ -4875,7 +4888,7 @@ const llist = $('#llist'), lscroll = llist.parentElement;
 llist.addEventListener('pointerdown', e => {
   const li = e.target.closest('li.layer'); if (!li || e.button !== 0 || e.target.closest('.eye, .fold, .lcolor')) return;
   const d = ldrag = { li, i: +li.dataset.i, y0: e.clientY, x0: e.clientX, id: e.pointerId, hold: e.pointerType !== 'mouse' && !e.target.closest('.lgrip'), started: false };
-  if (d.hold) d.timer = setTimeout(() => { if (ldrag === d) { li.classList.add('lifting'); try { navigator.vibrate && navigator.vibrate(12); } catch { } lstart(d); } }, 280);
+  if (d.hold) d.timer = setTimeout(() => { if (ldrag === d) { li.classList.add('lifting'); try { navigator.vibrate && navigator.vibrate(12); } catch { } lstart(d); } }, e.pointerType === 'pen' ? 420 : 320);
 });
 function lstart(d) {
   d.started = true; d.li.classList.add('dragging'); d.line = el('div', { class: 'dropline' }); document.body.append(d.line);
@@ -4888,6 +4901,7 @@ function lend(cancel) {
   if (!d.started) return;
   d.li.classList.remove('dragging'); d.line.remove(); $$('#llist li.into').forEach(q => q.classList.remove('into'));
   window.addEventListener('click', ev => { ev.stopPropagation(); ev.preventDefault(); }, { capture: true, once: true }); setTimeout(() => window.dispatchEvent(new MouseEvent('click')), 0);
+  if (!cancel && !d.moved) { if (layers[d.i]) { active = d.i; buildLayers(); } return; }
   if (!cancel && d.where) { const w = { ...d.where }; delete w.row; delete w.edge; if (!moveBlock(d.i, w)) toast('A folder can’t go inside itself'); }
 }
 window.addEventListener('pointermove', e => {
@@ -4895,8 +4909,9 @@ window.addEventListener('pointermove', e => {
   if (!d.started) {
     const dist = Math.hypot(e.clientX - d.x0, e.clientY - d.y0);
     if (d.hold) { if (dist > 8) { clearTimeout(d.timer); ldrag = null; } return; }
-    if (dist < 5) return; lstart(d);
+    if (dist < 5) return; lstart(d); d.moved = true;
   }
+  if (!d.moved) { if (Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 10) return; d.moved = true; }
   e.preventDefault();
   // scroll the list when dragging near its top or bottom edge
   const sb = lscroll.getBoundingClientRect(); if (e.clientY < sb.top + 28) lscroll.scrollTop -= 8; else if (e.clientY > sb.bottom - 28) lscroll.scrollTop += 8;
@@ -5216,16 +5231,22 @@ const refView = () => { const p = refPage(); return p ? (p.view || (p.view = { s
 const isSheet = (p = refPage()) => !!p && (p.items.length > 1 || !!p.sheet);
 const refItem = (blob, o = {}) => Object.assign({ id: rid(), blob, x: 0, y: 0, s: 1, flip: 1, op: 1, pin: 0, z: refZc++, lock: false }, o);
 let refSaveT = 0;
-const refSave = () => { clearTimeout(refSaveT); refSaveT = setTimeout(() => IDB.put('blobs', 'refBook', book).catch(() => toast('Could not keep the references in this browser')), 350); };
+const refSave = () => { clearTimeout(refSaveT); refSaveT = setTimeout(() => { refSaveT = 0; IDB.put('blobs', 'refBook', book).catch(() => toast('Could not keep the references in this browser')); }, 350); };
+const refFlush = () => { if (!refSaveT) return; clearTimeout(refSaveT); refSaveT = 0; IDB.put('blobs', 'refBook', book).catch(() => { }); };
 async function refLoad() {
   let b = null; try { b = await IDB.get('blobs', 'refBook'); } catch { }
   if (!b || !Array.isArray(b.pages)) {
     // one-time move from the old list of pictures: each picture becomes its own page, as before
     let old = []; try { old = (await IDB.get('blobs', 'refs')) || []; } catch { }
+    // beleaf next: start from what the official beleaf has
+    if (!old.length && SIBLING) { const sb = await siblingGet('blobs', 'refBook'); if (sb && Array.isArray(sb.pages) && sb.pages.length) { book = sb; refSave(); return refLoad2(); } old = (await siblingGet('blobs', 'refs')) || []; }
     b = { pages: old.filter(Boolean).map(f => ({ id: rid(), items: [refItem(f)] })), cur: 0 };
     book = b; if (b.pages.length) refSave();
   }
-  book = b; book.cur = Math.max(0, Math.min(book.cur | 0, book.pages.length - 1));
+  book = b; return refLoad2();
+}
+async function refLoad2() {
+  book.cur = Math.max(0, Math.min(book.cur | 0, book.pages.length - 1));
   book.pages.forEach(p => p.items.forEach(it => { refZc = Math.max(refZc, (it.z || 0) + 1); }));
   await refShow(true);
 }
@@ -5529,9 +5550,9 @@ refLoad();
 
 /* ================= sticky notes ================= */
 const NOTE_COLORS = [['', 'Plain'], ['#E9B949', 'Yellow'], ['#5CB85C', 'Green'], ['#E88AC4', 'Pink'], ['#A98BE0', 'Purple'], ['#5BC0EB', 'Blue'], ['#9A9A9A', 'Grey']];
-let notes = store.get('notes', null) || { list: [{ id: 'n1', html: '', color: '', updated: Date.now() }], cur: 'n1' };
+let notes = store.get('notes', null) || (SIBLING ? (() => { try { return JSON.parse(localStorage.getItem(SIBLING.pfx + 'notes')); } catch { return null; } })() : null) || { list: [{ id: 'n1', html: '', color: '', updated: Date.now() }], cur: 'n1' };
 const curNote = () => notes.list.find(n => n.id === notes.cur) || notes.list[0];
-const saveNotes = () => { try { localStorage.setItem('nib.notes', JSON.stringify(notes)); } catch { toast('Notes are too big to keep here. Try a smaller image.'); } };
+const saveNotes = () => { try { store.set('notes', notes, true); } catch { toast('Notes are too big to keep here. Try a smaller image.'); } };
 function showNote() { const n = curNote(); notes.cur = n.id; $('#noteEd').innerHTML = n.html; $('#notesPanel').style.setProperty('--nc', n.color || 'transparent'); $('#notesPanel').dataset.tint = n.color ? 'yes' : 'no'; $('#noteCount').textContent = notes.list.length > 1 ? `${notes.list.indexOf(n) + 1}/${notes.list.length}` : ''; }
 $('#noteEd').addEventListener('input', () => { const n = curNote(); n.html = $('#noteEd').innerHTML; n.updated = Date.now(); saveNotes(); });
 $('#noteNew').onclick = () => { const n = { id: 'n' + Date.now().toString(36), html: '', color: curNote().color, updated: Date.now() }; notes.list.push(n); notes.cur = n.id; saveNotes(); showNote(); $('#noteEd').focus(); };
@@ -5925,7 +5946,9 @@ async function importSutBytes(bytes, fname, quiet) {
   try {
     const r = readSut(bytes);
     if (r.v && r.v.LiquifyOperation != null) { liquifyFromSut(r.v, r.name || fname); if (!quiet) { setTool('liquify'); toast(`Liquify settings loaded from “${r.name}”`); } else if (tool === 'liquify') buildSettings(); return null; }
-    const b = await brushFromSut(bytes, fname); b._def = JSON.stringify(b);
+    const b = await brushFromSut(bytes, fname);
+    if (quiet && /textured acrylic/i.test(b.name)) b.taper = Object.assign({}, b.taper, { in: 0, out: 0 }); // the bundled one starts without tapers
+    b._def = JSON.stringify(b);
     if (!quiet) b.user = true; BRUSHES.push(b); if (!quiet) { brush = b; cat = 'Imported'; setTool('brush'); toast(`Imported “${b.name}”`); saveBrushLib(); }
     buildBrushUI(); return b;
   } catch (err) { toast(`${fname}: ${err.message || 'could not read this brush'}`); }
@@ -5949,7 +5972,7 @@ function thumb(L) { const c = $(`canvas[data-lid="${L.id}"]`); if (!c) return; c
 const layerMeta = L => L.kind === 'folder' ? `Folder · ${L.blend === 'pass' ? 'Through' : blendName(L.blend)} · ${Math.round(L.opacity * 100)}%` : (L.kind === 'anim' ? `Animation · ${L.cels.filter(Boolean).length}/${anim.n} frames · ` : '') + `${blendName(L.blend)} · ${Math.round(L.opacity * 100)}%` + (L.draft ? ' · draft' : '');
 function refreshLayerMeta(L) { const c = $(`canvas[data-lid="${L.id}"]`); const sm = c && c.parentElement.querySelector('small'); if (sm) sm.textContent = layerMeta(L); }
 function buildLayers() {
-  const ul = $('#llist'); ul.replaceChildren();
+  const ul = $('#llist'), lsc = ul.parentElement, lst = lsc.scrollTop; ul.replaceChildren();
   const tw = 80, th = Math.max(20, Math.min(60, Math.round(80 * DOC.h / DOC.w)));
   active = Math.max(0, Math.min(active, layers.length - 1));
   [...layers].reverse().forEach(L => {
@@ -5966,6 +5989,7 @@ function buildLayers() {
     const grip = el('span', { class: 'lgrip', title: 'Drag to reorder (or hold the layer, then drag)' }); grip.innerHTML = '<svg viewBox="0 0 10 16" aria-hidden="true"><circle cx="3" cy="3" r="1.3"/><circle cx="7" cy="3" r="1.3"/><circle cx="3" cy="8" r="1.3"/><circle cx="7" cy="8" r="1.3"/><circle cx="3" cy="13" r="1.3"/><circle cx="7" cy="13" r="1.3"/></svg>';
     if (fold) li.append(eye, pic, sel, grip); else li.append(eye, sel, grip); ul.append(li); if (!fold) thumb(L);
   });
+  lsc.scrollTop = lst;
   const A = layers[active], isF = A.kind === 'folder';
   $('#blend').replaceChildren(...(isF ? [['pass', 'Through']] : []).concat(BLENDS).map(([v, t]) => el('option', { value: v, text: t })));
   $('#blend').value = A.blend; $('#lOp').value = Math.round(A.opacity * 100); $('#oLOp').value = Math.round(A.opacity * 100) + '%';
@@ -6916,7 +6940,7 @@ async function decodeFile(f) {
 
 /* ---- what can be shared ---- */
 const SETTINGS_SKIP = new Set(['session', 'notes', 'pomo']);
-function collectSettings() { const out = {}; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith('nib.') && !SETTINGS_SKIP.has(k.slice(4))) try { out[k.slice(4)] = JSON.parse(localStorage.getItem(k)); } catch { } } return out; }
+function collectSettings() { const out = {}; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith(LS_PFX) && !SETTINGS_SKIP.has(k.slice(LS_PFX.length))) try { out[k.slice(LS_PFX.length)] = JSON.parse(localStorage.getItem(k)); } catch { } } return out; }
 const tipURL = new Map(); // tip pictures never change, so encode each one only once
 function tipsOf(b) { const names = new Set(); JSON.stringify(b, (k, v) => { if (typeof v === 'string' && imageTips[v]) names.add(v); return v; }); const t = {}; names.forEach(n => { const p = imageTips[n].preview; if (!p) return; if (!tipURL.has(n)) tipURL.set(n, p.toDataURL('image/png')); t[n] = tipURL.get(n); }); return t; }
 function brushData(b) { const c = JSON.parse(JSON.stringify(b)); delete c._def; return { brush: c, tips: tipsOf(b) }; }
@@ -6945,7 +6969,7 @@ async function applyPayload(o) {
   else if (o.kind === 'brush') { const b = await addBrush(d); toast(`Brush “${b.name}” added to ${b.cat}`); }
   else if (o.kind === 'settings') {
     if (!await confirmAsk('Load all settings?', 'This replaces your theme, shortcuts, panel layout, brushes and other settings on this device with the ones in the file, then reloads beleaf. Your drawings aren’t touched.', 'Load and reload')) return;
-    Object.keys(localStorage).filter(k => k.startsWith('nib.') && !SETTINGS_SKIP.has(k.slice(4))).forEach(k => localStorage.removeItem(k));
+    Object.keys(localStorage).filter(k => k.startsWith(LS_PFX) && !SETTINGS_SKIP.has(k.slice(LS_PFX.length))).forEach(k => localStorage.removeItem(k));
     for (const [k, v] of Object.entries(d.store || {})) if (!SETTINGS_SKIP.has(k)) store.set(k, v);
     if (d.brushes && idbOK) try { await IDB.put('blobs', 'brushlib', d.brushes); } catch { }
     location.reload();
@@ -7053,24 +7077,45 @@ $('#stage').addEventListener('drop', async e => {
 });
 
 /* ---- keep brushes (and changes to them) between visits ---- */
-const bkey = b => b.user ? 'u:' + b.id : 'n:' + b.cat + '/' + b.name;
-async function brushLibData() { return { order: BRUSHES.map(bkey), brushes: Object.fromEntries(BRUSHES.map(b => [bkey(b), brushData(b)])) }; }
+// a built-in brush keeps the name it came with as its key, so renaming it doesn't lose your changes
+const bkey = b => b.user ? 'u:' + b.id : (b._k || (b._k = 'n:' + b.cat + '/' + b.name));
+// built-in brushes are only stored when you've changed them, so improvements to their defaults still reach you
+const brushPlain = o => { const c = typeof o === 'string' ? JSON.parse(o) : JSON.parse(JSON.stringify(o)); delete c.id; delete c._def; delete c._k; return JSON.stringify(c); };
+const brushChanged = b => { if (b.user || !b._def) return true; try { return brushPlain(b) !== brushPlain(b._def); } catch { return true; } };
+async function brushLibData() { return { v: 2, t: Date.now(), order: BRUSHES.map(bkey), brushes: Object.fromEntries(BRUSHES.filter(brushChanged).map(b => [bkey(b), brushData(b)])) }; }
 let blT = 0, blReady = false;
-function saveBrushLib() { if (!blReady || !idbOK) return; clearTimeout(blT); blT = setTimeout(async () => { if (stroking) { saveBrushLib(); return; } try { await IDB.put('blobs', 'brushlib', await job('brush save', brushLibData)); } catch { } }, 1500); }
+function saveBrushLib() { if (!blReady || !idbOK) return; clearTimeout(blT); blT = setTimeout(async () => { if (stroking) { saveBrushLib(); return; } try { await IDB.put('blobs', 'brushlib', await job('brush save', brushLibData)); localStorage.removeItem(LS_PFX + 'brushPending'); } catch { } blT = 0; }, 800); }
+// save straight away when beleaf goes to the background or closes (an update reloads the page)
+async function flushBrushLib() {
+  if (!blReady || !idbOK || !blT) return; clearTimeout(blT); blT = 0;
+  // the page may close before the database finishes, so first a quick copy of the changed settings that is written instantly
+  try { localStorage.setItem(LS_PFX + 'brushPending', JSON.stringify({ t: Date.now(), order: BRUSHES.map(bkey), brushes: Object.fromEntries(BRUSHES.filter(brushChanged).map(b => { const c = JSON.parse(JSON.stringify(b)); delete c._def; return [bkey(b), { brush: c }]; })) })); } catch { }
+  try { await IDB.put('blobs', 'brushlib', await brushLibData()); localStorage.removeItem(LS_PFX + 'brushPending'); } catch { }
+}
 async function loadBrushLib() {
   try {
-    const L = idbOK && await IDB.get('blobs', 'brushlib'); if (!L || !L.brushes) return;
+    BRUSHES.forEach(bkey);
+    let L = idbOK && await IDB.get('blobs', 'brushlib');
+    if ((!L || !L.brushes) && SIBLING) { L = await siblingGet('blobs', 'brushlib'); if (L && L.brushes) setTimeout(() => toast('Brought over your brushes from beleaf'), 1500); }
+    // changes saved in a hurry as beleaf closed, newer than the full save
+    let P = null; try { P = JSON.parse(localStorage.getItem(LS_PFX + 'brushPending')); } catch { }
+    if (P && P.brushes && (!L || !L.brushes || (P.t || 0) > (L.t || 0))) L = { t: P.t, order: P.order, brushes: Object.assign({}, L && L.brushes, P.brushes) }, setTimeout(saveBrushLib, 0);
+    if (!L || !L.brushes) return;
     for (const k of L.order || Object.keys(L.brushes)) {
       const d = L.brushes[k]; if (!d) continue; const have = BRUSHES.find(b => bkey(b) === k);
-      if (have) { await tipsIn(d.tips); const def = have._def, id = have.id; Object.assign(have, d.brush, { id, _def: def }); }
+      if (have) { await tipsIn(d.tips); const def = have._def, id = have.id; Object.assign(have, d.brush, { id, _def: def, _k: k }); }
       else if (k.startsWith('u:')) { await tipsIn(d.tips); const b = Object.assign(baseBrush({}), d.brush); b.user = true; b._def = d.brush._def || JSON.stringify(b); BRUSHES.push(b); }
     }
     const pos = new Map((L.order || []).map((k, i) => [k, i])); BRUSHES.sort((a, b) => (pos.has(bkey(a)) ? pos.get(bkey(a)) : 1e6) - (pos.has(bkey(b)) ? pos.get(bkey(b)) : 1e6));
+    // the bundled Textured Acrylic brush now starts without tapers; take them off your copy too (once)
+    if (!store.get('mig.texTaper')) { BRUSHES.filter(b => !b.user && /textured acrylic/i.test(b.name)).forEach(b => { b.taper = Object.assign({}, b.taper, { in: 0, out: 0 }); }); store.set('mig.texTaper', 1); setTimeout(saveBrushLib, 0); }
     const cb = BRUSHES.find(b => b.id === (brush && brush.id)); if (!cb) brush = BRUSHES[0];
     buildBrushUI();
   } catch { }
   finally { blReady = true; }
 }
+addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') { flushBrushLib(); if (typeof refFlush === 'function') refFlush(); } });
+addEventListener('pagehide', () => { flushBrushLib(); if (typeof refFlush === 'function') refFlush(); });
 async function deleteBrush() {
   const b = cur(); if (!b.user) { toast('Built-in brushes can’t be deleted, but Reset brush puts them back how they were'); return; }
   if (!await confirmAsk(`Delete “${b.name}”?`, 'This removes the brush from beleaf on this device.', 'Delete')) return;
@@ -7681,14 +7726,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.13-0136' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.13-0205' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.13-0136';
+const BELEAF_BUILD = '2026.11.13-0205';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
