@@ -2593,10 +2593,10 @@ class StrokeEngine {
   }
   opFactor(p, tilt) { const b = this.st.b; let f = b.opDyn && b.opDyn.on ? (b.opDyn.min + (100 - b.opDyn.min) * evalCurve(b.opDyn.curve, p)) / 100 : 1;
     if (b.tiltOp && b.tiltOp.on && tilt != null) f *= (b.tiltOp.min + (100 - b.tiltOp.min) * tilt) / 100; return f; }
-  add(x, y, p, tilt, az) {
-    const S = this.st, b = S.b; if (az != null) S.az = az;
+  add(x, y, p, tilt, az, tm) {
+    const S = this.st, b = S.b; if (az != null) S.az = az; S.tNow = tm ?? performance.now();
     const k = b.stab ? Math.min(.94, Math.pow(b.stab / 25, .8)) : 0;
-    if (S.sx == null) { S.sx = x; S.sy = y; S.sp = p; S.tl = performance.now(); } else { S.sx = S.sx * k + x * (1 - k); S.sy = S.sy * k + y * (1 - k); S.sp = S.sp * k * .6 + p * (1 - k * .6); }
+    if (S.sx == null) { S.sx = x; S.sy = y; S.sp = p; S.tl = S.tNow; } else { S.sx = S.sx * k + x * (1 - k); S.sy = S.sy * k + y * (1 - k); S.sp = S.sp * k * .6 + p * (1 - k * .6); }
     x = S.sx; y = S.sy; p = S.sp;
     if (!S.last) {
       S.last = { x, y, p, tilt }; this.emit(x, y, p, tilt); this.emitDual(x, y, p, tilt);
@@ -2609,7 +2609,7 @@ class StrokeEngine {
     const q = S.cq || S.last, dr = Math.hypot(x - q.x, y - q.y);
     if (dr < .01) return;
     // drawing speed (px per ms, smoothed) for "taper by speed", from the real pen samples
-    const now = performance.now(); if (S.tl != null) { const inst = dr / Math.max(1, now - S.tl); S.spd = S.spd == null ? inst : S.spd * .85 + inst * .15; } S.tl = now;
+    const now = S.tNow; if (S.tl != null) { const inst = dr / Math.max(1, now - S.tl); S.spd = S.spd == null ? inst : S.spd * .85 + inst * .15; } S.tl = now;
     if (S.raw) { S.cq = null; this.seg(x, y, p, tilt); return; }
     // the path curves through the pen samples (from the middle of one gap to the middle of the next, bending at the
     // sample) instead of joining them with straight lines; with few samples those showed as corners
@@ -3441,7 +3441,7 @@ $('#navFit').onclick = fit; $('#navRotReset').onclick = () => rotateTo(0);
 
 /* ================= strokes ================= */
 function beginStroke(x, y, p, tilt, az) {
-  const b = cur(), L = layers[active], erase = tool === 'eraser' || (clearOn && tool !== 'blend');
+  const b0 = cur(), b = strokeBrush(b0), L = layers[active], erase = tool === 'eraser' || (clearOn && tool !== 'blend');
   if (L.kind === 'folder' || ancestors(L).some(F => !F.visible || F.locked)) { editable(L); return null; }
   if (!L.visible) { toast('This layer is hidden'); return null; }
   if (L.locked) { toast('This layer is locked'); return null; }
@@ -3449,23 +3449,31 @@ function beginStroke(x, y, p, tilt, az) {
   let sample = null;
   if (b.mix > 0 && !erase && S) {
     const W = DOC.w, H = DOC.h, data = S.ctx.getImageData(0, 0, W, H).data;
+    // with a selection, only colours inside it are picked up (nothing bleeds in from outside)
+    const md = sel ? sel.c.getContext('2d').getImageData(0, 0, W, H).data : null;
+    // blending quality: High reads more spots under the brush for smoother mixing
+    const h = .5, d = .7071, TAPS = b.blendQ === 'high' ? [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [h, 0], [-h, 0], [0, h], [0, -h], [d, d], [-d, d], [d, -d], [-d, -d]] : [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]];
     sample = (sx, sy, r) => {
       let R = 0, G = 0, B = 0, A = 0, n = 0;
-      for (const [ox, oy] of [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r]]) {
-        const xx = Math.round(sx + ox), yy = Math.round(sy + oy); if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
+      for (const [ux, uy] of TAPS) {
+        const xx = Math.round(sx + ux * r), yy = Math.round(sy + uy * r); if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
+        if (md && md[(yy * W + xx) * 4 + 3] < 128) continue;
         const i = (yy * W + xx) * 4, a = data[i + 3] / 255; R += data[i] * a; G += data[i + 1] * a; B += data[i + 2] * a; A += a; n++;
       }
       return !n || A < .01 ? [0, 0, 0, 0] : [R / A, G / A, B / A, A / n];
     };
   }
-  eng.begin(b, { color: hexRgb(color.hex), erase, sample });
-  stroking = { b, erase, S, L };
-  eng.add(x, y, p, tilt, az); strokeFlush = true; interacting(); dirty(false); return stroking;
+  const opts = { color: hexRgb(color.hex), erase, sample, seed: (Math.random() * 1e9) | 0 };
+  eng.begin(b, opts);
+  stroking = { b, eb: b, opts, erase, S, L }; strokeInit(stroking, b0);
+  strokeAdd(x, y, p, tilt, az); strokeFlush = true; interacting(); dirty(false); return stroking;
 }
 function endStroke(cancel) { const t0 = performance.now(); try { endStroke0(cancel); } finally { PERF.time('pen up', performance.now() - t0); } }
 function endStroke0(cancel) {
   const s = stroking; if (!s) return; stroking = null;
+  prevBox(s);
   if (cancel || !s.S) { eng.reset(); dirty(); return; }
+  stroking = s; try { strokePost(s); } catch (e) { console.warn(e); } stroking = null;
   eng.end();
   const bx = eng.box; if (!bx) { eng.reset(); dirty(); return; }
   const S = s.S, x0 = Math.max(0, bx[0]), y0 = Math.max(0, bx[1]), x1 = Math.min(DOC.w, bx[2]), y1 = Math.min(DOC.h, bx[3]);
@@ -3685,7 +3693,7 @@ view.addEventListener('pointermove', e => {
   if (shape) { const [dx, dy] = toDoc(p[0], p[1]); updateShape(dx, dy, e.shiftKey); return; }
   if (!stroking) return;
   const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [], t0 = performance.now(); lastInput = t0;
-  for (const ev of (evs.length ? evs : [e])) { const q = local(ev), [dx, dy] = toDoc(q[0], q[1]); eng.add(dx, dy, pressureOf(ev), tiltOf(ev), azOf(ev)); }
+  for (const ev of (evs.length ? evs : [e])) { const q = local(ev), [dx, dy] = toDoc(q[0], q[1]); strokeAdd(dx, dy, pressureOf(ev), tiltOf(ev), azOf(ev)); }
   brushMs += performance.now() - t0;
   if (e.pointerType !== 'touch') pressStatus(e);
   strokeFlush = true; frame();
@@ -3757,7 +3765,7 @@ function commitLive() {
 }
 function cancelLive() { liveOp = null; dirty(); }
 function drawOverlay(x) {
-  drawSelOverlay(x);
+  drawSelOverlay(x); drawStrokePreview(x);
   if (liveOp && liveOp.kind === 'lasso') { x.save(); x.beginPath(); liveOp.pts.forEach(([a, b], i) => { const [sx, sy] = toScreen(a, b); i ? x.lineTo(sx, sy) : x.moveTo(sx, sy); }); x.closePath(); x.setLineDash([5, 4]); x.lineWidth = 1.5; x.strokeStyle = '#000'; x.stroke(); x.lineDashOffset = 5; x.strokeStyle = '#fff'; x.stroke(); x.restore(); }
   if (liveOp && liveOp.kind === 'gradient') { const [a, b] = toScreen(liveOp.x0, liveOp.y0), [c, d] = toScreen(liveOp.x1, liveOp.y1); x.save(); x.lineWidth = 2; x.strokeStyle = '#fff'; x.shadowColor = 'rgba(0,0,0,.6)'; x.shadowBlur = 3; x.beginPath(); x.moveTo(a, b); x.lineTo(c, d); x.stroke(); [[a, b], [c, d]].forEach(([px, py]) => { x.beginPath(); x.arc(px, py, 5, 0, 7); x.fillStyle = '#fff'; x.fill(); }); x.restore(); }
 }
@@ -5910,8 +5918,19 @@ function buildSettings() {
     group('Ink',
       ctlRange('Opacity', () => b().opacity, v => b().opacity = v, 1, 100, 1, '%'),
       ctlRange('Density', () => b().flow, v => b().flow = v, 1, 100, 1, '%'),
-      ctlCheck('Build up (airbrush style)', () => b().build, v => b().build = v),
-      ctlRange('Stabilizer', () => b().stab, v => b().stab = v, 0, 30)),
+      ctlCheck('Build up (airbrush style)', () => b().build, v => b().build = v)),
+    group('Correction',
+      ctlRange('Stabilization', () => b().stab, v => b().stab = v, 0, 30),
+      ctlCheck('Adjust by speed (ease off on quick strokes)', () => b().stabSpeed, v => b().stabSpeed = v),
+      ctlCheck('Stroke preview (thin line to the pen while stabilizing; all brushes)', () => store.get('strokePreview', true) !== false, v => store.set('strokePreview', !!v)),
+      sub('Post correction (tidies the line when you lift the pen)'),
+      ctlRange('Post correction', () => b().post || 0, v => b().post = v, 0, 5),
+      ctlCheck('Adjust by speed (quick lines get more)', () => b().postSpeed, v => b().postSpeed = v),
+      ctlCheck('Adjust by scale (same on screen at any zoom)', () => b().postScale !== false, v => b().postScale = v),
+      ctlCheck('Bezier curve (redraw as a smooth curve)', () => b().postBezier, v => b().postBezier = v),
+      sub('Speed and quality'),
+      ctlSeg('Speed and quality', [['auto', 'Automatic'], ['high', 'High'], ['med', 'Medium'], ['low', 'Low']], () => b().quality || 'high', v => { b().quality = v; brushEdited(true); }),
+      el('p', { class: 'note tp-note', text: 'High is the best looking (the default). Medium and Low paint faster with big brushes and look a little rougher. Automatic picks by brush size.' })),
     group('Pen pressure',
       ctlCheck('Pressure changes size', () => b().sizeDyn.on, v => b().sizeDyn.on = v, true),
       B.sizeDyn.on ? ctlRange('Smallest size', () => b().sizeDyn.min, v => b().sizeDyn.min = v, 0, 100, 1, '%') : null,
@@ -5944,6 +5963,7 @@ function buildSettings() {
       ctlSeg('Mixing style', [['paint', 'Realistic (paint)'], ['normal', 'Normal']], () => b().mixMode || 'paint', v => { b().mixMode = v; brushEdited(true); }),
       el('p', { class: 'note tp-note', text: 'Realistic mixes like real paint: yellow + blue makes green, red + yellow makes orange. Normal blends the light, so yellow + blue makes grey.' }),
       ctlCheck('Blend only (no new paint)', () => b().blendOnly, v => b().blendOnly = v),
+      ctlSeg('Blending quality', [['normal', 'Normal'], ['high', 'High (smoother)']], () => b().blendQ || 'normal', v => { b().blendQ = v; brushEdited(true); }),
       sub('Color variation'),
       ctlRange('Hue', () => b().colorJitter.hue, v => b().colorJitter.hue = v, 0, 100, 1, '%'),
       ctlRange('Saturation', () => b().colorJitter.sat, v => b().colorJitter.sat = v, 0, 100, 1, '%'),
@@ -7761,14 +7781,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.13-0636' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.13-0701' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.13-0636';
+const BELEAF_BUILD = '2026.11.13-0701';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
@@ -8481,6 +8501,88 @@ function chamfer(src, w, h) {
 function rgb2hsv(r, g, b) { r /= 255; g /= 255; b /= 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn; let h = 0; if (d) { h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h /= 6; if (h < 0) h += 1; } return [h, mx ? d / mx : 0, mx]; }
 function hsv2rgb(h, s, v) { const i = Math.floor(h * 6), f = h * 6 - i, p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s); const [r, g, b] = [[v, t, p], [q, v, p], [p, v, t], [p, q, v], [t, p, v], [v, p, q]][((i % 6) + 6) % 6]; return [r * 255, g * 255, b * 255]; }
 
+/* ================= stroke extras: stabilizer by speed, post correction, speed/quality, stroke preview ================= */
+// The stabilizer runs here (the same maths the engines used), so the corrected path is known for the preview line and for
+// post correction, and both brush engines get the same points.
+const QUAL = { high: 1, med: 1.6, low: 2.4 };
+function brushQuality(b) { const q = b.quality || 'high'; return q === 'auto' ? (b.size >= 300 ? 'low' : b.size >= 120 ? 'med' : 'high') : q; }
+function strokeBrush(b) {
+  const k = QUAL[brushQuality(b)] || 1;
+  if (k === 1 && !(b.stab > 0)) return b;
+  const o = Object.assign({}, b); o.stab = 0;
+  // fewer, slightly stronger stamps: quicker to paint with big brushes, a little rougher
+  if (k > 1) { o.spacing = Math.min(60, b.spacing * k); if (b.build || (b.flow ?? 100) < 100) o.flow = Math.min(100, (b.flow ?? 100) * Math.sqrt(k)); }
+  return o;
+}
+function strokeInit(s, b) {
+  s.pts = []; s.stabK = b.stab > 0 ? Math.min(.94, Math.pow(b.stab / 25, .8)) : 0; s.bySpeed = !!b.stabSpeed;
+  s.post = Math.max(0, Math.min(5, b.post || 0)); s.postSpeed = !!b.postSpeed; s.postScale = b.postScale !== false; s.postBezier = !!b.postBezier;
+}
+function prevBox(s) { if (!s.pen || s.hx == null) return; const [a, b] = toScreen(s.hx, s.hy), [c, d] = toScreen(s.pen[0], s.pen[1]); scrAdd(Math.min(a, c) - 6, Math.min(b, d) - 6, Math.max(a, c) + 6, Math.max(b, d) + 6); }
+function strokeAdd(x, y, p, tilt, az) {
+  const s = stroking, t = performance.now(); if (!s) return;
+  prevBox(s);
+  if (s.stabK) {
+    let k = s.stabK;
+    if (s.bySpeed) {
+      // quick strokes are steady already, so the stabilizer eases off; slow careful ones get all of it
+      const d = s.raw ? Math.hypot(x - s.raw[0], y - s.raw[1]) * V.s : 0, inst = d / Math.max(1, t - (s.rawT || t));
+      s.spd = s.spd == null ? inst : s.spd * .8 + inst * .2; s.raw = [x, y]; s.rawT = t;
+      k *= Math.max(.25, 1 - Math.min(1, s.spd / 2.5) * .75);
+    }
+    if (s.hx == null) { s.hx = x; s.hy = y; s.hp = p; } else { s.hx = s.hx * k + x * (1 - k); s.hy = s.hy * k + y * (1 - k); s.hp = s.hp * k * .6 + p * (1 - k * .6); }
+    s.pen = [x, y]; x = s.hx; y = s.hy; p = s.hp; prevBox(s);
+  }
+  s.pts.push([x, y, p, tilt, az, t]);
+  eng.add(x, y, p, tilt, az, t);
+}
+// the thin line from the (lagging) stabilized stroke to the pen, so a strong stabilizer doesn't feel slow
+function drawStrokePreview(x) {
+  const s = stroking; if (!s || !s.pen || s.hx == null || store.get('strokePreview', true) === false) return;
+  const [a, b] = toScreen(s.hx, s.hy), [c, d] = toScreen(s.pen[0], s.pen[1]); if (Math.hypot(c - a, d - b) < 5) return;
+  x.save(); x.lineCap = 'round'; x.lineWidth = 1.5; x.globalAlpha = .6; x.strokeStyle = s.erase ? '#888' : color.hex; x.beginPath(); x.moveTo(a, b); x.lineTo(c, d); x.stroke(); x.restore();
+}
+// post correction: tidy the whole line after the pen lifts
+function postCorrect(pts, s) {
+  const n0 = pts.length, cum = [0]; for (let i = 1; i < n0; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  const L = cum[n0 - 1]; if (L < 6) return pts;
+  // evenly spaced points along the line
+  const step = Math.max(1.5, L / 3000), n = Math.max(2, Math.round(L / step) + 1), X = new Float64Array(n), Y = new Float64Array(n), P = new Float64Array(n), T = new Float64Array(n), src = new Int32Array(n);
+  for (let i = 0, j = 0; i < n; i++) { const d = L * i / (n - 1); while (j < n0 - 2 && cum[j + 1] < d) j++; const a = pts[j], b = pts[j + 1], f = cum[j + 1] > cum[j] ? (d - cum[j]) / (cum[j + 1] - cum[j]) : 0; X[i] = a[0] + (b[0] - a[0]) * f; Y[i] = a[1] + (b[1] - a[1]) * f; P[i] = a[2] + (b[2] - a[2]) * f; T[i] = a[5] + (b[5] - a[5]) * f; src[i] = f < .5 ? j : j + 1; }
+  const ds = L / (n - 1), base = s.post * 5 * (s.postScale ? 1 / V.s : 1);
+  // how hard each part is corrected: by speed, quick parts get more
+  const sig = i => { if (!s.postSpeed) return base; const a = Math.max(0, i - 3), b = Math.min(n - 1, i + 3), v = (b - a) * ds * V.s / Math.max(1, T[b] - T[a]); return base * Math.max(.5, Math.min(2, .5 + v / 1.5)); };
+  let OX = new Float64Array(n), OY = new Float64Array(n), OP = new Float64Array(n);
+  if (s.postBezier) {
+    // keep only the points that shape the line, then run a smooth curve through them
+    const eps = Math.max(.75, base * .6), keep = new Uint8Array(n); keep[0] = keep[n - 1] = 1; const st = [[0, n - 1]];
+    while (st.length) { const [a, b] = st.pop(); let m = -1, md = eps; const ux = X[b] - X[a], uy = Y[b] - Y[a], ul = Math.hypot(ux, uy) || 1; for (let i = a + 1; i < b; i++) { const d = Math.abs((X[i] - X[a]) * uy - (Y[i] - Y[a]) * ux) / ul; if (d > md) { md = d; m = i; } } if (m > 0) { keep[m] = 1; st.push([a, m], [m, b]); } }
+    const K = []; for (let i = 0; i < n; i++) if (keep[i]) K.push(i);
+    for (let k = 0; k < K.length - 1; k++) {
+      const i1 = K[k], i2 = K[k + 1], i0 = K[Math.max(0, k - 1)], i3 = K[Math.min(K.length - 1, k + 2)];
+      for (let i = i1; i <= i2; i++) { const t = i2 > i1 ? (i - i1) / (i2 - i1) : 0, t2 = t * t, t3 = t2 * t;
+        const cr = (a, b, c, d) => .5 * (2 * b + (c - a) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (3 * b - a - 3 * c + d) * t3);
+        OX[i] = cr(X[i0], X[i1], X[i2], X[i3]); OY[i] = cr(Y[i0], Y[i1], Y[i2], Y[i3]); OP[i] = P[i]; }
+    }
+  } else {
+    for (let i = 0; i < n; i++) {
+      // the ends stay where you put them: the averaging window shrinks toward them
+      const sg = sig(i) / ds, w = Math.min(Math.ceil(sg * 3), i, n - 1 - i); if (w < 1) { OX[i] = X[i]; OY[i] = Y[i]; OP[i] = P[i]; continue; }
+      const q = Math.max(.5, Math.min(sg, w / 2)); let sx = 0, sy = 0, sp = 0, sw = 0;
+      for (let j = -w; j <= w; j++) { const g = Math.exp(-j * j / (2 * q * q)); sx += X[i + j] * g; sy += Y[i + j] * g; sp += P[i + j] * g; sw += g; }
+      OX[i] = sx / sw; OY[i] = sy / sw; OP[i] = P[i] * .5 + sp / sw * .5;
+    }
+  }
+  const out = new Array(n); for (let i = 0; i < n; i++) out[i] = [OX[i], OY[i], OP[i], pts[src[i]][3], pts[src[i]][4], T[i]];
+  return out;
+}
+function strokePost(s) {
+  if (!(s.post > 0) || !s.pts || s.pts.length < 4 || !s.opts) return;
+  const t0 = performance.now(), P = postCorrect(s.pts, s); if (P === s.pts) return;
+  eng.reset(); eng.begin(s.eb, s.opts); for (const q of P) eng.add(q[0], q[1], q[2], q[3], q[4], q[5]);
+  PERF.time('post correction', performance.now() - t0);
+}
+
 /* ================= image resolution + canvas size (Edit menu), and DPI for print ================= */
 // Change image resolution: every layer and animation frame is scaled up or down (or only the DPI changes).
 // Change canvas size: the art stays exactly as it is; the edges move out (more room) or in (cropped).
@@ -8766,7 +8868,8 @@ async function pngDpi(blob, dpi) {
     // already has one?
     let p = 8; while (p + 8 <= u.length) { const n = (u[p] << 24 | u[p + 1] << 16 | u[p + 2] << 8 | u[p + 3]) >>> 0, t = String.fromCharCode(...u.subarray(p + 4, p + 8)); if (t === 'pHYs') return blob; if (t === 'IDAT' || t === 'IEND') break; p += 12 + n; }
     const ppm = Math.round(dpi / .0254), d = new Uint8Array(9), dv = new DataView(d.buffer); dv.setUint32(0, ppm); dv.setUint32(4, ppm); d[8] = 1;
-    return new Blob([u.subarray(0, 33), chunk('pHYs', d), u.subarray(33)], { type: 'image/png' });
+    // also say plainly that the colours are sRGB, so they look the same in other apps and on other devices
+    return new Blob([u.subarray(0, 33), chunk('sRGB', new Uint8Array([0])), chunk('pHYs', d), u.subarray(33)], { type: 'image/png' });
   } catch { return blob; }
 }
 
@@ -8963,7 +9066,7 @@ function sample() {
   C.beginPath(); C.moveTo(cx + 222, cy - 100); C.lineTo(cx + 229, cy - 270); C.lineTo(cx + 116, cy - 186); C.fill();
   const keep = { tool, brush, hex: color.hex };
   tool = 'brush'; color.hex = '#9A4F2A';
-  const draw = (li, P, b, size) => { active = li; brush = b; const bs = b.size; b.size = size; beginStroke(P[0][0], P[0][1], .3, null); for (let i = 1; i < P.length; i++) eng.add(P[i][0], P[i][1], P[i][2] ?? .85, null); endStroke(); b.size = bs; };
+  const draw = (li, P, b, size) => { active = li; brush = b; const bs = b.size; b.size = size; beginStroke(P[0][0], P[0][1], .3, null); for (let i = 1; i < P.length; i++) strokeAdd(P[i][0], P[i][1], P[i][2] ?? .85, null); endStroke(); b.size = bs; };
   const arc = (x, y, rx, ry, a0, a1, n = 60) => Array.from({ length: n + 1 }, (_, i) => { const a = a0 + (a1 - a0) * i / n, t = i / n; return [x + Math.cos(a) * rx, y + Math.sin(a) * ry, .3 + Math.sin(t * Math.PI) * .7]; });
   const air = BRUSHES.find(b => b.name === 'Soft airbrush'), pen = BRUSHES.find(b => b.name === 'G-pen');
   draw(3, arc(cx + 60, cy + 150, 230, 60, Math.PI * .05, Math.PI * .95), air, 120);
