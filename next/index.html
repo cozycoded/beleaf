@@ -2907,7 +2907,7 @@ class HybridEngine {
 'use strict';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
-const app = $('#app'), stage = $('#stage'), view = $('#view'), vctx = (() => { try { if (localStorage.getItem('nibnext.lowLatency') !== 'false' && localStorage.getItem('nibnext.gpuCanvas') === '0') return view.getContext('2d', { desynchronized: true }); } catch { } return view.getContext('2d'); })();
+const app = $('#app'), stage = $('#stage'), view = $('#view'), vctx = (() => { try { if ((localStorage.getItem('nibnext.gpuDefOff') || (localStorage.setItem('nibnext.gpuDefOff', '1'), localStorage.removeItem('nibnext.gpuCanvas'), 1)) && localStorage.getItem('nibnext.lowLatency') !== 'false' && localStorage.getItem('nibnext.gpuCanvas') !== '1') return view.getContext('2d', { desynchronized: true }); } catch { } return view.getContext('2d'); })();
 const mk = mkc;
 const hexRgb = h => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
 const el = (tag, props = {}, ...kids) => { const e = document.createElement(tag); for (const k in props) { if (k === 'class') e.className = props[k]; else if (k === 'text') e.textContent = props[k]; else if (k.startsWith('on')) e[k] = props[k]; else e.setAttribute(k, props[k]); } e.append(...kids); return e; };
@@ -9031,7 +9031,7 @@ var GPUV = (() => {
   let onionUp = '', onT = { p: null, n: null };
   let compVer = 0, mipVer = -1, R = null; // R: the rect being recomposed (null = all)
   let settleT = 0, settling = false, verSeen = -1;
-  const pref = () => { try { return localStorage.getItem('nibnext.gpuCanvas') !== '0'; } catch { return true; } };
+  const pref = () => { try { return localStorage.getItem('nibnext.gpuCanvas') === '1'; } catch { return false; } };
 
   const VS_QUAD = `#version 300 es
   in vec2 p; out vec2 uv; void main(){ uv = p; gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0); }`;
