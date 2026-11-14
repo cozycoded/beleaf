@@ -1040,6 +1040,14 @@ body,button,select,input,textarea{letter-spacing:var(--ls,0);word-spacing:var(--
 .szimgs canvas{display:block}
 .szchat{display:flex;align-items:center;gap:4px;font-size:13px;line-height:28px}
 .result-view[data-bg="checker"] .exitem figcaption{color:#333}
+/* resting a floating window over a spot: a ring fills in, then it will dock there when you let go */
+.dwell{position:fixed;z-index:320;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;pointer-events:none;background:conic-gradient(var(--accent) 0 0,transparent 0);border:2px solid color-mix(in srgb,var(--accent) 40%,transparent);animation:dwellfill .55s linear forwards}
+.dwell.done{animation:none;background:var(--accent);opacity:.8;width:14px;height:14px;margin:-7px 0 0 -7px}
+@property --dw{syntax:'<angle>';inherits:false;initial-value:0deg}
+.dwell{background:conic-gradient(var(--accent) var(--dw),transparent var(--dw))}
+@keyframes dwellfill{to{--dw:360deg}}
+/* title bars never get text-selected or tap-highlighted while you grab them */
+.fbar,.ph,.sec-h,.tabstrip,.ptab{user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
 .dropline{position:fixed;height:3px;background:var(--accent);border-radius:2px;z-index:300;pointer-events:none;box-shadow:0 0 0 1px var(--panel)}
 .lgrip{display:grid;place-items:center;width:calc(16px*var(--iz,1));align-self:stretch;flex-shrink:0;color:var(--dim);cursor:grab;touch-action:none;border-radius:6px}
 .lgrip svg{width:calc(8px*var(--iz,1));height:calc(13px*var(--iz,1));fill:currentColor}
@@ -6669,15 +6677,34 @@ document.addEventListener('pointerdown', e => {
   const win = u.closest('.fwin'), r = (win || u).getBoundingClientRect(), g0 = groupOf(u.dataset.unit);
   pdrag = { u, id: u.dataset.unit, win, group: bar ? g0 : null, x0: e.clientX, y0: e.clientY, ox: e.clientX - r.left, oy: e.clientY - r.top, started: false, target: null, before: null };
 }, true);
-document.addEventListener('pointermove', e => {
-  const d = pdrag; if (!d) return;
+const DWELL_MS = 550;
+// which place the pointer is resting on: another panel's title (to join as a tab) or a column (to dock)
+function spotKey(under, y) {
+  if (!under) return '';
+  const hd = under.closest('.ph, .sec-h, .tabstrip, .fbar');
+  if (hd) { const tu = hd.matches('.tabstrip') ? hd.dataset.lead : hd.matches('.fbar') ? (hd.parentElement.querySelector('[data-unit]') || {}).dataset?.unit : (hd.closest('[data-unit]') || {}).dataset?.unit; if (tu) return 'tab:' + tu; }
+  const dk = under.closest('.dock[data-dock]'); return dk && dk.dataset.mini !== '1' ? 'dock:' + dk.dataset.dock : '';
+}
+document.addEventListener('pointermove', e => pdragMove(e));
+function pdragMove(e) {
+  const d = pdrag; if (!d || !e) return;
   if (!d.started) { if (Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 7) return; d.started = true; app.dataset.dragging = '1'; if (!d.win) { d.ghost = el('div', { class: 'dghost', text: d.group ? d.group.ids.map(x => UNITS[x][1]).join(' · ') : UNITS[d.id][1] }); document.body.append(d.ghost); } d.line = el('div', { class: 'dropline', hidden: '' }); document.body.append(d.line); if (d.win) d.win.style.zIndex = 31 + (++zTop % 50); }
-  e.preventDefault();
+  if (e.preventDefault) e.preventDefault();
   if (d.ghost) { d.ghost.style.left = e.clientX + 12 + 'px'; d.ghost.style.top = e.clientY + 10 + 'px'; }
   if (d.win) { const wr = $('.work').getBoundingClientRect(); d.win.style.left = (e.clientX - wr.left - d.ox) + 'px'; d.win.style.top = Math.max(0, e.clientY - wr.top - d.oy) + 'px'; d.win.style.pointerEvents = 'none'; }
   const under = document.elementFromPoint(e.clientX, e.clientY), dk = under && under.closest('.dock[data-dock]');
-  $$('.dock.drop-on').forEach(x => x.classList.toggle('drop-on', x === dk));
   d.target = null; d.before = null; d.line.hidden = true; d.tabInto = null; $$('.tab-drop').forEach(x => x.classList.remove('tab-drop'));
+  // a floating window just moves: it only docks or joins as a tab if you rest it over the spot for a moment
+  // (holding Shift or Ctrl while dragging never docks)
+  if (d.win) {
+    const key = e.shiftKey || e.ctrlKey || e.metaKey ? '' : spotKey(under, e.clientY);
+    if (key !== d.spot) { d.spot = key; d.spotT = performance.now(); clearTimeout(d.dwellT); if (d.ring) d.ring.remove(); d.ring = null; d.armed = false;
+      if (key) { d.ring = el('div', { class: 'dwell' }); document.body.append(d.ring); d.dwellT = setTimeout(() => { if (pdrag === d && d.spot === key) { d.armed = true; if (d.ring) d.ring.classList.add('done'); try { navigator.vibrate && navigator.vibrate(8); } catch { } pdragMove(d.lastE); } }, DWELL_MS); } }
+    if (d.ring) { d.ring.style.left = e.clientX + 'px'; d.ring.style.top = e.clientY + 'px'; }
+    d.lastE = { clientX: e.clientX, clientY: e.clientY, shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey };
+    if (!d.armed) { $$('.dock.drop-on').forEach(x => x.classList.remove('drop-on')); return; }
+  }
+  $$('.dock.drop-on').forEach(x => x.classList.toggle('drop-on', x === dk));
   // over another panel's title bar or tab strip: join it as a tab
   const hd = under && under.closest('.ph, .sec-h, .tabstrip, .fbar'), tu = hd && (hd.matches('.tabstrip') ? unitEl(hd.dataset.lead) : hd.matches('.fbar') ? hd.parentElement.querySelector('[data-unit]') : hd.closest('[data-unit]'));
   const mine = d.group ? d.group.ids : [d.id];
@@ -6690,9 +6717,9 @@ document.addEventListener('pointermove', e => {
     const br = (d.before || kids[kids.length - 1] || body).getBoundingClientRect(), y = d.before ? br.top : kids.length ? br.bottom : br.top + 4, dr = dk.getBoundingClientRect();
     Object.assign(d.line.style, { left: dr.left + 6 + 'px', width: dr.width - 12 + 'px', top: y - 1 + 'px' }); d.line.hidden = false;
   }
-});
+}
 function endPanelDrag(e, cancel) {
-  const d = pdrag; pdrag = null; if (!d || !d.started) return;
+  const d = pdrag; pdrag = null; if (!d) return; clearTimeout(d.dwellT); if (d.ring) d.ring.remove(); if (!d.started) return;
   app.dataset.dragging = ''; if (d.ghost) d.ghost.remove(); d.line.remove(); $$('.dock.drop-on').forEach(x => x.classList.remove('drop-on')); $$('.tab-drop').forEach(x => x.classList.remove('tab-drop'));
   if (d.win) d.win.style.pointerEvents = '';
   window.addEventListener('click', ev => { ev.stopPropagation(); ev.preventDefault(); }, { capture: true, once: true });
@@ -7781,14 +7808,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.13-0701' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.13-1943' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.13-0701';
+const BELEAF_BUILD = '2026.11.13-1943';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
