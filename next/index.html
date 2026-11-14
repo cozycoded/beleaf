@@ -1731,6 +1731,15 @@ html,body{overscroll-behavior:none} /* no pull-to-refresh or swipe-back bounce w
 .layer .lmask{flex-shrink:0;align-self:center;border-radius:3px;border:2px solid transparent;background:#000;margin-left:-2px;cursor:pointer;width:auto;height:calc(var(--lth,30px));max-height:30px;aspect-ratio:auto}
 .layer .lmask.on{border-color:var(--accent)}
 .layer .lmask.off{opacity:.45;outline:1px dashed var(--muted)}
+
+/* small tool windows for rulers, correction layers and vector lines */
+.nfwin .btnrow{display:flex;flex-wrap:wrap;gap:6px}
+.nfwin .nf-field{display:flex;flex-direction:column;gap:5px;font-size:calc(13px*var(--fz,1))}
+.nfwin .nf-seg{display:flex;flex-wrap:wrap;gap:3px}
+.nfwin .nf-seg button{flex:1 1 auto;min-height:32px;padding:0 10px;border-radius:7px;border:1px solid var(--line);background:var(--panel-2);color:var(--fg2);font-size:calc(12px*var(--fz,1))}
+.nfwin .nf-seg button[aria-checked="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.nfwin select{height:34px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:0 8px;color:var(--fg);font:inherit}
+.nfwin .note{margin:0}
 </style>
 
 <div class="app" id="app" data-open="" data-timeline="" data-quick="on" data-dl="open" data-dr="open">
@@ -2985,7 +2994,7 @@ function newLayer(name, fill) {
 }
 function newAnimLayer(name) { return { id: uid++, name, kind: 'anim', cels: Array(anim.n).fill(null), visible: true, opacity: 1, blend: 'source-over', ...FLAGS }; }
 const surfAt = (L, f) => L.kind === 'anim' ? L.cels[f] : L.s;
-function editSurf(L) { if (L.maskEdit && L.mask) return L.mask; if (L.kind !== 'anim') return L.s; return L.cels[anim.cur] || (L.cels[anim.cur] = newSurface()); }
+function editSurf(L) { if (L.maskEdit && L.mask) return L.mask; if (L.vec && !vecOK) vecToRaster(L, 'That tool works on pixels, so this vector layer became a normal layer'); if (L.kind !== 'anim') return L.s; return L.cels[anim.cur] || (L.cels[anim.cur] = newSurface()); }
 const hasAnim = () => layers.some(L => L.kind === 'anim');
 
 /* ================= brushes ================= */
@@ -3401,7 +3410,7 @@ function srcOf(L, i, f, exp) {
     clipCtx(tctx); tctx.globalCompositeOperation = 'source-over'; tctx.globalAlpha = 1; tctx.clearRect(0, 0, DOC.w, DOC.h);
     if (stroking.S) tctx.drawImage(stroking.S.c, 0, 0);
     tctx.globalAlpha = stroking.b.opacity / 100; tctx.globalCompositeOperation = stroking.erase ? 'destination-out' : (L.lockAlpha ? 'source-atop' : 'source-over');
-    tctx.drawImage(masked(eng.out), 0, 0); tctx.globalAlpha = 1; tctx.globalCompositeOperation = 'source-over'; src = tmp;
+    drawStrokeOut(tctx, masked(eng.out)); tctx.globalAlpha = 1; tctx.globalCompositeOperation = 'source-over'; src = tmp;
   }
   return src;
 }
@@ -3455,7 +3464,7 @@ function rotChip() {
 function render() {
   needs = false;
   let t0 = performance.now();
-  if (stroking && strokeFlush) { strokeFlush = false; dirtyRect(eng.flush()); }
+  if (stroking && strokeFlush) { strokeFlush = false; const fr = eng.flush(); if (fr && stroking.sym && stroking.sym.length) dirty(); else dirtyRect(fr); }
   if (stroking) { PERF.time('brush', brushMs + performance.now() - t0); brushMs = 0; }
   t0 = performance.now();
   if (GPUV.on && (compDirty || compRect)) { GPUV.compose(compDirty ? null : compRect); compDirty = false; compRect = null; PERF.time('composite', performance.now() - t0); GPUV.navSoon(); }
@@ -3525,7 +3534,8 @@ function beginStroke(x, y, p, tilt, az) {
   if (L.kind === 'folder' || ancestors(L).some(F => !F.visible || F.locked)) { editable(L); return null; }
   if (!L.visible) { toast('This layer is hidden'); return null; }
   if (L.locked) { toast('This layer is locked'); return null; }
-  const S = L.maskEdit && L.mask ? L.mask : erase && L.kind === 'anim' ? L.cels[anim.cur] : editSurf(L);
+  if (L.vec && !(L.maskEdit && L.mask) && (tool === 'blend' || b.blendOnly)) { toast('Blending works on normal layers, not vector layers'); return null; }
+  vecOK = true; const S = L.maskEdit && L.mask ? L.mask : erase && L.kind === 'anim' ? L.cels[anim.cur] : editSurf(L); vecOK = false;
   let sample = null;
   if (b.mix > 0 && !erase && S) {
     const W = DOC.w, H = DOC.h, data = S.ctx.getImageData(0, 0, W, H).data;
@@ -3545,7 +3555,7 @@ function beginStroke(x, y, p, tilt, az) {
   }
   const opts = { color: hexRgb(color.hex), erase, sample, seed: (Math.random() * 1e9) | 0, gpu: true };
   eng.begin(b, opts);
-  stroking = { b, eb: b, opts, erase, S, L }; strokeInit(stroking, b0);
+  stroking = { b, eb: b, opts, erase, S, L, sym: symList() }; strokeInit(stroking, b0);
   strokeAdd(x, y, p, tilt, az); strokeFlush = true; interacting(); dirty(false); return stroking;
 }
 function endStroke(cancel) { const t0 = performance.now(); try { endStroke0(cancel); } finally { PERF.time('pen up', performance.now() - t0); } }
@@ -3553,15 +3563,16 @@ function endStroke0(cancel) {
   const s = stroking; if (!s) return; stroking = null;
   prevBox(s);
   if (cancel || !s.S) { eng.reset(); dirty(); return; }
+  if (s.L.vec && s.erase && s.S === s.L.s) { eng.reset(); try { vecEraseStroke(s); } catch (e) { console.warn(e); } dirty(); return; }
   stroking = s; try { strokePost(s); } catch (e) { console.warn(e); } stroking = null;
   eng.end();
   const bx = eng.box; if (!bx) { eng.reset(); dirty(); return; }
-  const S = s.S, x0 = Math.max(0, bx[0]), y0 = Math.max(0, bx[1]), x1 = Math.min(DOC.w, bx[2]), y1 = Math.min(DOC.h, bx[3]);
+  const S = s.S, full = s.sym && s.sym.length, x0 = full ? 0 : Math.max(0, bx[0]), y0 = full ? 0 : Math.max(0, bx[1]), x1 = full ? DOC.w : Math.min(DOC.w, bx[2]), y1 = full ? DOC.h : Math.min(DOC.h, bx[3]);
   if (x1 <= x0 || y1 <= y0) { eng.reset(); dirty(); return; }
   const before = S.ctx.getImageData(x0, y0, x1 - x0, y1 - y0);
   S.ctx.globalAlpha = s.b.opacity / 100; S.ctx.globalCompositeOperation = s.erase ? 'destination-out' : (s.L.lockAlpha ? 'source-atop' : 'source-over');
-  S.ctx.drawImage(masked(eng.out), 0, 0); S.ctx.globalAlpha = 1; S.ctx.globalCompositeOperation = 'source-over';
-  record({ S, L: s.L, x0, y0, before, after: S.ctx.getImageData(x0, y0, x1 - x0, y1 - y0) });
+  drawStrokeOut(S.ctx, masked(eng.out), s.sym); S.ctx.globalAlpha = 1; S.ctx.globalCompositeOperation = 'source-over';
+  const ent = { S, L: s.L, x0, y0, before, after: S.ctx.getImageData(x0, y0, x1 - x0, y1 - y0) }; vecAfterStroke(s, ent); record(ent);
   eng.reset();
   if (!s.erase) pushRecent(color.hex);
   changed(s.L, [x0, y0, x1, y1]); interacting(); if (hover) hoverMove(hover);
@@ -3640,6 +3651,8 @@ function redo() { if (undoGuard && undoGuard('redo')) return; if (xform) return;
 function applyH(e, back) {
   if (e.kind === 'docsize') { applyDocsize(e, back); return; }
   if (e.kind === 'mask') { applyMaskH(e, back); return; }
+  if (e.kind === 'vec') { applyVecH(e, back); return; }
+  if (e.vec && e.vec.L.vec) e.vec.L.vec.strokes = back ? e.vec.prev : e.vec.next;
   if (e.sel) setSelCanvas(back ? e.sel.prev : e.sel.next);
   if (e.kind === 'sel') return;
   if (e.px) { e.px.S.ctx.putImageData(unpack(back ? e.px.before : e.px.after), 0, 0); markDirty(e.px.S); }
@@ -3749,12 +3762,13 @@ view.addEventListener('pointerdown', e => {
   if (xform) { xfDown(p, e); return; }
   const [dx, dy] = toDoc(p[0], p[1]);
   if (DOC.sheet) { const bi = boxAt(dx, dy, DOC.sheet, DOC.sheet.gap / 2); if (bi >= 0 && bi !== curBox) { curBox = bi; markEmote(); dirty(false); } }
+  if (rulerDown(dx, dy) || vecDown(dx, dy)) return;
   if (tool === 'select') { selDown(dx, dy, e); return; }
   if (tool === 'liquify') { liqBegin(dx, dy); return; }
   if (e.altKey || tool === 'picker') { pick(dx, dy); return; }
   if (tool === 'fill') { fill(dx, dy); return; }
   if (tool === 'text') { openText(dx, dy); return; }
-  if (tool === 'move' || tool === 'lasso' || tool === 'gradient') { startLive(tool, dx, dy); return; }
+  if (tool === 'move' || tool === 'lasso' || tool === 'gradient') { vecOK = tool === 'move'; try { startLive(tool, dx, dy); } finally { vecOK = false; } return; }
   if (layers[active].paper && tool !== 'eraser') toast('Paper layer selected. Pick or add a layer to draw on.');
   if (tool === 'line' || tool === 'rect' || tool === 'ellipse') { startShape(dx, dy); return; }
   beginStroke(dx, dy, pressureOf(e), tiltOf(e), azOf(e));
@@ -3766,6 +3780,7 @@ view.addEventListener('pointermove', e => {
   if (zdrag) { const ns = zdrag.s * Math.exp(-(p[1] - zdrag.y) / 160); if (Math.abs(p[1] - zdrag.y) > 4) zdrag.moved = true; zoomAt(ns / V.s, zdrag.x, zdrag.y); return; }
   if (rdrag) { const a = Math.atan2(p[1] - VH / 2, p[0] - VW / 2); let d = (rdrag.r0 + a - rdrag.a0) * 180 / Math.PI; const n = Math.round(d / 90) * 90; if (Math.abs(d - n) < 5) d = n; rotateTo(d); return; }
   if (xform && xform.drag) { xfMove(p, e); return; }
+  if (rulDrag || vecDrag) { const [dx, dy] = toDoc(p[0], p[1]); rulerMove(dx, dy) || vecMove(dx, dy); return; }
   if (selOp) { const [dx, dy] = toDoc(p[0], p[1]); selMove(dx, dy, e); return; }
   if (liqOp) { const [dx, dy] = toDoc(p[0], p[1]); liqMove(dx, dy); if (e.pointerType !== 'touch') hover = p; return; }
   if (xform && e.pointerType !== 'touch' && !e.buttons) view.style.cursor = XF_CURSOR[xfHit(p).k];
@@ -3785,6 +3800,7 @@ function up(e) {
   if (zdrag) { if (!zdrag.moved) zoomAt(zdrag.out ? .8 : 1.25, zdrag.x, zdrag.y); zdrag = null; return; }
   if (rdrag) { rdrag = null; return; }
   if (xform && xform.drag) { xform.drag = null; return; }
+  if (rulerUp() || vecUp()) return;
   if (selOp) { selUp(e.type === 'pointercancel'); return; }
   if (liqOp) { liqEnd(e.type === 'pointercancel'); return; }
   if (liveOp) { e.type === 'pointercancel' ? cancelLive() : commitLive(); return; }
@@ -3841,12 +3857,12 @@ function commitLive() {
   const before = op.S.ctx.getImageData(0, 0, DOC.w, DOC.h); op.apply(op.S.ctx);
   let selE = null;
   if (op.kind === 'move' && op.withSel && sel) { const m = blankMask(), prev = sel.c; m.getContext('2d').drawImage(sel.c, op.dx, op.dy); setSelCanvas(m); selE = { prev, next: sel ? sel.c : null }; }
-  record({ S: op.S, L: op.L, x0: 0, y0: 0, before, after: op.S.ctx.getImageData(0, 0, DOC.w, DOC.h), sel: selE });
+  const ent = { S: op.S, L: op.L, x0: 0, y0: 0, before, after: op.S.ctx.getImageData(0, 0, DOC.w, DOC.h), sel: selE }; if (op.kind === 'move') vecAfterMove(op, ent); record(ent);
   if (op.kind !== 'move') pushRecent(color.hex); changed(op.L);
 }
 function cancelLive() { liveOp = null; dirty(); }
 function drawOverlay(x) {
-  drawSelOverlay(x); drawStrokePreview(x);
+  drawSelOverlay(x); drawStrokePreview(x); drawRulers(x); vecOverlay(x);
   if (liveOp && liveOp.kind === 'lasso') { x.save(); x.beginPath(); liveOp.pts.forEach(([a, b], i) => { const [sx, sy] = toScreen(a, b); i ? x.lineTo(sx, sy) : x.moveTo(sx, sy); }); x.closePath(); x.setLineDash([5, 4]); x.lineWidth = 1.5; x.strokeStyle = '#000'; x.stroke(); x.lineDashOffset = 5; x.strokeStyle = '#fff'; x.stroke(); x.restore(); }
   if (liveOp && liveOp.kind === 'gradient') { const [a, b] = toScreen(liveOp.x0, liveOp.y0), [c, d] = toScreen(liveOp.x1, liveOp.y1); x.save(); x.lineWidth = 2; x.strokeStyle = '#fff'; x.shadowColor = 'rgba(0,0,0,.6)'; x.shadowBlur = 3; x.beginPath(); x.moveTo(a, b); x.lineTo(c, d); x.stroke(); [[a, b], [c, d]].forEach(([px, py]) => { x.beginPath(); x.arc(px, py, 5, 0, 7); x.fillStyle = '#fff'; x.fill(); }); x.restore(); }
 }
@@ -4981,6 +4997,7 @@ function renderList(ctx, idxs, f, o, depth, tree, onion) {
     const i = idxs[n], L = layers[i]; if (onion && !L.paper) onion();
     let m = n + 1; const clips = []; while (m < idxs.length && layers[idxs[m]].clip) clips.push(idxs[m++]);
     if (!shows(L, o)) { n = m; continue; }
+    if (L.adj) { corrRender(ctx, L, depth); n = m; continue; }
     const vis = clips.filter(k => shows(layers[k], o));
     if (L.kind === 'folder' && L.blend === 'pass' && L.opacity >= 1 && !vis.length && !L.mask) { renderList(ctx, tree.get(L.id) || [], f, o, depth, tree, onion); n = m; continue; }
     let base = L.kind === 'folder' ? renderFolder(L, f, o, depth, tree) : srcOf(L, i, f, o.exp);
@@ -5124,6 +5141,7 @@ async function serialize(t, keyFn = surfKey) {
   const L = [];
   for (const x of t.layers) {
     const m = { id: x.id, name: x.name, kind: x.kind || 'raster', visible: x.visible, opacity: x.opacity, blend: x.blend, parent: x.parent || null, color: x.color || null, open: x.open, paper: !!x.paper, clip: !!x.clip, lockAlpha: !!x.lockAlpha, locked: !!x.locked, ref: !!x.ref, draft: !!x.draft };
+    if (x.adj) m.adj = x.adj; if (x.vec) m.vec = { strokes: x.vec.strokes, brushes: x.vec.brushes };
     if (x.mask) { m.mask = await keyFn(x.mask); m.maskOn = x.maskOn !== false; }
     if (x.kind === 'anim') { m.cels = []; for (const c of x.cels) m.cels.push(c ? await keyFn(c) : null); } else if (x.kind !== 'folder') m.s = await keyFn(x.s);
     L.push(m);
@@ -5172,6 +5190,8 @@ async function deserialize(rec, asCopy, src) {
     const L = { ...FLAGS, id: idMap.get(m.id), name: m.name, kind: m.kind, visible: m.visible, opacity: m.opacity, blend: m.blend, parent: m.parent ? idMap.get(m.parent) : null, color: m.color, open: m.open !== false, paper: m.paper, clip: m.clip, lockAlpha: m.lockAlpha, locked: m.locked, ref: m.ref, draft: m.draft };
     if (m.kind === 'anim') { L.cels = []; for (const k of m.cels) L.cels.push(k ? await surfFrom(k, src) : null); } else if (m.kind !== 'folder') { L.kind = 'raster'; L.s = await surfFrom(m.s, src); }
     if (m.mask) { L.mask = await surfFrom(m.mask, src); L.maskOn = m.maskOn !== false; }
+    if (m.adj) { L.adj = JSON.parse(JSON.stringify(m.adj)); L.maskEdit = true; if (!L.mask) { const sw = DOC.w, sh = DOC.h; L.mask = maskNew(true); } }
+    if (m.vec) L.vec = { strokes: m.vec.strokes || [], brushes: m.vec.brushes || [] };
     if (asCopy) { [...(L.cels || [L.s]), L.mask].forEach(S => S && (S._dirty = true)); }
     out.push(L);
   }
@@ -6104,8 +6124,9 @@ const IC = {
   draft: '<svg class="ic" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z"/></svg>',
 };
 function thumb(L) { const c = $(`canvas[data-lid="${L.id}"]`); if (!c) return; const x = c.getContext('2d'); x.clearRect(0, 0, c.width, c.height); const S = surfAt(L, anim.cur); if (S) x.drawImage(S.c, 0, 0, c.width, c.height);
+  if (L.adj) { const g = x.createLinearGradient(0, 0, c.width, 0); g.addColorStop(0, '#222'); g.addColorStop(.5, '#B26BFF'); g.addColorStop(1, '#fff'); x.fillStyle = g; x.fillRect(0, 0, c.width, c.height); }
   const m = L.mask && $(`canvas[data-mid="${L.id}"]`); if (m) { const g = m.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, m.width, m.height); g.drawImage(L.mask.c, 0, 0, m.width, m.height); } }
-const layerMeta = L => L.kind === 'folder' ? `Folder · ${L.blend === 'pass' ? 'Through' : blendName(L.blend)} · ${Math.round(L.opacity * 100)}%` : (L.kind === 'anim' ? `Animation · ${L.cels.filter(Boolean).length}/${anim.n} frames · ` : '') + `${blendName(L.blend)} · ${Math.round(L.opacity * 100)}%` + (L.draft ? ' · draft' : '');
+const layerMeta = L => L.adj ? `Correction · ${Math.round(L.opacity * 100)}%` : L.kind === 'folder' ? `Folder · ${L.blend === 'pass' ? 'Through' : blendName(L.blend)} · ${Math.round(L.opacity * 100)}%` : (L.kind === 'anim' ? `Animation · ${L.cels.filter(Boolean).length}/${anim.n} frames · ` : '') + (L.vec ? 'Vector · ' : '') + `${blendName(L.blend)} · ${Math.round(L.opacity * 100)}%` + (L.draft ? ' · draft' : '');
 function refreshLayerMeta(L) { const c = $(`canvas[data-lid="${L.id}"]`); const sm = c && c.parentElement.querySelector('small'); if (sm) sm.textContent = layerMeta(L); }
 function buildLayers() {
   const ul = $('#llist'), lsc = ul.parentElement, lst = lsc.scrollTop; ul.replaceChildren();
@@ -6125,11 +6146,12 @@ function buildLayers() {
     if (L.mask) { mpic = el('canvas', { class: 'lmask' + (L.maskEdit ? ' on' : '') + (L.maskOn === false ? ' off' : ''), width: Math.round(tw / 2), height: Math.round(th / 2), 'data-mid': L.id, title: 'Layer mask: tap to paint the mask or the layer; hold Shift (or double-tap) to turn it off/on' });
       mpic.addEventListener('click', ev => { ev.stopPropagation(); if (ev.shiftKey || ev.altKey) { active = i; maskOnToggle(L); return; } active = i; maskEditToggle(L, !L.maskEdit || layers[active] !== L ? true : false); });
       mpic.addEventListener('dblclick', ev => { ev.stopPropagation(); maskOnToggle(L); }); }
-    const sel = el('button', { class: 'sel', 'aria-label': 'Select ' + L.name, onclick: () => { active = i; buildLayers(); }, ondblclick: () => renameLayer(i) }, ...(fold ? [meta, flags] : [pic, ...(mpic ? [mpic] : []), meta, flags]));
+    const sel = el('button', { class: 'sel', 'aria-label': 'Select ' + L.name, onclick: () => { active = i; buildLayers(); }, ondblclick: () => L.adj ? (active = i, corrOpen()) : renameLayer(i) }, ...(fold ? [meta, flags] : [pic, ...(mpic ? [mpic] : []), meta, flags]));
     const grip = el('span', { class: 'lgrip', title: 'Drag to reorder (or hold the layer, then drag)' }); grip.innerHTML = '<svg viewBox="0 0 10 16" aria-hidden="true"><circle cx="3" cy="3" r="1.3"/><circle cx="7" cy="3" r="1.3"/><circle cx="3" cy="8" r="1.3"/><circle cx="7" cy="8" r="1.3"/><circle cx="3" cy="13" r="1.3"/><circle cx="7" cy="13" r="1.3"/></svg>';
     if (fold) li.append(eye, pic, sel, grip); else li.append(eye, sel, grip); ul.append(li); if (!fold) thumb(L);
   });
   lsc.scrollTop = lst;
+  if (layers.some(L => L.mask || L.adj)) needCPU('masks and correction layers');
   const A = layers[active], isF = A.kind === 'folder';
   $('#blend').replaceChildren(...(isF ? [['pass', 'Through']] : []).concat(BLENDS).map(([v, t]) => el('option', { value: v, text: t })));
   $('#blend').value = A.blend; $('#lOp').value = Math.round(A.opacity * 100); $('#oLOp').value = Math.round(A.opacity * 100) + '%';
@@ -6153,6 +6175,8 @@ function mergeDown() {
   if (active === 0) return; const top = layers[active], bot = layers[active - 1];
   if (top.kind === 'folder' || bot.kind === 'folder' || top.parent !== bot.parent) { toast('Merge down works on two layers next to each other in the same folder'); return; }
   if (top.kind === 'anim' || bot.kind === 'anim') { toast('Merging works on regular layers for now'); return; }
+  if (top.adj || bot.adj) { toast('Correction layers can’t be merged: they change what’s under them live'); return; }
+  if (bot.vec) { bot.vec = null; toast('The lower layer became a normal layer (merged pixels can’t stay as vector lines)'); }
   const before = bot.s.ctx.getImageData(0, 0, DOC.w, DOC.h);
   bot.s.ctx.globalAlpha = top.opacity; bot.s.ctx.globalCompositeOperation = top.clip ? 'source-atop' : top.blend; bot.s.ctx.drawImage(top.mask && top.maskOn !== false ? maskedCopy(top) : top.s.c, 0, 0); bot.s.ctx.globalAlpha = 1; bot.s.ctx.globalCompositeOperation = 'source-over';
   const after = bot.s.ctx.getImageData(0, 0, DOC.w, DOC.h), prev = layers.slice(), pa = active;
@@ -7890,14 +7914,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.13-1951' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.13-2005' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.13-1951';
+const BELEAF_BUILD = '2026.11.13-2005';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
@@ -8642,6 +8666,7 @@ function strokeAdd(x, y, p, tilt, az) {
     if (s.hx == null) { s.hx = x; s.hy = y; s.hp = p; } else { s.hx = s.hx * k + x * (1 - k); s.hy = s.hy * k + y * (1 - k); s.hp = s.hp * k * .6 + p * (1 - k * .6); }
     s.pen = [x, y]; x = s.hx; y = s.hy; p = s.hp; prevBox(s);
   }
+  const rs = rulerSnap(s, x, y); if (!rs) return; x = rs[0]; y = rs[1];
   s.pts.push([x, y, p, tilt, az, t]);
   eng.add(x, y, p, tilt, az, t);
 }
@@ -8688,7 +8713,7 @@ function postCorrect(pts, s) {
 function strokePost(s) {
   if (!(s.post > 0) || !s.pts || s.pts.length < 4 || !s.opts) return;
   const t0 = performance.now(), P = postCorrect(s.pts, s); if (P === s.pts) return;
-  eng.reset(); eng.begin(s.eb, s.opts); for (const q of P) eng.add(q[0], q[1], q[2], q[3], q[4], q[5]);
+  eng.reset(); eng.begin(s.eb, s.opts); for (const q of P) eng.add(q[0], q[1], q[2], q[3], q[4], q[5]); s.pts = P;
   PERF.time('post correction', performance.now() - t0);
 }
 
@@ -8735,8 +8760,10 @@ function resizeDoc(nw, nh, o) {
     }
     return { c, ctx: g };
   });
-  const e = { kind: 'docsize', surfs, olds, news, from: [DOC.w, DOC.h, DOC.dpi || 72], to: [nw, nh, o.dpi || DOC.dpi || 72], how: o.scale ? 'scale' : 'canvas' };
-  applyDocsize(e, false); record(e);
+  const kx = nw / DOC.w, ky = nh / DOC.h, kk = Math.sqrt(kx * ky);
+  const vecs = same ? [] : layers.filter(L => L.vec).map(L => ({ L, prev: L.vec.strokes, next: L.vec.strokes.map(st => Object.assign({}, st, o.scale ? { w: (st.w || 1) * kk, pts: st.pts.map(q => [q[0] * kx, q[1] * ky, q[2], q[3], q[4], q[5]]) } : { pts: st.pts.map(q => [q[0] + Math.round(o.ox), q[1] + Math.round(o.oy), q[2], q[3], q[4], q[5]]) })) }));
+  const e = { kind: 'docsize', vecs, surfs, olds, news, from: [DOC.w, DOC.h, DOC.dpi || 72], to: [nw, nh, o.dpi || DOC.dpi || 72], how: o.scale ? 'scale' : 'canvas' };
+  applyDocsize(e, false); if (o.scale) vecs.forEach(v => { try { vecRender(v.L); } catch (er) { console.warn(er); } }); record(e);
   // count the kept pictures toward the undo memory limit
   const b = olds.reduce((n, x) => n + x.c.width * x.c.height, 0); e._b = b; histBytes += b;
   while (history.length > 1 && histBytes > HIST_MAX) histBytes -= history.shift()._b || 0;
@@ -8744,6 +8771,7 @@ function resizeDoc(nw, nh, o) {
 function applyDocsize(e, back) {
   const [w, h, dpi] = back ? e.from : e.to, set = back ? e.olds : e.news, ow = DOC.w;
   e.surfs.forEach((S, i) => { S.c = set[i].c; S.ctx = set[i].ctx; markDirty(S); });
+  (e.vecs || []).forEach(v => { if (v.L.vec) v.L.vec.strokes = back ? v.prev : v.next; });
   DOC.dpi = dpi;
   if (w !== DOC.w || h !== DOC.h) {
     const VS = { ...V };
@@ -8991,7 +9019,7 @@ function batchDelete(kind) {
   const kill = new Set();
   if (kind === 'hidden') { layers.forEach(L => { if (!L.visible) kill.add(L); }); layers.forEach(L => { if (under(L, kill)) kill.add(L); }); }
   else {
-    layers.forEach(L => { if (L.kind === 'folder' || L.paper) return; if (L.kind === 'anim' ? L.cels.every(surfEmpty) : surfEmpty(L.s)) kill.add(L); });
+    layers.forEach(L => { if (L.kind === 'folder' || L.paper || L.adj) return; if (L.kind === 'anim' ? L.cels.every(surfEmpty) : surfEmpty(L.s)) kill.add(L); });
     // a folder left with nothing inside goes too
     let more = true; while (more) { more = false; layers.forEach(F => { if (F.kind === 'folder' && !kill.has(F) && !layers.some(L => L.parent === F.id && !kill.has(L))) { kill.add(F); more = true; } }); }
   }
@@ -9006,6 +9034,140 @@ function batchDelete(kind) {
   MENUS.layer.splice(i + 1, 0, ['Delete empty layers', '', () => batchDelete('empty')], ['Delete hidden layers', '', () => batchDelete('hidden')]);
 }
 
+/* ================= small floating tool windows for the newer features (they follow the layout like Adjust) ================= */
+function nfWin(id, title, key) {
+  const win = el('div', { class: 'adjwin nfwin', id, hidden: '', role: 'dialog', 'aria-label': title });
+  const ttl = el('span', { text: title }), bar = el('div', { class: 'fbar adj-bar' }, ttl), x = el('button', { class: 'ibtn sm', 'aria-label': 'Close ' + title, title: 'Close' }); x.innerHTML = IC_X; x.onclick = () => { win.hidden = true; };
+  const body = el('div', { class: 'adj-body' }); bar.append(minBtn(win, title), x); win.append(bar, body); $('#detailWin').after(win);
+  makeAdaptive(win, { key, bar, minW: 250, minH: 150, def: (m, b) => {
+    if (m === 'float') { const w = Math.min(330, Math.round((b.right - b.left) * .88)); return { x: b.left + 8, y: b.bottom - 340, w, h: 320 }; }
+    return { x: b.left + 16, y: b.top + 16, w: 330, h: Math.min(430, b.bottom - b.top - 32) }; } });
+  return { win, body, ttl, show() { win.hidden = false; }, hide() { win.hidden = true; } };
+}
+function nfRange(label, min, max, val, unit, on, step = 1) {
+  const id = 'nf' + Math.random().toString(36).slice(2, 8), r = el('input', { type: 'range', id, min, max, step }), n = el('input', { type: 'number', class: 'num', min, max, step, 'aria-label': label + (unit ? ` (${unit})` : '') });
+  r.value = val; n.value = val; r.oninput = () => { n.value = r.value; on(+r.value); }; n.onchange = () => { const v = Math.max(min, Math.min(max, +n.value || 0)); n.value = v; r.value = v; on(v); };
+  return el('div', { class: 'adj-row' }, el('label', { for: id, text: label }), r, n);
+}
+function nfSeg(label, opts, val, on) {
+  const row = el('div', { class: 'seg nf-seg', role: 'radiogroup', 'aria-label': label });
+  const paint = v => [...row.children].forEach(b => b.setAttribute('aria-checked', String(b.dataset.v === String(v))));
+  opts.forEach(([v, t]) => row.append(el('button', { type: 'button', role: 'radio', 'data-v': v, text: t, onclick: () => { paint(v); on(v); } }))); paint(val);
+  return el('div', { class: 'nf-field' }, el('span', { class: 'flabel', text: label }), row);
+}
+function nfCheck(label, val, on) { const i = el('input', { type: 'checkbox' }); i.checked = !!val; i.onchange = () => on(i.checked); return el('label', { class: 'adj-row check' }, el('span', { text: label }), i); }
+// the GPU canvas doesn't know masks, correction layers or symmetry yet: those use the normal canvas
+function needCPU(what) { try { if (typeof GPUV !== 'undefined' && GPUV.on) { GPUV.set(false); toast(`GPU canvas turned off: ${what} use the normal canvas for now`); } } catch { } }
+
+/* ================= rulers: symmetry, parallel lines, focus lines, circles and perspective =================
+   Symmetry repeats what you draw around a centre, live. The other rulers make freehand strokes follow a guide:
+   one direction (parallel), toward a point (focus lines), around a point (circles), or toward vanishing points
+   (perspective: the stroke follows whichever point you start drawing toward). */
+const RUL = Object.assign({ type: 'off', n: 2, mirror: true, ang: 90, cx: .5, cy: .5, pang: 0, vpn: 2, vps: [[-.4, .45], [1.4, .45], [.5, -1.2]], edit: false, snap: true }, store.get('ruler', {}));
+const rulSave = () => { store.set('ruler', RUL); dirty(false); };
+const rulC = () => [RUL.cx * DOC.w, RUL.cy * DOC.h];
+const symOn = () => NEXTF && RUL.type === 'sym' && !DOC.placeholder;
+// every extra copy symmetry makes: a turn, and maybe a flip across the mirror line
+function symList() {
+  if (!symOn()) return [];
+  const out = [], n = Math.max(1, RUL.n | 0), [cx, cy] = rulC(), a0 = RUL.ang * Math.PI / 180;
+  for (let k = 0; k < n; k++) { const rot = k * 2 * Math.PI / n; if (k) out.push({ cx, cy, rot, mir: null }); if (RUL.mirror) out.push({ cx, cy, rot, mir: a0 }); }
+  return out;
+}
+function xfApply(g, t) { g.translate(t.cx, t.cy); g.rotate(t.rot); if (t.mir != null) { g.rotate(t.mir); g.scale(1, -1); g.rotate(-t.mir); } g.translate(-t.cx, -t.cy); }
+function xfPoint(t, x, y) {
+  let px = x - t.cx, py = y - t.cy;
+  if (t.mir != null) { const c = Math.cos(-t.mir), s = Math.sin(-t.mir); let ax = px * c - py * s, ay = px * s + py * c; ay = -ay; const c2 = Math.cos(t.mir), s2 = Math.sin(t.mir); px = ax * c2 - ay * s2; py = ax * s2 + ay * c2; }
+  const c = Math.cos(t.rot), s = Math.sin(t.rot); return [t.cx + px * c - py * s, t.cy + px * s + py * c];
+}
+// draw the stroke being made (or just finished), plus its symmetric copies
+function drawStrokeOut(g, img, list) {
+  g.drawImage(img, 0, 0);
+  for (const t of list || (stroking && stroking.sym) || []) { g.save(); xfApply(g, t); g.drawImage(img, 0, 0); g.restore(); }
+}
+// make a freehand stroke follow the ruler; returns null while it's still working out which way you're going
+function rulerSnap(s, x, y) {
+  if (!NEXTF || !RUL.snap || RUL.type === 'off' || RUL.type === 'sym' || s.noRuler) return [x, y];
+  const r = s.rul || (s.rul = { x0: x, y0: y, dir: null });
+  if (RUL.type === 'circle') { const [cx, cy] = rulC(), R = Math.hypot(r.x0 - cx, r.y0 - cy), d = Math.hypot(x - cx, y - cy) || 1; return [cx + (x - cx) / d * R, cy + (y - cy) / d * R]; }
+  if (!r.dir) {
+    const dx = x - r.x0, dy = y - r.y0, d = Math.hypot(dx, dy); if (d < 5 / V.s) return (x === r.x0 && y === r.y0) ? [x, y] : null;
+    let cands = [];
+    if (RUL.type === 'par') { const a = RUL.pang * Math.PI / 180; cands = [[Math.cos(a), Math.sin(a)]]; }
+    else if (RUL.type === 'focus') { const [cx, cy] = rulC(), L = Math.hypot(cx - r.x0, cy - r.y0) || 1; cands = [[(cx - r.x0) / L, (cy - r.y0) / L]]; }
+    else if (RUL.type === 'persp') {
+      cands = RUL.vps.slice(0, RUL.vpn).map(([vx, vy]) => { const ax = vx * DOC.w - r.x0, ay = vy * DOC.h - r.y0, L = Math.hypot(ax, ay) || 1; return [ax / L, ay / L]; });
+      // with one or two points, straight up-and-down lines stay available (and side-to-side with one)
+      if (RUL.vpn < 3) cands.push([0, 1]); if (RUL.vpn < 2) cands.push([1, 0]);
+    }
+    let best = null, bs = -1; for (const c of cands) { const sc = Math.abs(dx * c[0] + dy * c[1]) / d; if (sc > bs) { bs = sc; best = c; } }
+    r.dir = best || [1, 0];
+  }
+  const t = (x - r.x0) * r.dir[0] + (y - r.y0) * r.dir[1]; return [r.x0 + r.dir[0] * t, r.y0 + r.dir[1] * t];
+}
+/* ---- the guides on screen, and moving them ---- */
+function rulHandles() {
+  if (RUL.type === 'off') return [];
+  if (RUL.type === 'persp') return RUL.vps.slice(0, RUL.vpn).map((v, i) => ({ k: 'vp' + i, x: v[0] * DOC.w, y: v[1] * DOC.h }));
+  if (RUL.type === 'par') return [];
+  return [{ k: 'c', x: RUL.cx * DOC.w, y: RUL.cy * DOC.h }];
+}
+function drawRulers(x) {
+  if (!NEXTF || RUL.type === 'off' || DOC.placeholder) return;
+  const acc = '#B26BFF', far = Math.hypot(DOC.w, DOC.h) * 3;
+  const ln = (a, b, c, d) => { const [p, q] = toScreen(a, b), [r, s] = toScreen(c, d); x.beginPath(); x.moveTo(p, q); x.lineTo(r, s); x.stroke(); };
+  x.save(); x.lineWidth = 1; x.strokeStyle = acc; x.globalAlpha = .75;
+  const [cx, cy] = rulC();
+  if (RUL.type === 'sym') {
+    const n = Math.max(1, RUL.n | 0), a0 = RUL.ang * Math.PI / 180;
+    for (let k = 0; k < n; k++) { const a = a0 + k * Math.PI / n * (RUL.mirror ? 1 : 2); x.setLineDash(RUL.mirror ? [] : [6, 5]); if (RUL.mirror) ln(cx - Math.cos(a) * far, cy - Math.sin(a) * far, cx + Math.cos(a) * far, cy + Math.sin(a) * far); else ln(cx, cy, cx + Math.cos(a) * far, cy + Math.sin(a) * far); }
+  } else if (RUL.type === 'par') {
+    const a = RUL.pang * Math.PI / 180, nx = -Math.sin(a), ny = Math.cos(a), gap = Math.max(DOC.w, DOC.h) / 8; x.setLineDash([8, 6]);
+    for (let k = -6; k <= 6; k++) { const ox = DOC.w / 2 + nx * gap * k, oy = DOC.h / 2 + ny * gap * k; ln(ox - Math.cos(a) * far, oy - Math.sin(a) * far, ox + Math.cos(a) * far, oy + Math.sin(a) * far); }
+  } else if (RUL.type === 'focus') { x.setLineDash([8, 6]); for (let k = 0; k < 24; k++) { const a = k * Math.PI / 12; ln(cx, cy, cx + Math.cos(a) * far, cy + Math.sin(a) * far); } }
+  else if (RUL.type === 'circle') { x.setLineDash([8, 6]); const [sx, sy] = toScreen(cx, cy); for (let k = 1; k <= 6; k++) { x.beginPath(); x.arc(sx, sy, k * Math.max(DOC.w, DOC.h) / 8 * V.s, 0, 7); x.stroke(); } }
+  else if (RUL.type === 'persp') {
+    const cols = ['#FF6B6B', '#4CC38A', '#5B9BFF'];
+    RUL.vps.slice(0, RUL.vpn).forEach(([vx, vy], i) => { x.strokeStyle = cols[i]; x.setLineDash([8, 6]); const px = vx * DOC.w, py = vy * DOC.h; for (let k = 0; k < 24; k++) { const a = k * Math.PI / 12; ln(px, py, px + Math.cos(a) * far, py + Math.sin(a) * far); } });
+    if (RUL.vpn === 2) { x.strokeStyle = acc; x.setLineDash([]); ln(RUL.vps[0][0] * DOC.w, RUL.vps[0][1] * DOC.h, RUL.vps[1][0] * DOC.w, RUL.vps[1][1] * DOC.h); }
+  }
+  x.setLineDash([]); x.globalAlpha = 1;
+  for (const h of rulHandles()) { const [sx, sy] = toScreen(h.x, h.y); x.beginPath(); x.arc(sx, sy, RUL.edit ? 11 : 5, 0, 7); x.fillStyle = RUL.edit ? acc : '#fff'; x.fill(); x.lineWidth = 2; x.strokeStyle = RUL.edit ? '#fff' : acc; x.stroke(); }
+  x.restore();
+}
+// while "Move the guide" is on, dragging on the canvas moves the nearest handle instead of drawing
+let rulDrag = null;
+function rulerDown(dx, dy) {
+  if (!NEXTF || !RUL.edit || RUL.type === 'off') return false;
+  const hs = rulHandles(); if (!hs.length) { toast('This ruler has no points to move: set its angle in the Ruler window'); return true; }
+  let best = hs[0], bd = 1e18; for (const h of hs) { const d = Math.hypot(h.x - dx, h.y - dy); if (d < bd) { bd = d; best = h; } }
+  rulDrag = best.k; rulerMove(dx, dy); return true;
+}
+function rulerMove(dx, dy) {
+  if (!rulDrag) return false;
+  if (rulDrag === 'c') { RUL.cx = dx / DOC.w; RUL.cy = dy / DOC.h; } else RUL.vps[+rulDrag.slice(2)] = [dx / DOC.w, dy / DOC.h];
+  dirty(false); return true;
+}
+function rulerUp() { if (!rulDrag) return false; rulDrag = null; rulSave(); return true; }
+/* ---- the Ruler window ---- */
+let rulW = null;
+function openRulers() {
+  closeMenu(); if (!rulW) rulW = nfWin('rulerWin', 'Rulers', 'win.ruler');
+  const b = rulW.body, again = () => { rulSave(); openRulers(); }, T = RUL.type;
+  const rows = [nfSeg('Ruler', [['off', 'Off'], ['sym', 'Symmetry'], ['par', 'Parallel'], ['focus', 'Focus lines'], ['circle', 'Circles'], ['persp', 'Perspective']], T, v => { RUL.type = v; if (v === 'sym') needCPU('symmetry'); again(); })];
+  if (T === 'sym') rows.push(nfRange('Lines', 1, 16, RUL.n, '', v => { RUL.n = v; rulSave(); }), nfCheck('Mirror across each line', RUL.mirror, v => { RUL.mirror = v; rulSave(); }), nfRange('Angle', 0, 180, RUL.ang, '°', v => { RUL.ang = v; rulSave(); }),
+    el('p', { class: 'note', text: 'What you draw repeats around the centre as you draw it. One line with Mirror on is a simple left/right mirror.' }));
+  if (T === 'par') rows.push(nfRange('Angle', -90, 90, RUL.pang, '°', v => { RUL.pang = v; rulSave(); }), el('p', { class: 'note', text: 'Every stroke runs in this one direction.' }));
+  if (T === 'focus') rows.push(el('p', { class: 'note', text: 'Every stroke runs straight toward (or away from) the centre point.' }));
+  if (T === 'circle') rows.push(el('p', { class: 'note', text: 'Every stroke curves around the centre point, at the distance where you start it.' }));
+  if (T === 'persp') rows.push(nfSeg('Vanishing points', [[1, '1 point'], [2, '2 points'], [3, '3 points']], RUL.vpn, v => { RUL.vpn = +v; again(); }), el('p', { class: 'note', text: 'Start a stroke toward a vanishing point and it locks onto it. With 1 or 2 points, straight up-and-down lines still work.' }));
+  if (T !== 'off' && T !== 'sym') rows.push(nfCheck('Snap strokes to the ruler', RUL.snap, v => { RUL.snap = v; rulSave(); }));
+  if (T !== 'off' && T !== 'par') rows.push(nfCheck('Move the guide (drag its point on the canvas)', RUL.edit, v => { RUL.edit = v; rulSave(); }),
+    el('div', { class: 'btnrow' }, el('button', { class: 'btn sm', text: 'Centre it on the canvas', onclick: () => { RUL.cx = RUL.cy = .5; RUL.vps = [[-.4, .45], [1.4, .45], [.5, -1.2]]; again(); } })));
+  b.replaceChildren(...rows); rulW.show();
+}
+if (NEXTF) MENUS.view.splice(MENUS.view.findIndex(x => Array.isArray(x) && x[0] === 'Navigator'), 0, ['Rulers and symmetry…', '', () => openRulers()]);
+
 /* ================= layer masks (like Clip Studio): hide parts of a layer without erasing them =================
    A mask starts fully showing. While you edit the mask, the eraser (or any eraser-like tool) hides, brushes show
    again. The layer row gets a small black-and-white picture of the mask: tap it to switch between painting the
@@ -9016,7 +9178,7 @@ function maskLive(L, depth) {
   if (!(stroking && stroking.S === L.mask)) return L.mask.c;
   const K = fbuf(depth, 'k'); K.x.drawImage(L.mask.c, 0, 0);
   K.x.globalAlpha = stroking.b.opacity / 100; K.x.globalCompositeOperation = stroking.erase ? 'destination-out' : 'source-over';
-  K.x.drawImage(masked(eng.out), 0, 0); K.x.globalAlpha = 1; K.x.globalCompositeOperation = 'source-over'; return K.c;
+  drawStrokeOut(K.x, masked(eng.out)); K.x.globalAlpha = 1; K.x.globalCompositeOperation = 'source-over'; return K.c;
 }
 function maskApplyTo(L, base, depth, o) {
   if (!L.mask || L.maskOn === false) return base;
@@ -9048,7 +9210,7 @@ function maskAdd(fromSel) {
   toast(fromSel ? 'Mask made from the selection. Eraser hides, brushes bring back.' : 'Mask added. Eraser hides parts, brushes bring them back.');
 }
 function maskEditToggle(L = layers[active], to) {
-  if (!L || !L.mask) return; L.maskEdit = to ?? !L.maskEdit; buildLayers(); dirty();
+  if (!L || !L.mask) return; if (L.adj) { L.maskEdit = true; return toast('A correction layer is painted through its mask: eraser keeps the correction off, brushes bring it back'); } L.maskEdit = to ?? !L.maskEdit; buildLayers(); dirty();
   toast(L.maskEdit ? 'Painting the mask: eraser hides, brushes show' : 'Painting the layer');
 }
 function maskOnToggle(L = layers[active]) { if (!L || !L.mask) return; maskChange(L, () => { L.maskOn = !(L.maskOn !== false); }); toast(L.maskOn ? 'Mask on' : 'Mask off (everything shows)'); }
@@ -9057,13 +9219,13 @@ function maskInvert(L = layers[active]) {
   maskChange(L, () => { L.mask = M; });
 }
 function maskApply(L = layers[active]) {
-  if (!L || !L.mask) return; if (L.kind === 'anim') return toast('Applying a mask works on drawing layers for now; animation layers keep theirs');
+  if (!L || !L.mask) return; if (L.adj) return toast('Correction layers keep their mask'); if (L.kind === 'anim') return toast('Applying a mask works on drawing layers for now; animation layers keep theirs');
   const S = L.s, before = S.ctx.getImageData(0, 0, DOC.w, DOC.h);
   S.ctx.globalCompositeOperation = 'destination-in'; S.ctx.drawImage(L.mask.c, 0, 0); S.ctx.globalCompositeOperation = 'source-over';
   const after = S.ctx.getImageData(0, 0, DOC.w, DOC.h);
   maskChange(L, () => { L.mask = null; L.maskEdit = false; }, { S, before, after }); markDirty(S); toast('Mask applied: the hidden parts are erased now');
 }
-function maskDelete(L = layers[active]) { if (!L || !L.mask) return; maskChange(L, () => { L.mask = null; L.maskEdit = false; }); toast('Mask deleted (Undo brings it back)'); }
+function maskDelete(L = layers[active]) { if (!L || !L.mask) return; if (L.adj) return toast('Correction layers keep their mask'); maskChange(L, () => { L.mask = null; L.maskEdit = false; }); toast('Mask deleted (Undo brings it back)'); }
 function maskMenuItems() {
   const L = layers[active], has = L && L.mask;
   return has ? [['Edit mask / layer', '', () => { closeMenu(); maskEditToggle(); }], [L.maskOn === false ? 'Turn mask on' : 'Turn mask off', '', () => { closeMenu(); maskOnToggle(); }], ['Invert mask', '', () => { closeMenu(); maskInvert(); }], ['Apply mask', '', () => { closeMenu(); maskApply(); }], ['Delete mask', '', () => { closeMenu(); maskDelete(); }]]
@@ -9074,6 +9236,206 @@ if (NEXTF) {
   // the menu is rebuilt each time it opens, so the mask entries follow the active layer
   const f = () => { }; f.sub = async () => maskMenuItems().map(([t, , fn]) => [t, '', fn]);
   MENUS.layer.splice(i, 0, '-', ['Layer mask', '', f], '-');
+}
+
+/* ================= correction layers: change the colours of everything underneath without touching it =================
+   A correction layer has no drawing of its own. It carries settings (brightness, hue, gradient map...) that are
+   applied to the layers below it, live. It comes with a mask: paint on the layer with the eraser to keep the
+   correction off an area, with a brush to bring it back. */
+const CORR = {
+  bc: { name: 'Brightness/Contrast', p: [['b', 'Brightness', -100, 100, 0], ['c', 'Contrast', -100, 100, 0]] },
+  hsl: { name: 'Hue/Saturation/Luminosity', p: [['h', 'Hue', -180, 180, 0], ['s', 'Saturation', -100, 100, 0], ['l', 'Luminosity', -100, 100, 0]] },
+  poster: { name: 'Posterization', p: [['n', 'Levels', 2, 20, 5]] },
+  invert: { name: 'Reverse gradient (invert)', p: [] },
+  thresh: { name: 'Binarization', p: [['t', 'Threshold', 1, 99, 50]] },
+  gmap: { name: 'Gradient map', p: [] },
+};
+const CORR_GRADS = [['Black to white', ['#000000', '#FFFFFF']], ['Sunset', ['#1B1040', '#B5305A', '#FF9E4A', '#FFF3C4']], ['Sea', ['#06203B', '#1F7A8C', '#9BE3D0', '#F6FFF8']], ['Sepia', ['#2B1B0E', '#8A5A2B', '#E9CFA3', '#FFF8E7']], ['Neon', ['#12002B', '#7B2FF7', '#F107A3', '#FFE66D']], ['Forest', ['#0B1F12', '#2E6B3A', '#A8D672', '#FBFFE0']], ['Main to sub colour', null]];
+const corrSvg = (() => { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('width', 0); s.setAttribute('height', 0); s.style.position = 'absolute'; s.setAttribute('aria-hidden', 'true'); document.body.append(s); return s; })();
+const hx = h => [parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 16) / 255, parseInt(h.slice(5, 7), 16) / 255];
+// filters that plain CSS can't do are built as small SVG filters, one per layer
+function corrSvgFilter(L) {
+  const id = 'corrF' + L.id, a = L.adj; let body = '';
+  const fn = (r, g, b, type = 'table') => `<feComponentTransfer><feFuncR type="${type}" tableValues="${r}"/><feFuncG type="${type}" tableValues="${g}"/><feFuncB type="${type}" tableValues="${b}"/></feComponentTransfer>`;
+  const grey = '<feColorMatrix type="matrix" values=".2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 0 0 0 1 0"/>';
+  if (a.type === 'poster') { const n = Math.max(2, a.p.n | 0), t = Array.from({ length: n }, (_, i) => (i / (n - 1)).toFixed(4)).join(' '); body = fn(t, t, t, 'discrete'); }
+  else if (a.type === 'thresh') { const N = 100, t = Array.from({ length: N }, (_, i) => i / N * 100 < a.p.t ? 0 : 1).join(' '); body = grey + fn(t, t, t, 'discrete'); }
+  else if (a.type === 'gmap') {
+    const st = (a.p.stops || ['#000000', '#FFFFFF']).map(hx), N = 33, ch = c => Array.from({ length: N }, (_, i) => { const f = i / (N - 1) * (st.length - 1), k = Math.min(st.length - 2, Math.floor(f)), u = f - k; return (st[k][c] + (st[k + 1][c] - st[k][c]) * u).toFixed(4); }).join(' ');
+    body = grey + fn(ch(0), ch(1), ch(2));
+  }
+  let f = corrSvg.querySelector('#' + id); if (!f) { f = document.createElementNS('http://www.w3.org/2000/svg', 'filter'); f.id = id; f.setAttribute('color-interpolation-filters', 'sRGB'); f.setAttribute('x', '0'); f.setAttribute('y', '0'); f.setAttribute('width', '100%'); f.setAttribute('height', '100%'); corrSvg.append(f); }
+  const key = JSON.stringify(a); if (f._k !== key) { f.innerHTML = body; f._k = key; }
+  return `url(#${id})`;
+}
+function corrFilter(L) {
+  const a = L.adj, p = a.p;
+  if (a.type === 'bc') return `brightness(${Math.max(0, 1 + p.b / 100)}) contrast(${Math.max(0, 1 + p.c / 100)})`;
+  if (a.type === 'hsl') return `hue-rotate(${p.h}deg) saturate(${Math.max(0, 1 + p.s / 100)}) brightness(${Math.max(0, 1 + p.l / 100)})`;
+  if (a.type === 'invert') return 'invert(1)';
+  return corrSvgFilter(L);
+}
+const corrCan = (() => { try { return 'filter' in document.createElement('canvas').getContext('2d'); } catch { return false; } })();
+// called from the layer stack: recolour what has been drawn so far (the layers below)
+function corrRender(ctx, L, depth) {
+  if (!corrCan) return;
+  const T = fbuf(depth, 'a'); T.x.drawImage(ctx.canvas, 0, 0);
+  const F = fbuf(depth, 'b'); F.x.filter = corrFilter(L); F.x.drawImage(T.c, 0, 0); F.x.filter = 'none';
+  if (L.mask && L.maskOn !== false) { F.x.globalCompositeOperation = 'destination-in'; F.x.drawImage(maskLive(L, depth), 0, 0); F.x.globalCompositeOperation = 'source-over'; }
+  ctx.globalAlpha = L.opacity; ctx.globalCompositeOperation = 'source-atop'; ctx.drawImage(F.c, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+}
+function corrAdd(type) {
+  closeMenu(); if (DOC.placeholder) return toast('Make or open a canvas first');
+  if (!corrCan) return toast('This browser can’t show correction layers yet (it works in Chrome, Edge and Firefox)');
+  const def = Object.fromEntries(CORR[type].p.map(([k, , , , d]) => [k, d])); if (type === 'gmap') { def.stops = CORR_GRADS[1][1].slice(); def.g = 1; }
+  structChange(() => { const L = newLayer(CORR[type].name); L.adj = { type, p: def }; L.mask = maskNew(true); L.maskOn = true; L.maskEdit = true; placeNew(L); active = layers.indexOf(L); });
+  needCPU('correction layers'); corrOpen();
+}
+let corrW = null;
+function corrOpen() {
+  closeMenu(); const L = layers[active]; if (!L || !L.adj) return toast('Pick a correction layer first');
+  if (!corrW) corrW = nfWin('corrWin', 'Correction layer', 'win.corr');
+  const C = CORR[L.adj.type], p = L.adj.p, touch = () => { ver++; dirty(); };
+  const rows = [el('p', { class: 'note', text: `${C.name}: changes everything under this layer. Use the eraser on this layer to keep it off an area, a brush to bring it back.` })];
+  C.p.forEach(([k, label, min, max]) => rows.push(nfRange(label, min, max, p[k], '', v => { p[k] = v; touch(); })));
+  if (L.adj.type === 'gmap') {
+    const sel = el('select', { 'aria-label': 'Gradient' }, ...CORR_GRADS.map(([n], i) => el('option', { value: i, text: n }))); sel.value = p.g ?? 1;
+    sel.onchange = () => { p.g = +sel.value; const g = CORR_GRADS[p.g][1]; p.stops = g ? g.slice() : [color.hex, sub.hex]; touch(); };
+    rows.push(el('label', { class: 'nf-field' }, el('span', { class: 'flabel', text: 'Gradient (dark parts take the first colour, light parts the last)' }), sel),
+      el('div', { class: 'btnrow' }, el('button', { class: 'btn sm', text: 'Flip the gradient', onclick: () => { p.stops.reverse(); touch(); } })));
+  }
+  rows.push(nfRange('Strength', 0, 100, Math.round(L.opacity * 100), '%', v => { L.opacity = v / 100; touch(); buildLayers(); }));
+  corrW.ttl.textContent = C.name; corrW.body.replaceChildren(...rows); corrW.show();
+}
+if (NEXTF) {
+  const i = MENUS.layer.findIndex(x => Array.isArray(x) && x[0] === 'New animation layer');
+  const f = () => { }; f.sub = async () => [...Object.entries(CORR).map(([k, C]) => [C.name, '', () => corrAdd(k)]), '-', ['Settings of this correction layer…', '', () => corrOpen()]];
+  MENUS.layer.splice(i + 1, 0, ['New correction layer', '', f]);
+}
+
+/* ================= vector layers: lines stay editable =================
+   On a vector layer every stroke is remembered as a line (its path, pressure, brush and colour), not just as pixels.
+   So lines can be made thicker or thinner, recoloured, moved, simplified or deleted afterwards, the eraser can take
+   out a whole line or just the part it touches, and changing the image resolution redraws them sharp. */
+let vecOK = false, vecPick = false, vecSel = null, vecDrag = null, vecEng = null;
+const vecKeys = (k, v) => k === '_def' || k === '_k' || k === 'id' ? undefined : v;
+function vecBrushIdx(L, b) { const js = JSON.stringify(b, vecKeys); let i = L.vec.brushes.indexOf(js); if (i < 0) { L.vec.brushes.push(js); i = L.vec.brushes.length - 1; } return i; }
+const vecBrushCache = new Map();
+function vecBrushOf(L, st) { const js = L.vec.brushes[st.bi]; let b = vecBrushCache.get(js); if (!b) { b = JSON.parse(js); vecBrushCache.set(js, b); } return b; }
+const vecWidth = (L, st) => vecBrushOf(L, st).size * (st.w || 1);
+function vecNew() {
+  closeMenu(); if (DOC.placeholder) return toast('Make or open a canvas first');
+  structChange(() => { const n = layers.filter(L => L.vec).length + 1, L = newLayer('Vector ' + n); L.vec = { strokes: [], brushes: [] }; placeNew(L); active = layers.indexOf(L); });
+  toast('Vector layer: lines you draw here stay editable (Layer → Vector lines…)');
+}
+function vecToRaster(L, why) { if (!L.vec) return; L.vec = null; if (vecSel) vecSel = null; setTimeout(() => { buildLayers(); dirty(false); }, 0); toast(why || 'This layer is a normal (pixel) layer now'); }
+// a finished brush stroke on a vector layer is kept as a line (with symmetry, one line per copy)
+function vecAfterStroke(s, ent) {
+  const L = s.L; if (!L.vec || s.S !== L.s || s.erase) return;
+  const bi = vecBrushIdx(L, s.eb), c = s.opts.color.slice(), mk1 = pts => ({ bi, c, w: 1, seed: s.opts.seed, pts });
+  const add = [mk1(s.pts.map(q => q.slice(0, 6)))];
+  for (const t of s.sym || []) add.push(mk1(s.pts.map(q => { const [x, y] = xfPoint(t, q[0], q[1]); return [x, y, q[2], q[3], q[4], q[5]]; })));
+  const prev = L.vec.strokes, next = prev.concat(add); L.vec.strokes = next; ent.vec = { L, prev, next };
+}
+function vecRender(L) {
+  if (!L.vec) return; const S = L.s, W = DOC.w, H = DOC.h;
+  if (!vecEng || vecEng.w !== W || vecEng.h !== H) { vecEng = new StrokeEngine(W, H); vecEng.w = W; vecEng.h = H; }
+  S.ctx.globalCompositeOperation = 'source-over'; S.ctx.globalAlpha = 1; S.ctx.clearRect(0, 0, W, H);
+  for (const st of L.vec.strokes) {
+    if (st.pts.length < 1) continue; const b = Object.assign({}, vecBrushOf(L, st)); b.size = Math.max(.5, b.size * (st.w || 1)); b.stab = 0; b.mix = 0; b.blendOnly = false;
+    vecEng.begin(b, { color: st.c, seed: st.seed }); for (const q of st.pts) vecEng.add(q[0], q[1], q[2], q[3], q[4], q[5]); vecEng.end(); vecEng.flush();
+    S.ctx.globalAlpha = (b.opacity ?? 100) / 100; S.ctx.drawImage(vecEng.out, 0, 0); S.ctx.globalAlpha = 1; vecEng.reset();
+  }
+  markDirty(S);
+}
+function vecEdit(L, fn, quiet) {
+  if (!L || !L.vec) return; const prev = L.vec.strokes, next = fn(prev); if (next === prev) return;
+  const t0 = performance.now(); L.vec.strokes = next; vecRender(L); record({ kind: 'vec', L, prev, next }); changed(L); if (!quiet && performance.now() - t0 > 600) toast('Lines redrawn');
+}
+function applyVecH(e, back) { if (!e.L.vec) return; e.L.vec.strokes = back ? e.prev : e.next; if (vecSel && !e.L.vec.strokes.includes(vecSel)) vecSel = null; vecRender(e.L); changed(e.L); }
+const segD = (px, py, ax, ay, bx, by) => { const dx = bx - ax, dy = by - ay, l = dx * dx + dy * dy, t = l ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l)) : 0; return Math.hypot(px - ax - dx * t, py - ay - dy * t); };
+// the eraser on a vector layer: take out whole lines, or only the part it touches
+function vecEraseStroke(s) {
+  const L = s.L, R = Math.max(1, s.eb.size / 2), mode = store.get('vecErase', 'part');
+  const paths = [s.pts, ...(s.sym || []).map(t => s.pts.map(q => xfPoint(t, q[0], q[1])))];
+  // eraser path as closely spaced points
+  const E = []; for (const P of paths) for (let i = 0; i < P.length; i++) { const a = P[i], b = P[i + 1]; E.push([a[0], a[1]]); if (b) { const d = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.floor(d / Math.max(1, R / 2)); for (let k = 1; k < n; k++) E.push([a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n]); } }
+  if (!E.length) return;
+  let ex0 = 1e9, ey0 = 1e9, ex1 = -1e9, ey1 = -1e9; for (const [x, y] of E) { ex0 = Math.min(ex0, x); ey0 = Math.min(ey0, y); ex1 = Math.max(ex1, x); ey1 = Math.max(ey1, y); }
+  let hitAny = false;
+  vecEdit(L, prev => {
+    const next = [];
+    for (const st of prev) {
+      const r = R + vecWidth(L, st) * .3, P = st.pts; let bx0 = 1e9, by0 = 1e9, bx1 = -1e9, by1 = -1e9; for (const q of P) { bx0 = Math.min(bx0, q[0]); by0 = Math.min(by0, q[1]); bx1 = Math.max(bx1, q[0]); by1 = Math.max(by1, q[1]); }
+      if (bx0 - r > ex1 || bx1 + r < ex0 || by0 - r > ey1 || by1 + r < ey0) { next.push(st); continue; }
+      // finer points along the line so the cut lands where the eraser was
+      const D = [P[0]]; for (let i = 1; i < P.length; i++) { const a = P[i - 1], b = P[i], d = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.min(200, Math.floor(d / 3)); for (let k = 1; k < n; k++) { const f = k / n; D.push([a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f, b[3], b[4], a[5] + (b[5] - a[5]) * f]); } D.push(b); }
+      const hit = D.map(q => { if (q[0] < ex0 - r || q[0] > ex1 + r || q[1] < ey0 - r || q[1] > ey1 + r) return false; for (const e of E) if (Math.hypot(e[0] - q[0], e[1] - q[1]) <= r) return true; return false; });
+      if (!hit.includes(true)) { next.push(st); continue; }
+      hitAny = true; if (mode === 'whole') continue;
+      let run = []; const flush = () => { if (run.length > 1) next.push(Object.assign({}, st, { pts: run })); run = []; };
+      D.forEach((q, i) => { if (hit[i]) flush(); else run.push(q); }); flush();
+    }
+    return hitAny ? next : prev;
+  }, true);
+}
+/* ---- picking and moving one line ---- */
+function vecNearest(L, x, y) { let best = null, bd = 1e18; for (const st of L.vec.strokes) { const P = st.pts, lim = Math.max(10 / V.s, vecWidth(L, st) / 2 + 4 / V.s); for (let i = 0; i < P.length; i++) { const a = P[i], b = P[i + 1] || a, d = segD(x, y, a[0], a[1], b[0], b[1]); if (d < lim && d < bd) { bd = d; best = st; } } } return best; }
+function vecDown(dx, dy) {
+  const L = layers[active]; if (!NEXTF || !vecPick || !L || !L.vec) return false;
+  vecSel = vecNearest(L, dx, dy); vecDrag = vecSel ? { x: dx, y: dy, dx: 0, dy: 0 } : null; if (!vecSel) toast('No line there: tap right on a line'); vecWinSync(); dirty(false); return true;
+}
+function vecMove(dx, dy) { if (!vecDrag) return false; vecDrag.dx = dx - vecDrag.x; vecDrag.dy = dy - vecDrag.y; dirty(false); return true; }
+function vecUp() {
+  if (!vecDrag) return false; const d = vecDrag, L = layers[active], st = vecSel; vecDrag = null;
+  if (L && L.vec && st && Math.hypot(d.dx, d.dy) > 1 / V.s) { const moved = Object.assign({}, st, { pts: st.pts.map(q => [q[0] + d.dx, q[1] + d.dy, q[2], q[3], q[4], q[5]]) }); vecSel = moved; vecEdit(L, prev => prev.map(x => x === st ? moved : x), true); }
+  dirty(false); return true;
+}
+function vecOverlay(x) {
+  const L = layers[active]; if (!NEXTF || !vecSel || !L || !L.vec || !L.vec.strokes.includes(vecSel)) return;
+  const ox = vecDrag ? vecDrag.dx : 0, oy = vecDrag ? vecDrag.dy : 0;
+  x.save(); x.beginPath(); vecSel.pts.forEach((q, i) => { const [sx, sy] = toScreen(q[0] + ox, q[1] + oy); i ? x.lineTo(sx, sy) : x.moveTo(sx, sy); });
+  x.lineWidth = 4; x.strokeStyle = 'rgba(255,255,255,.9)'; x.stroke(); x.lineWidth = 2; x.setLineDash([6, 4]); x.strokeStyle = '#B26BFF'; x.stroke(); x.restore();
+}
+// moving the whole layer with the Move tool moves the lines (they stay vector)
+function vecAfterMove(op, ent) {
+  const L = op.L; if (!L || !L.vec) return;
+  if (op.withSel && sel) { vecToRaster(L, 'Moving part of a vector layer turned it into a normal layer (Undo goes back)'); return; }
+  const prev = L.vec.strokes, next = prev.map(st => Object.assign({}, st, { pts: st.pts.map(q => [q[0] + op.dx, q[1] + op.dy, q[2], q[3], q[4], q[5]]) })); L.vec.strokes = next; ent.vec = { L, prev, next };
+}
+/* ---- the Vector lines window ---- */
+let vecW = null, vecWk = 100;
+function vecWinSync() { if (vecW && !vecW.win.hidden) openVector(); }
+function vecSimplify(P, eps) {
+  if (P.length < 3) return P; const keep = new Uint8Array(P.length); keep[0] = keep[P.length - 1] = 1; const st = [[0, P.length - 1]];
+  while (st.length) { const [a, b] = st.pop(); let m = -1, md = eps; for (let i = a + 1; i < b; i++) { const d = segD(P[i][0], P[i][1], P[a][0], P[a][1], P[b][0], P[b][1]); if (d > md) { md = d; m = i; } } if (m > 0) { keep[m] = 1; st.push([a, m], [m, b]); } }
+  return P.filter((_, i) => keep[i]);
+}
+function openVector() {
+  closeMenu(); const L = layers[active];
+  if (!L || !L.vec) return toast('Pick a vector layer first (Layer → New vector layer)');
+  if (!vecW) { vecW = nfWin('vecWin', 'Vector lines', 'win.vec'); new MutationObserver(() => { if (vecW.win.hidden && vecPick) { vecPick = false; vecSel = null; dirty(false); } }).observe(vecW.win, { attributes: true, attributeFilter: ['hidden'] }); }
+  if (vecSel && !L.vec.strokes.includes(vecSel)) vecSel = null;
+  const one = vecSel, who = one ? 'the picked line' : `all ${L.vec.strokes.length} lines`, each = fn => vecEdit(L, prev => prev.map(st => !one || st === one ? fn(st) : st));
+  const keepSel = fn => st => { const n = fn(st); if (st === vecSel) vecSel = n; return n; };
+  vecWk = 100;
+  const rows = [
+    el('p', { class: 'note', text: `${L.vec.strokes.length} line${L.vec.strokes.length === 1 ? '' : 's'} on this layer. Changes apply to ${who}.` }),
+    nfCheck('Pick one line (tap it on the canvas; drag to move it)', vecPick, v => { vecPick = v; if (!v) vecSel = null; dirty(false); openVector(); }),
+    nfRange('Line width', 10, 400, 100, '%', v => { vecWk = v; }),
+    el('div', { class: 'btnrow' }, ...[
+      el('button', { class: 'btn sm primary', text: 'Apply width', onclick: () => { const k = vecWk / 100; if (k !== 1) each(keepSel(st => Object.assign({}, st, { w: (st.w || 1) * k }))); openVector(); } }),
+      el('button', { class: 'btn sm', text: 'Use main colour', onclick: () => { const c = hexRgb(color.hex); each(keepSel(st => Object.assign({}, st, { c }))); openVector(); } }),
+      el('button', { class: 'btn sm', text: 'Simplify', title: 'Fewer points: smoother, lighter lines', onclick: () => { each(keepSel(st => Object.assign({}, st, { pts: vecSimplify(st.pts, Math.max(.5, 1.5 / V.s)) }))); openVector(); } }),
+      one ? el('button', { class: 'btn sm', text: 'Delete line', onclick: () => { const d = vecSel; vecSel = null; vecEdit(L, prev => prev.filter(st => st !== d)); openVector(); } }) : null].filter(Boolean)),
+    nfSeg('Eraser on vector layers', [['part', 'Touched part'], ['whole', 'Whole line']], store.get('vecErase', 'part'), v => store.set('vecErase', v)),
+    el('div', { class: 'btnrow' }, el('button', { class: 'btn sm', text: 'Turn into a normal layer', onclick: () => { vecToRaster(L); vecW.hide(); } })),
+  ].filter(Boolean);
+  vecW.body.replaceChildren(...rows); vecW.show();
+}
+if (NEXTF) {
+  const i = MENUS.layer.findIndex(x => Array.isArray(x) && x[0] === 'New animation layer');
+  MENUS.layer.splice(i + 1, 0, ['New vector layer', '', vecNew], ['Vector lines…', '', () => openVector()]);
 }
 
 /* ================= phones and tablets: everything in reach =================
