@@ -1726,6 +1726,11 @@ html,body{overscroll-behavior:none} /* no pull-to-refresh or swipe-back bounce w
 .ref-menu.rm-sheet{left:0!important;right:0;bottom:0;top:auto!important;max-width:none;width:auto;border-radius:16px 16px 0 0;max-height:70vh;padding:8px 8px calc(8px + var(--sab,0px))}
 .ref-menu.rm-sheet button{height:44px}
 #refPanel[data-sheet="yes"] #refCan{cursor:default}
+
+/* layer masks: a small black-and-white picture of the mask next to the layer's picture */
+.layer .lmask{flex-shrink:0;align-self:center;border-radius:3px;border:2px solid transparent;background:#000;margin-left:-2px;cursor:pointer;width:auto;height:calc(var(--lth,30px));max-height:30px;aspect-ratio:auto}
+.layer .lmask.on{border-color:var(--accent)}
+.layer .lmask.off{opacity:.45;outline:1px dashed var(--muted)}
 </style>
 
 <div class="app" id="app" data-open="" data-timeline="" data-quick="on" data-dl="open" data-dr="open">
@@ -2971,6 +2976,7 @@ function allocDoc(w, h) {
 const newSurface = () => { const c = mk(DOC.w, DOC.h); return { c, ctx: c.getContext('2d') }; };
 let layers = [], active = 0, uid = 1, ver = 0;
 const anim = { n: 1, cur: 0, holds: [1], fps: 12, onion: true, loop: true, playing: false };
+const NEXTF = true; // beleaf next turns on the newest features
 const FLAGS = { clip: false, lockAlpha: false, locked: false, ref: false, draft: false };
 function newLayer(name, fill) {
   const s = newSurface();
@@ -2979,7 +2985,7 @@ function newLayer(name, fill) {
 }
 function newAnimLayer(name) { return { id: uid++, name, kind: 'anim', cels: Array(anim.n).fill(null), visible: true, opacity: 1, blend: 'source-over', ...FLAGS }; }
 const surfAt = (L, f) => L.kind === 'anim' ? L.cels[f] : L.s;
-function editSurf(L) { if (L.kind !== 'anim') return L.s; return L.cels[anim.cur] || (L.cels[anim.cur] = newSurface()); }
+function editSurf(L) { if (L.maskEdit && L.mask) return L.mask; if (L.kind !== 'anim') return L.s; return L.cels[anim.cur] || (L.cels[anim.cur] = newSurface()); }
 const hasAnim = () => layers.some(L => L.kind === 'anim');
 
 /* ================= brushes ================= */
@@ -3391,7 +3397,7 @@ function srcOf(L, i, f, exp) {
   const S = surfAt(L, f); let src = S && S.c;
   if (xform && S && S === xform.S && !exp) { tctx.globalCompositeOperation = 'source-over'; tctx.globalAlpha = 1; tctx.clearRect(0, 0, DOC.w, DOC.h); tctx.drawImage(xform.base, 0, 0); drawFloat(tctx); return tmp; }
   if (liveOp && i === active && f === anim.cur && !exp) { tctx.globalCompositeOperation = 'source-over'; tctx.globalAlpha = 1; tctx.clearRect(0, 0, DOC.w, DOC.h); liveOp.render(tctx); tctx.globalCompositeOperation = 'source-over'; tctx.globalAlpha = 1; return tmp; }
-  if (stroking && i === active && f === anim.cur && !exp) {
+  if (stroking && i === active && f === anim.cur && !exp && !(L.mask && stroking.S === L.mask)) {
     clipCtx(tctx); tctx.globalCompositeOperation = 'source-over'; tctx.globalAlpha = 1; tctx.clearRect(0, 0, DOC.w, DOC.h);
     if (stroking.S) tctx.drawImage(stroking.S.c, 0, 0);
     tctx.globalAlpha = stroking.b.opacity / 100; tctx.globalCompositeOperation = stroking.erase ? 'destination-out' : (L.lockAlpha ? 'source-atop' : 'source-over');
@@ -3519,7 +3525,7 @@ function beginStroke(x, y, p, tilt, az) {
   if (L.kind === 'folder' || ancestors(L).some(F => !F.visible || F.locked)) { editable(L); return null; }
   if (!L.visible) { toast('This layer is hidden'); return null; }
   if (L.locked) { toast('This layer is locked'); return null; }
-  const S = erase && L.kind === 'anim' ? L.cels[anim.cur] : editSurf(L);
+  const S = L.maskEdit && L.mask ? L.mask : erase && L.kind === 'anim' ? L.cels[anim.cur] : editSurf(L);
   let sample = null;
   if (b.mix > 0 && !erase && S) {
     const W = DOC.w, H = DOC.h, data = S.ctx.getImageData(0, 0, W, H).data;
@@ -3633,6 +3639,7 @@ function undo() { if (undoGuard && undoGuard('undo')) return; if (xform) { cance
 function redo() { if (undoGuard && undoGuard('redo')) return; if (xform) return; const e = future.pop(); if (!e) return; applyH(e, false); history.push(e); syncUndo(); }
 function applyH(e, back) {
   if (e.kind === 'docsize') { applyDocsize(e, back); return; }
+  if (e.kind === 'mask') { applyMaskH(e, back); return; }
   if (e.sel) setSelCanvas(back ? e.sel.prev : e.sel.next);
   if (e.kind === 'sel') return;
   if (e.px) { e.px.S.ctx.putImageData(unpack(back ? e.px.before : e.px.after), 0, 0); markDirty(e.px.S); }
@@ -4947,6 +4954,7 @@ function duplicateActive() {
       if (L.kind === 'folder') n = { ...newFolder(L.name + (k === e ? ' copy' : '')), ...L, id: uid++ };
       else if (L.kind === 'anim') { n = newAnimLayer(L.name); n.cels = L.cels.map(copySurf); }
       else { n = newLayer(L.name); n.s.ctx.drawImage(L.s.c, 0, 0); }
+      if (L.mask) { n.mask = copySurf(L.mask); n.maskOn = L.maskOn; }
       if (L.kind !== 'folder') Object.assign(n, { opacity: L.opacity, blend: L.blend, clip: L.clip, lockAlpha: L.lockAlpha, ref: L.ref, draft: L.draft, color: L.color });
       if (k === e) n.name = L.name + ' copy';
       map.set(L.id, n.id); n.parent = L.parent; out.push(n);
@@ -4974,14 +4982,15 @@ function renderList(ctx, idxs, f, o, depth, tree, onion) {
     let m = n + 1; const clips = []; while (m < idxs.length && layers[idxs[m]].clip) clips.push(idxs[m++]);
     if (!shows(L, o)) { n = m; continue; }
     const vis = clips.filter(k => shows(layers[k], o));
-    if (L.kind === 'folder' && L.blend === 'pass' && L.opacity >= 1 && !vis.length) { renderList(ctx, tree.get(L.id) || [], f, o, depth, tree, onion); n = m; continue; }
-    const base = L.kind === 'folder' ? renderFolder(L, f, o, depth, tree) : srcOf(L, i, f, o.exp);
+    if (L.kind === 'folder' && L.blend === 'pass' && L.opacity >= 1 && !vis.length && !L.mask) { renderList(ctx, tree.get(L.id) || [], f, o, depth, tree, onion); n = m; continue; }
+    let base = L.kind === 'folder' ? renderFolder(L, f, o, depth, tree) : srcOf(L, i, f, o.exp);
     if (!base) { n = m; continue; }
+    if (L.mask) base = maskApplyTo(L, base, depth, o);
     if (!vis.length) { ctx.globalAlpha = L.opacity; ctx.globalCompositeOperation = blendOf(L); ctx.drawImage(base, 0, 0); }
     else {
       const G = fbuf(depth, 'g'); G.x.drawImage(base, 0, 0);
       for (const k of vis) {
-        const C = layers[k], cs = C.kind === 'folder' ? renderFolder(C, f, o, depth, tree) : srcOf(C, k, f, o.exp); if (!cs) continue;
+        const C = layers[k]; let cs = C.kind === 'folder' ? renderFolder(C, f, o, depth, tree) : srcOf(C, k, f, o.exp); if (!cs) continue; if (C.mask) cs = maskApplyTo(C, cs, depth + 1, o);
         const T = fbuf(depth, 't'); T.x.globalAlpha = C.opacity; T.x.drawImage(cs, 0, 0); T.x.globalAlpha = 1;
         T.x.globalCompositeOperation = 'destination-in'; T.x.drawImage(G.c, 0, 0); T.x.globalCompositeOperation = 'source-over';
         G.x.globalCompositeOperation = blendOf(C) === 'source-over' ? 'source-atop' : blendOf(C); G.x.drawImage(T.c, 0, 0); G.x.globalCompositeOperation = 'source-over';
@@ -5115,6 +5124,7 @@ async function serialize(t, keyFn = surfKey) {
   const L = [];
   for (const x of t.layers) {
     const m = { id: x.id, name: x.name, kind: x.kind || 'raster', visible: x.visible, opacity: x.opacity, blend: x.blend, parent: x.parent || null, color: x.color || null, open: x.open, paper: !!x.paper, clip: !!x.clip, lockAlpha: !!x.lockAlpha, locked: !!x.locked, ref: !!x.ref, draft: !!x.draft };
+    if (x.mask) { m.mask = await keyFn(x.mask); m.maskOn = x.maskOn !== false; }
     if (x.kind === 'anim') { m.cels = []; for (const c of x.cels) m.cels.push(c ? await keyFn(c) : null); } else if (x.kind !== 'folder') m.s = await keyFn(x.s);
     L.push(m);
   }
@@ -5161,7 +5171,8 @@ async function deserialize(rec, asCopy, src) {
   for (const m of rec.layers) {
     const L = { ...FLAGS, id: idMap.get(m.id), name: m.name, kind: m.kind, visible: m.visible, opacity: m.opacity, blend: m.blend, parent: m.parent ? idMap.get(m.parent) : null, color: m.color, open: m.open !== false, paper: m.paper, clip: m.clip, lockAlpha: m.lockAlpha, locked: m.locked, ref: m.ref, draft: m.draft };
     if (m.kind === 'anim') { L.cels = []; for (const k of m.cels) L.cels.push(k ? await surfFrom(k, src) : null); } else if (m.kind !== 'folder') { L.kind = 'raster'; L.s = await surfFrom(m.s, src); }
-    if (asCopy) { (L.cels || [L.s]).forEach(S => S && (S._dirty = true)); }
+    if (m.mask) { L.mask = await surfFrom(m.mask, src); L.maskOn = m.maskOn !== false; }
+    if (asCopy) { [...(L.cels || [L.s]), L.mask].forEach(S => S && (S._dirty = true)); }
     out.push(L);
   }
   DOC.w = save.w; DOC.h = save.h;
@@ -5209,8 +5220,8 @@ async function gcBlobs() {
   try {
     const keep = new Set(), add = r => r && r.layers.forEach(m => { if (m.s) keep.add(m.s); (m.cels || []).forEach(k => k && keep.add(k)); });
     (await IDB.all('projects')).forEach(([, r]) => add(r)); (await IDB.all('backups')).forEach(([, r]) => add(r));
-    tabs.forEach(t => t && t.layers && t.layers.forEach(L => (L.cels || [L.s]).forEach(S => { const k = S && blobCache.get(S); if (k) keep.add(k); })));
-    layers.forEach(L => (L.cels || [L.s]).forEach(S => { const k = S && blobCache.get(S); if (k) keep.add(k); }));
+    tabs.forEach(t => t && t.layers && t.layers.forEach(L => [...(L.cels || [L.s]), L.mask].forEach(S => { const k = S && blobCache.get(S); if (k) keep.add(k); })));
+    layers.forEach(L => [...(L.cels || [L.s]), L.mask].forEach(S => { const k = S && blobCache.get(S); if (k) keep.add(k); }));
     // only layer pictures (keys like b + time + random) are cleaned up; references and the brush library stay
     for (const k of await IDB.keys('blobs')) if (!keep.has(k) && /^b[0-9a-z]{12,}$/.test(k)) await IDB.del('blobs', k);
   } catch { }
@@ -6092,7 +6103,8 @@ const IC = {
   ref: '<svg class="ic" viewBox="0 0 24 24"><path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7L12 3z"/></svg>',
   draft: '<svg class="ic" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z"/></svg>',
 };
-function thumb(L) { const c = $(`canvas[data-lid="${L.id}"]`); if (!c) return; const x = c.getContext('2d'); x.clearRect(0, 0, c.width, c.height); const S = surfAt(L, anim.cur); if (S) x.drawImage(S.c, 0, 0, c.width, c.height); }
+function thumb(L) { const c = $(`canvas[data-lid="${L.id}"]`); if (!c) return; const x = c.getContext('2d'); x.clearRect(0, 0, c.width, c.height); const S = surfAt(L, anim.cur); if (S) x.drawImage(S.c, 0, 0, c.width, c.height);
+  const m = L.mask && $(`canvas[data-mid="${L.id}"]`); if (m) { const g = m.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, m.width, m.height); g.drawImage(L.mask.c, 0, 0, m.width, m.height); } }
 const layerMeta = L => L.kind === 'folder' ? `Folder · ${L.blend === 'pass' ? 'Through' : blendName(L.blend)} · ${Math.round(L.opacity * 100)}%` : (L.kind === 'anim' ? `Animation · ${L.cels.filter(Boolean).length}/${anim.n} frames · ` : '') + `${blendName(L.blend)} · ${Math.round(L.opacity * 100)}%` + (L.draft ? ' · draft' : '');
 function refreshLayerMeta(L) { const c = $(`canvas[data-lid="${L.id}"]`); const sm = c && c.parentElement.querySelector('small'); if (sm) sm.textContent = layerMeta(L); }
 function buildLayers() {
@@ -6109,7 +6121,11 @@ function buildLayers() {
     else pic = el('canvas', { width: tw, height: th, 'data-lid': L.id });
     const meta = el('span', { class: 'meta' }, el('b', { text: L.name }), el('small', { text: layerMeta(L) }));
     const flags = el('span', { class: 'flags' }); flags.innerHTML = (L.kind === 'anim' ? IC.film : '') + (L.locked ? IC.lock : '') + (L.lockAlpha ? IC.alpha : '') + (L.ref ? IC.ref : '') + (L.draft ? IC.draft : '');
-    const sel = el('button', { class: 'sel', 'aria-label': 'Select ' + L.name, onclick: () => { active = i; buildLayers(); }, ondblclick: () => renameLayer(i) }, ...(fold ? [meta, flags] : [pic, meta, flags]));
+    let mpic = null;
+    if (L.mask) { mpic = el('canvas', { class: 'lmask' + (L.maskEdit ? ' on' : '') + (L.maskOn === false ? ' off' : ''), width: Math.round(tw / 2), height: Math.round(th / 2), 'data-mid': L.id, title: 'Layer mask: tap to paint the mask or the layer; hold Shift (or double-tap) to turn it off/on' });
+      mpic.addEventListener('click', ev => { ev.stopPropagation(); if (ev.shiftKey || ev.altKey) { active = i; maskOnToggle(L); return; } active = i; maskEditToggle(L, !L.maskEdit || layers[active] !== L ? true : false); });
+      mpic.addEventListener('dblclick', ev => { ev.stopPropagation(); maskOnToggle(L); }); }
+    const sel = el('button', { class: 'sel', 'aria-label': 'Select ' + L.name, onclick: () => { active = i; buildLayers(); }, ondblclick: () => renameLayer(i) }, ...(fold ? [meta, flags] : [pic, ...(mpic ? [mpic] : []), meta, flags]));
     const grip = el('span', { class: 'lgrip', title: 'Drag to reorder (or hold the layer, then drag)' }); grip.innerHTML = '<svg viewBox="0 0 10 16" aria-hidden="true"><circle cx="3" cy="3" r="1.3"/><circle cx="7" cy="3" r="1.3"/><circle cx="3" cy="8" r="1.3"/><circle cx="7" cy="8" r="1.3"/><circle cx="3" cy="13" r="1.3"/><circle cx="7" cy="13" r="1.3"/></svg>';
     if (fold) li.append(eye, pic, sel, grip); else li.append(eye, sel, grip); ul.append(li); if (!fold) thumb(L);
   });
@@ -6138,7 +6154,7 @@ function mergeDown() {
   if (top.kind === 'folder' || bot.kind === 'folder' || top.parent !== bot.parent) { toast('Merge down works on two layers next to each other in the same folder'); return; }
   if (top.kind === 'anim' || bot.kind === 'anim') { toast('Merging works on regular layers for now'); return; }
   const before = bot.s.ctx.getImageData(0, 0, DOC.w, DOC.h);
-  bot.s.ctx.globalAlpha = top.opacity; bot.s.ctx.globalCompositeOperation = top.clip ? 'source-atop' : top.blend; bot.s.ctx.drawImage(top.s.c, 0, 0); bot.s.ctx.globalAlpha = 1; bot.s.ctx.globalCompositeOperation = 'source-over';
+  bot.s.ctx.globalAlpha = top.opacity; bot.s.ctx.globalCompositeOperation = top.clip ? 'source-atop' : top.blend; bot.s.ctx.drawImage(top.mask && top.maskOn !== false ? maskedCopy(top) : top.s.c, 0, 0); bot.s.ctx.globalAlpha = 1; bot.s.ctx.globalCompositeOperation = 'source-over';
   const after = bot.s.ctx.getImageData(0, 0, DOC.w, DOC.h), prev = layers.slice(), pa = active;
   layers.splice(active, 1); active--;
   record({ kind: 'struct', prev, next: layers.slice(), pa, na: active, px: { S: bot.s, before, after } });
@@ -7874,14 +7890,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.13-1943' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.13-1951' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.13-1943';
+const BELEAF_BUILD = '2026.11.13-1951';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
@@ -8695,7 +8711,7 @@ function dsWarn(w, h) {
   return '';
 }
 // every picture the document holds: each layer, and each animation frame
-function docSurfaces() { const out = new Set(); layers.forEach(L => { if (L.kind === 'anim') L.cels.forEach(S => S && out.add(S)); else if (L.s) out.add(L.s); }); return [...out]; }
+function docSurfaces() { const out = new Set(); layers.forEach(L => { if (L.kind === 'anim') L.cels.forEach(S => S && out.add(S)); else if (L.s) out.add(L.s); if (L.mask) out.add(L.mask); }); return [...out]; }
 // smooth scaling; big reductions go down in halves so thin lines don't break into dots
 function scaleInto(src, g, nw, nh, crisp) {
   if (crisp) { g.imageSmoothingEnabled = false; g.drawImage(src, 0, 0, nw, nh); return; }
@@ -8988,6 +9004,76 @@ function batchDelete(kind) {
 {
   const i = MENUS.layer.findIndex(x => Array.isArray(x) && x[0] === 'Delete layer');
   MENUS.layer.splice(i + 1, 0, ['Delete empty layers', '', () => batchDelete('empty')], ['Delete hidden layers', '', () => batchDelete('hidden')]);
+}
+
+/* ================= layer masks (like Clip Studio): hide parts of a layer without erasing them =================
+   A mask starts fully showing. While you edit the mask, the eraser (or any eraser-like tool) hides, brushes show
+   again. The layer row gets a small black-and-white picture of the mask: tap it to switch between painting the
+   layer and painting the mask. Hidden parts are tinted purple while you edit the mask. */
+function maskNew(show = true) { const S = newSurface(); if (show) { S.ctx.fillStyle = '#fff'; S.ctx.fillRect(0, 0, DOC.w, DOC.h); } return S; }
+// the mask as it looks right now, including the stroke being painted on it
+function maskLive(L, depth) {
+  if (!(stroking && stroking.S === L.mask)) return L.mask.c;
+  const K = fbuf(depth, 'k'); K.x.drawImage(L.mask.c, 0, 0);
+  K.x.globalAlpha = stroking.b.opacity / 100; K.x.globalCompositeOperation = stroking.erase ? 'destination-out' : 'source-over';
+  K.x.drawImage(masked(eng.out), 0, 0); K.x.globalAlpha = 1; K.x.globalCompositeOperation = 'source-over'; return K.c;
+}
+function maskApplyTo(L, base, depth, o) {
+  if (!L.mask || L.maskOn === false) return base;
+  const M = fbuf(depth, 'm'), mk_ = maskLive(L, depth); M.x.drawImage(base, 0, 0); M.x.globalCompositeOperation = 'destination-in'; M.x.drawImage(mk_, 0, 0); M.x.globalCompositeOperation = 'source-over';
+  // while editing the mask, show what's hidden as a purple tint
+  if (L.maskEdit && !o.exp && layers[active] === L) { const T = fbuf(depth, 'q'); T.x.fillStyle = 'rgba(150,80,220,.38)'; T.x.fillRect(0, 0, DOC.w, DOC.h); T.x.globalCompositeOperation = 'destination-out'; T.x.drawImage(mk_, 0, 0); T.x.globalCompositeOperation = 'source-over'; M.x.drawImage(T.c, 0, 0); }
+  return M.c;
+}
+// a flattened copy of the layer with its mask applied (for merging)
+function maskedCopy(L) { const c = mk(DOC.w, DOC.h), g = c.getContext('2d'); g.drawImage(L.s.c, 0, 0); if (L.mask && L.maskOn !== false) { g.globalCompositeOperation = 'destination-in'; g.drawImage(L.mask.c, 0, 0); } return c; }
+const maskState = L => ({ mask: L.mask || null, maskOn: L.maskOn !== false, maskEdit: !!L.maskEdit });
+function maskChange(L, fn, px) {
+  if (xform) applyXform(); const prev = maskState(L); fn(); const next = maskState(L);
+  record({ kind: 'mask', L, prev, next, px }); maskAfter(L);
+}
+function maskAfter(L) { ver++; markDirty(L.mask || L.s); buildLayers(); dirty(); }
+function applyMaskH(e, back) {
+  const s = back ? e.prev : e.next; Object.assign(e.L, { mask: s.mask, maskOn: s.maskOn, maskEdit: s.maskEdit });
+  if (e.px) putSnap(e.px.S, back ? e.px.before : e.px.after, 0, 0);
+  maskAfter(e.L);
+}
+const maskable = L => L && L.kind !== 'folder' && !L.paper;
+function maskNeed() { const L = layers[active]; if (!maskable(L)) { toast('Masks work on drawing and animation layers'); return null; } return L; }
+function maskAdd(fromSel) {
+  closeMenu(); const L = maskNeed(); if (!L) return;
+  if (fromSel && !sel) return toast('Make a selection first: the mask will show only what’s inside it');
+  const M = maskNew(!fromSel); if (fromSel) M.ctx.drawImage(sel.c, 0, 0);
+  maskChange(L, () => { L.mask = M; L.maskOn = true; L.maskEdit = true; });
+  toast(fromSel ? 'Mask made from the selection. Eraser hides, brushes bring back.' : 'Mask added. Eraser hides parts, brushes bring them back.');
+}
+function maskEditToggle(L = layers[active], to) {
+  if (!L || !L.mask) return; L.maskEdit = to ?? !L.maskEdit; buildLayers(); dirty();
+  toast(L.maskEdit ? 'Painting the mask: eraser hides, brushes show' : 'Painting the layer');
+}
+function maskOnToggle(L = layers[active]) { if (!L || !L.mask) return; maskChange(L, () => { L.maskOn = !(L.maskOn !== false); }); toast(L.maskOn ? 'Mask on' : 'Mask off (everything shows)'); }
+function maskInvert(L = layers[active]) {
+  if (!L || !L.mask) return; const M = maskNew(true); M.ctx.globalCompositeOperation = 'destination-out'; M.ctx.drawImage(L.mask.c, 0, 0); M.ctx.globalCompositeOperation = 'source-over';
+  maskChange(L, () => { L.mask = M; });
+}
+function maskApply(L = layers[active]) {
+  if (!L || !L.mask) return; if (L.kind === 'anim') return toast('Applying a mask works on drawing layers for now; animation layers keep theirs');
+  const S = L.s, before = S.ctx.getImageData(0, 0, DOC.w, DOC.h);
+  S.ctx.globalCompositeOperation = 'destination-in'; S.ctx.drawImage(L.mask.c, 0, 0); S.ctx.globalCompositeOperation = 'source-over';
+  const after = S.ctx.getImageData(0, 0, DOC.w, DOC.h);
+  maskChange(L, () => { L.mask = null; L.maskEdit = false; }, { S, before, after }); markDirty(S); toast('Mask applied: the hidden parts are erased now');
+}
+function maskDelete(L = layers[active]) { if (!L || !L.mask) return; maskChange(L, () => { L.mask = null; L.maskEdit = false; }); toast('Mask deleted (Undo brings it back)'); }
+function maskMenuItems() {
+  const L = layers[active], has = L && L.mask;
+  return has ? [['Edit mask / layer', '', () => { closeMenu(); maskEditToggle(); }], [L.maskOn === false ? 'Turn mask on' : 'Turn mask off', '', () => { closeMenu(); maskOnToggle(); }], ['Invert mask', '', () => { closeMenu(); maskInvert(); }], ['Apply mask', '', () => { closeMenu(); maskApply(); }], ['Delete mask', '', () => { closeMenu(); maskDelete(); }]]
+    : [['Add layer mask', '', () => maskAdd(false)], ['Mask from selection', '', () => maskAdd(true)]];
+}
+if (NEXTF) {
+  const i = MENUS.layer.findIndex(x => Array.isArray(x) && x[0] === 'Merge down');
+  // the menu is rebuilt each time it opens, so the mask entries follow the active layer
+  const f = () => { }; f.sub = async () => maskMenuItems().map(([t, , fn]) => [t, '', fn]);
+  MENUS.layer.splice(i, 0, '-', ['Layer mask', '', f], '-');
 }
 
 /* ================= phones and tablets: everything in reach =================
