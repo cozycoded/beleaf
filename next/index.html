@@ -1740,6 +1740,23 @@ html,body{overscroll-behavior:none} /* no pull-to-refresh or swipe-back bounce w
 .nfwin .nf-seg button[aria-checked="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
 .nfwin select{height:34px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:0 8px;color:var(--fg);font:inherit}
 .nfwin .note{margin:0}
+
+/* phone floating panel: tab names stay inside their tab; the tabs share the width */
+.mtabs{overflow:hidden}
+.mtabs > button[role=tab]{flex:1 1 0;min-width:24px;justify-content:center;padding:6px 3px;overflow:hidden}
+.mtabs > button[role=tab][aria-selected="true"]{flex:0 1 auto;padding:6px 8px;min-width:34px}
+.mtabs > button[role=tab] span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.mtabs .mt-x{flex:0 0 26px;padding:6px 2px;justify-content:center}.mtabs .mt-grab{flex:0 0 18px}.mtabs{gap:0;padding:4px 3px 0}
+.mtabs > button[role=tab]{min-width:20px!important}
+.mtabs .mt-pin{margin-left:auto}.mtabs .mt-pin + .mt-min{margin-left:0}
+.pinbtn[aria-pressed="true"]{color:var(--accent)}.pinbtn[aria-pressed="true"] .ic{fill:currentColor}
+/* reference window: everything fits however small it is made; the picture area gives way first */
+#refPanel .ref-body{overflow:hidden}
+#refPanel .ref-view{min-height:36px!important;flex:1 1 60px}
+#refPanel .ref-body{gap:3px;padding-bottom:6px}
+#refPanel .ref-tools{flex-shrink:0}
+.ref-foot{display:flex;flex-direction:column;gap:4px;flex-shrink:0}.ref-foot[hidden]{display:none}
+.ref-zoomrow input{flex:1;min-width:0}
 </style>
 
 <div class="app" id="app" data-open="" data-timeline="" data-quick="on" data-dl="open" data-dr="open">
@@ -6706,7 +6723,7 @@ function applyLayout(force) {
   for (const d of Object.keys(HOME)) for (const id of L.docks[d] || []) if (UNITS[id] && !placed.has(id) && !(desk && L.floats[id])) { bodyOf(d).append(unitEl(id)); placed.add(id); }
   for (const id of Object.keys(UNITS)) if (!placed.has(id) && !(desk && L.floats[id])) { bodyOf(homeOf(id)).append(unitEl(id)); placed.add(id); }
   if (desk) for (const id in L.floats) if (UNITS[id]) makeFloat(id, L.floats[id]);
-  for (const id of Object.keys(UNITS)) unitEl(id).hidden = desk ? L.hidden.includes(id) : (id === 'mix' || id === 'saved' || id === 'recent');
+  for (const id of Object.keys(UNITS)) unitEl(id).hidden = desk ? L.hidden.includes(id) : (id === 'mix' || id === 'saved');
   for (const d of Object.keys(HOME)) dockEl(d).dataset.mini = desk && L.mini[d] ? '1' : '';
   refreshDocks();
 }
@@ -6887,7 +6904,8 @@ function layoutGroups() {
 /* Wheel, Mixing and Color set are their own panels on desktop; on phones they go back inside the colour sheet's switcher */
 function placeColorBoxes(desk) {
   const cb = $('#colorPanel .color-body');
-  const rc = $('.recent'); if (desk) $('#recentPanel .color-body').append(rc); else cb.append(rc);
+  // phones with the floating panel get Recent colours as its own tab; the other phone layouts keep them under the wheel
+  const rc = $('.recent'); if (desk || app.dataset.mlay === 'float') $('#recentPanel .color-body').append(rc); else cb.append(rc);
   if (desk) { $('#mixPanel .color-body').append($('#mixBox')); $('#savedPanel .color-body').append($('#savedBox')); $('#mixBox').hidden = $('#savedBox').hidden = $('#wheelBox').hidden = false; cb.querySelector(':scope > .tabs').hidden = true; }
   else { const rec = cb.querySelector(':scope > .recent'); cb.insertBefore($('#mixBox'), rec); cb.insertBefore($('#savedBox'), rec); cb.querySelector(':scope > .tabs').hidden = false; colorTab('wheel'); }
 }
@@ -7914,14 +7932,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.13-2005' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.16-1011' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.13-2005';
+const BELEAF_BUILD = '2026.11.16-1011';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
@@ -8153,7 +8171,8 @@ const _kc = keysChanged; keysChanged = function () { _kc(); buildCB(); buildQA()
 /* ================= phones: panels you can use while drawing ================= */
 // Floating side panel (portrait): the open panel floats on the right with tabs on top; the canvas stays live around it.
 const MTABS = [['brush', 'Brush', ICON.brushes], ['color', 'Color', UNITS.color[2]], ['layers', 'Layers', ICON.layers], ['emotes', 'Emotes', ICON.emotes], ['nav', 'Navigator', ICON.nav], ['ref', 'Reference', UNITS.ref[2]]];
-const PANEL_OF = { brush: '#brushPanel', color: '#colorPanel', layers: '#layersPanel', emotes: '#emotePanel', nav: '#navPanel', ref: '#refPanel', notes: '#notesPanel' };
+MTABS.splice(2, 0, ['recent', 'Recent', UNITS.recent[2]]);
+const PANEL_OF = { brush: '#brushPanel', color: '#colorPanel', layers: '#layersPanel', emotes: '#emotePanel', nav: '#navPanel', ref: '#refPanel', notes: '#notesPanel', recent: '#recentPanel' };
 // the reference window is in View on every screen size (on phones it opens like the other panels)
 { const v = MENUS.view, i = v.findIndex(it => Array.isArray(it) && it[0] === 'Navigator'); v.splice(i + 1, 0, ['Reference window', '', () => { if (!docked()) return openPanel('ref'); const u = unitEl('ref'); if (u.hidden) showUnit('ref'); else hideUnit('ref'); }]); }
 let fpMin = !!store.get('panelMin', false);
@@ -8163,12 +8182,14 @@ function placeMTabs() {
   const o = app.dataset.open, on = !docked() && app.dataset.mlay === 'float' && o && PANEL_OF[o];
   mTabs.hidden = !on; if (!on) return;
   mTabs.replaceChildren(...MTABS.map(([k, label, ic]) => { const b = el('button', { role: 'tab', 'aria-selected': k === o, title: label, 'aria-label': label, onclick: () => { if (fpMin) setFpMin(false); if (k !== o) openPanel(k); } }); b.innerHTML = `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ic}</svg>${k === o ? `<span>${label}</span>` : ''}`; return b; }),
+    winPinBtn('win.panel', 'mt-x mt-pin'),
     (() => { const x = el('button', { class: 'mt-x mt-min', title: fpMin ? 'Open up' : 'Shrink to the tab strip', 'aria-label': fpMin ? 'Open panel' : 'Minimise panel', 'aria-pressed': fpMin, onclick: () => setFpMin(!fpMin) }); x.innerHTML = fpMin ? '<svg class="ic" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>' : IC_MIN; return x; })(),
     (() => { const x = el('button', { class: 'mt-x', title: 'Close', 'aria-label': 'Close panel', onclick: () => { app.dataset.open = ''; } }); x.innerHTML = IC_X; return x; })());
   mTabs.prepend(fpGrab);
   const p = $(PANEL_OF[o]); if (mTabs.parentElement !== p) p.prepend(mTabs);
 }
 new MutationObserver(() => { placeMTabs(); buildRails(); }).observe(app, { attributes: true, attributeFilter: ['data-open', 'data-mlay'] });
+new MutationObserver(() => { if (!docked()) placeColorBoxes(false); }).observe(app, { attributes: true, attributeFilter: ['data-mlay'] });
 /* Floating side panel = a real floating window: drag it by the dotted handle (or its title), resize from the corner,
    shrink it to just the tab strip, and tap the canvas to shrink it (that tap doesn't draw). Its spot and size are remembered. */
 const FPANELS = Object.values(PANEL_OF).map(s => $(s));
@@ -9042,6 +9063,7 @@ function nfWin(id, title, key) {
   makeAdaptive(win, { key, bar, minW: 250, minH: 150, def: (m, b) => {
     if (m === 'float') { const w = Math.min(330, Math.round((b.right - b.left) * .88)); return { x: b.left + 8, y: b.bottom - 340, w, h: 320 }; }
     return { x: b.left + 16, y: b.top + 16, w: 330, h: Math.min(430, b.bottom - b.top - 32) }; } });
+  awRegister(win);
   return { win, body, ttl, show() { win.hidden = false; }, hide() { win.hidden = true; } };
 }
 function nfRange(label, min, max, val, unit, on, step = 1) {
@@ -9588,6 +9610,51 @@ function openPhoneTips() {
 }
 MENUS.help.unshift(['Phone tips and gestures…', '', () => openPhoneTips()]);
 setTimeout(() => { if (!docked() && !store.get('phoneTipsSeen', false)) { store.set('phoneTipsSeen', true); const t = () => { if ($('#startScreen') && !$('#startScreen').hidden) return setTimeout(t, 1500); openPhoneTips(); }; t(); } }, 2500);
+
+/* ---- phones: one menu at a time, unless you pin it ----
+   Opening a window closes the other open ones, so nothing is left hiding behind it. The pin on a window keeps it
+   open no matter what else you open. */
+const IC_PIN = '<svg class="ic" viewBox="0 0 24 24"><path d="M9 4h6l-1 6 3 3H7l3-3-1-6zM12 13v7"/></svg>';
+const winPinned = k => !!store.get('pin.' + k, false);
+function winPinBtn(key, cls = 'ibtn sm') {
+  const b = el('button', { class: cls + ' pinbtn', type: 'button' }); b.innerHTML = IC_PIN;
+  const sync = () => { const on = winPinned(key); b.setAttribute('aria-pressed', on); b.title = on ? 'Pinned: stays open when you open other menus (tap to unpin)' : 'Pin: keep this open when you open other menus'; b.setAttribute('aria-label', on ? 'Unpin this window' : 'Pin this window open'); };
+  b.onclick = e => { e.stopPropagation(); store.set('pin.' + key, !winPinned(key)); sync(); toast(winPinned(key) ? 'Pinned: this stays open' : 'Unpinned: it closes when you open another menu'); }; sync(); return b;
+}
+const AW_KEEP = w => w.id === 'adjWin'; // an adjustment in progress is never closed for you
+function closeOtherWins(w) {
+  if (docked()) return;
+  AW.forEach((cfg, o) => { if (o === w || FPANELS.includes(o) || AW_KEEP(o) || o.hidden || winPinned(cfg.key)) return; o.hidden = true; });
+  if (w && !FPANELS.includes(w) && app.dataset.open && PANEL_OF[app.dataset.open] && !winPinned('win.panel')) app.dataset.open = '';
+}
+function awRegister(w) {
+  if (w._awReg || FPANELS.includes(w)) return; w._awReg = true; const cfg = AW.get(w); if (!cfg) return;
+  const mb = w.querySelector('.minbtn'); if (mb && !AW_KEEP(w)) mb.before(winPinBtn(cfg.key));
+  new MutationObserver(() => { if (!w.hidden) closeOtherWins(w); }).observe(w, { attributes: true, attributeFilter: ['hidden'] });
+}
+AW.forEach((_, w) => awRegister(w));
+new MutationObserver(() => { if (app.dataset.open && PANEL_OF[app.dataset.open]) closeOtherWins($(PANEL_OF[app.dataset.open])); }).observe(app, { attributes: true, attributeFilter: ['data-open'] });
+/* ---- swipe up on the panel buttons of the bottom bar opens them, like swiping up on a tool ---- */
+{
+  let sw = null;
+  document.addEventListener('pointerdown', e => { const b = e.target.closest('.bottombar button, #mobBar button'); sw = b && !b.dataset.tool ? { b, x: e.clientX, y: e.clientY, id: e.pointerId } : null; }, true);
+  document.addEventListener('pointermove', e => {
+    if (!sw || e.pointerId !== sw.id) return; const dx = e.clientX - sw.x, dy = e.clientY - sw.y; if (!(dy < -22 && -dy > Math.abs(dx) * 1.2)) return;
+    const b = sw.b; sw = null; try { navigator.vibrate && navigator.vibrate(10); } catch { }
+    // open it (never close it: a swipe up always means "show me this")
+    if (!(b.dataset.open && app.dataset.open === b.dataset.open)) b.click();
+    const until = performance.now() + 600, eat = ev => { window.removeEventListener('click', eat, true); if (!ev.isTrusted || performance.now() > until) return; ev.stopPropagation(); ev.preventDefault(); }; window.addEventListener('click', eat, true); setTimeout(() => window.removeEventListener('click', eat, true), 650);
+  }, true);
+  const end = e => { if (sw && e.pointerId === sw.id) sw = null; }; document.addEventListener('pointerup', end, true); document.addEventListener('pointercancel', end, true);
+}
+/* ---- reference window: the zoom and see-through sliders tuck away behind a button ---- */
+{
+  const foot = el('div', { class: 'ref-foot' }), z = $('#refZoom'), op = $('.ref-op');
+  z.before(foot); foot.append(el('label', { class: 'ref-op ref-zoomrow' }, el('span', { text: 'Zoom' }), z), op);
+  const b = el('button', { class: 'ibtn', id: 'refFootB', type: 'button', title: 'Show or hide the zoom and see-through sliders', 'aria-label': 'Zoom and see-through sliders' }); b.innerHTML = '<svg class="ic" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>';
+  const sync = () => { const on = store.get('refFoot', true) !== false; foot.hidden = !on; b.setAttribute('aria-pressed', on); };
+  b.onclick = () => { store.set('refFoot', !(store.get('refFoot', true) !== false)); sync(); }; ($('#refMoreB') || $('#refDel')).before(b); sync();
+}
 
 
 /* ================= sample: a blinking cat ================= */
