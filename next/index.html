@@ -1757,6 +1757,39 @@ html,body{overscroll-behavior:none} /* no pull-to-refresh or swipe-back bounce w
 #refPanel .ref-tools{flex-shrink:0}
 .ref-foot{display:flex;flex-direction:column;gap:4px;flex-shrink:0}.ref-foot[hidden]{display:none}
 .ref-zoomrow input{flex:1;min-width:0}
+
+/* brush sizes: a tight grid like Clip Studio */
+#sizes{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(40px,1fr))!important;gap:0!important;padding:0 6px 6px!important;background:transparent}
+#sizes .szb{aspect-ratio:auto!important;height:44px!important;border-radius:0!important;border:0!important;border-right:1px solid color-mix(in srgb,var(--line) 70%,transparent)!important;border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent)!important;background:transparent!important;gap:3px!important;justify-content:flex-end!important;padding:0 0 3px!important}
+#sizes .szb:hover{background:color-mix(in srgb,var(--fg) 7%,transparent)!important}
+#sizes .szb i{background:color-mix(in srgb,var(--fg) 62%,transparent)!important;box-shadow:none!important;flex-shrink:0}
+#sizes .szb span{font-size:calc(10px*var(--fz,1))!important;color:var(--muted)!important;line-height:1}
+#sizes .szb[aria-pressed="true"]{background:color-mix(in srgb,var(--accent) 26%,transparent)!important}
+#sizes .szb[aria-pressed="true"] i{background:var(--fg)!important}#sizes .szb[aria-pressed="true"] span{color:var(--fg)!important}
+/* colour set: tight square swatches and a footer of buttons */
+#palGrid{grid-template-columns:repeat(auto-fill,minmax(20px,1fr))!important;gap:1px!important}
+#palGrid .psw{border-radius:0!important;border:0!important;outline:1px solid rgba(0,0,0,.25);outline-offset:-1px}
+#palGrid .psw.picked{outline:2px solid var(--fg);outline-offset:-2px;box-shadow:inset 0 0 0 3px var(--panel);z-index:1}
+#savedBox{display:flex;flex-direction:column;min-height:0}
+#savedBox:not([hidden]){flex:1 1 auto}
+#savedBox #palGrid{flex:1 1 auto;min-height:21px;overflow-y:auto;align-content:start}
+.palfoot{display:flex;align-items:center;gap:2px;flex-shrink:0;border-top:1px solid var(--line);padding-top:4px}
+.palfoot .pf-gap{flex:1}
+.palfoot .ibtn:disabled{opacity:.35}
+[data-unit]{min-height:var(--umin,74px)}
+/* colours on the top bar */
+.cmdbar .cbcol{flex:0 0 auto;width:calc(22px*var(--iz,1));height:calc(22px*var(--iz,1));border:1px solid rgba(0,0,0,.35);border-radius:3px;margin:0 1px;padding:0;cursor:pointer}
+.cmdbar .cbcol:hover{outline:2px solid var(--fg2);outline-offset:1px}
+.cmdbar.cbdrop{box-shadow:inset 0 0 0 2px var(--accent)}
+/* colour set settings */
+.ps-list{display:flex;flex-direction:column;gap:2px;max-height:min(46vh,340px);overflow-y:auto;border:1px solid var(--line);border-radius:8px;padding:3px;background:var(--panel)}
+.ps-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:calc(13px*var(--fz,1))}
+.ps-row[aria-selected="true"]{background:color-mix(in srgb,var(--accent) 28%,transparent)}
+.ps-row b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}.ps-row small{color:var(--muted)}
+.ps-grip{color:var(--dim);cursor:grab;font-size:10px;letter-spacing:-2px}
+.ps-sw{display:flex}.ps-sw i{width:10px;height:14px;display:block}
+.ps-acts .btn{min-height:30px}
+.ps-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
 </style>
 
 <div class="app" id="app" data-open="" data-timeline="" data-quick="on" data-dl="open" data-dr="open">
@@ -3184,12 +3217,12 @@ function buildPalGrid(box, editable) {
 function buildPal() {
   $('#palSel').replaceChildren(...palettes.map((p, i) => el('option', { value: i, text: `${p.name} (${p.colors.length})` }))); $('#palSel').value = palIdx;
   buildPalGrid($('#palGrid'), true); if (!$('#mixSaved').hidden) buildPalGrid($('#mixSaved'), false);
-  $('#palEdit').setAttribute('aria-pressed', palEditing);
+  const pe = $('#palEdit'); if (pe) pe.setAttribute('aria-pressed', palEditing);
 }
 function palAddColor(h) { const P = palettes[palIdx]; if (P.colors.includes(h)) { toast(`Already in “${P.name}”`); return; } P.colors.push(h); savePals(); buildPal(); toast(`Added to “${P.name}”`); }
 $('#palSel').onchange = e => { palIdx = +e.target.value; palEditing = false; savePals(); buildPal(); };
-$('#palAdd').onclick = () => palAddColor(color.hex);
-$('#palEdit').onclick = () => { palEditing = !palEditing; buildPal(); };
+if ($('#palAdd')) $('#palAdd').onclick = () => palAddColor(color.hex);
+if ($('#palEdit')) $('#palEdit').onclick = () => { palEditing = !palEditing; buildPal(); };
 $('#palMore').onclick = () => { $('#palMenu').hidden = !$('#palMenu').hidden; };
 function askName(title, value) { return new Promise(res => { $('#nameTitle').textContent = title; $('#nameInput').value = value || ''; $('#nameModal').hidden = false; setTimeout(() => $('#nameInput').focus(), 30); const done = v => { $('#nameModal').hidden = true; $('#nameOk').onclick = null; $('#nameInput').onkeydown = null; res(v); }; $('#nameOk').onclick = () => done($('#nameInput').value.trim()); $('#nameInput').onkeydown = e => { if (e.key === 'Enter') done($('#nameInput').value.trim()); }; $('#nameModal').querySelector('[data-dismiss]').onclick = () => done(null); }); }
 function confirmAsk(title, text, ok) { return new Promise(res => { $('#confirmTitle').textContent = title; $('#confirmText').textContent = text; $('#confirmOk').textContent = ok; $('#confirmModal').hidden = false; $('#confirmOk').onclick = () => { $('#confirmModal').hidden = true; res(true); }; $('#confirmModal').querySelector('[data-dismiss]').onclick = () => { $('#confirmModal').hidden = true; res(false); }; }); }
@@ -3421,7 +3454,7 @@ let screenFull = true, scrRect = null;
 function scrAdd(x0, y0, x1, y1) { scrRect = scrRect ? [Math.min(scrRect[0], x0), Math.min(scrRect[1], y0), Math.max(scrRect[2], x1), Math.max(scrRect[3], y1)] : [x0, y0, x1, y1]; frame(); }
 function scrDoc(r) { const p = [[r[0], r[1]], [r[2], r[1]], [r[2], r[3]], [r[0], r[3]]].map(([a, b]) => toScreen(a, b)), xs = p.map(q => q[0]), ys = p.map(q => q[1]); scrAdd(Math.min(...xs) - 2, Math.min(...ys) - 2, Math.max(...xs) + 2, Math.max(...ys) + 2); }
 function cursorR() { const b = cur(); return Math.max(liq ? liq.size : 0, b ? b.size : 0) * V.s / 2 + 6; }
-function hoverMove(p) { const r = cursorR(); if (hover) scrAdd(hover[0] - r, hover[1] - r, hover[0] + r, hover[1] + r); hover = p; if (p) scrAdd(p[0] - r, p[1] - r, p[0] + r, p[1] + r); }
+function hoverMove(p) { if (!view._bigCur && BRUSHLIKE.has(tool)) { hover = p; syncBrushCursor(); return; } const r = cursorR(); if (hover) scrAdd(hover[0] - r, hover[1] - r, hover[0] + r, hover[1] + r); hover = p; if (p) scrAdd(p[0] - r, p[1] - r, p[0] + r, p[1] + r); }
 function animOnly(target, f, tint) {
   const x = target.getContext('2d'); x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1; x.clearRect(0, 0, DOC.w, DOC.h);
   if (f < 0 || f >= anim.n) return false; let any = false;
@@ -3510,11 +3543,11 @@ function render() {
   if (!GPUV.on) x.drawImage(comp, 0, 0); x.restore(); if (GPUV.on) GPUV.present(bg, busy);
   drawOverlay(x); drawBoxHighlight(x);
   if (hover && tool === 'liquify' && !liqOp) { x.beginPath(); x.arc(hover[0], hover[1], Math.max(2, liq.size * V.s / 2), 0, 7); x.lineWidth = 1; x.setLineDash([4, 3]); x.strokeStyle = 'rgba(255,255,255,.8)'; x.stroke(); x.setLineDash([]); }
-  if (hover && BRUSHLIKE.has(tool) && !anim.playing && !stroking && !shape) {
+  const bigCur = syncBrushCursor();
+  if (bigCur && hover && BRUSHLIKE.has(tool) && !anim.playing && !shape) {
     const b = cur(), r = Math.max(1, b.size * V.s / 2);
     x.save(); x.translate(hover[0], hover[1]); x.rotate(V.r + (b.angle || 0) * Math.PI / 180); x.scale(1, Math.max(.05, (b.roundness ?? 100) / 100));
-    x.beginPath(); x.arc(0, 0, r, 0, 7); x.restore(); x.lineWidth = 1; x.strokeStyle = 'rgba(0,0,0,.6)'; x.stroke();
-    x.beginPath(); x.arc(hover[0], hover[1], 1.5, 0, 7); x.fillStyle = 'rgba(255,255,255,.8)'; x.fill();
+    x.beginPath(); x.arc(0, 0, r, 0, 7); x.restore(); x.lineWidth = 2; x.strokeStyle = 'rgba(255,255,255,.6)'; x.stroke(); x.lineWidth = 1; x.strokeStyle = 'rgba(0,0,0,.75)'; x.stroke();
   }
   if (part) x.restore();
   const zt = Math.round(V.s * 100) + '%'; if (zt !== lastZoomTxt) { $('#zoomOut').value = zt; lastZoomTxt = zt; }
@@ -3838,12 +3871,7 @@ view.addEventListener('pointerup', up); view.addEventListener('pointercancel', u
 view.addEventListener('pointerleave', e => { if (e.pointerType !== 'touch') hoverMove(null); });
 view.addEventListener('contextmenu', e => e.preventDefault());
 view.addEventListener('wheel', e => {
-  e.preventDefault(); const p = local(e); interacting();
-  const mouseWheel = e.deltaMode !== 0 || (e.deltaX === 0 && Math.abs(e.deltaY) >= 40 && Number.isInteger(e.deltaY));
-  if (e.ctrlKey || e.metaKey) zoomAt(Math.exp(-e.deltaY * .01), p[0], p[1]);
-  else if (e.shiftKey) { V.tx -= e.deltaY || e.deltaX; dirty(false); }
-  else if (mouseWheel) zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, p[0], p[1]);
-  else { V.tx -= e.deltaX; V.ty -= e.deltaY; dirty(false); }
+  e.preventDefault(); const p = local(e); interacting(); wheelAction(e, p);
 }, { passive: false });
 
 /* ================= more tools ================= */
@@ -7951,14 +7979,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.23-0527' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.23-0614' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.23-0527';
+const BELEAF_BUILD = '2026.11.23-0614';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
@@ -8019,7 +8047,8 @@ function openPrefs(cat) {
         num('Length of keypress to switch tools', 'How long you hold the key before letting go takes you back.', 100, 2000, 50, 'ms', () => PREF.toolShiftMs, v => { PREF.toolShiftMs = v; savePref(); }, 'toolShift')),
       grp('Tool buttons', link('Hold a tool button to open its settings', 'Long-press any tool in the tool bar (works with a pen, mouse or finger).', 'Customise tool bar…', () => openToolsEditor())),
       grp('Brush on the canvas', chk('Size and opacity sliders on the canvas', 'The little sliders at the edge of the canvas.', () => app.dataset.quick !== 'off', v => { if ((app.dataset.quick !== 'off') !== v) toggleQuick(); }))],
-    'Pen and tablet': () => [grp('Pen', link('Pen pressure and tablet', 'Pressure curve, Windows Ink, tablet buttons and a pen test pad.', 'Open…', openPen),
+    'Pen and tablet': () => [grp('Mouse', (() => { const sl = el('select', { 'aria-label': 'Mouse wheel' }, ...WHEEL_MODES.map(([v, t]) => el('option', { value: v, text: t }))); sl.value = store.get('wheelMode', 'zoom'); sl.onchange = () => { store.set('wheelMode', sl.value); toast('Mouse wheel: ' + WHEEL_MODES.find(m => m[0] === sl.value)[1]); }; return el('label', { class: 'pf-row' }, el('span', { class: 'pf-t' }, el('b', { text: 'Mouse wheel' }), el('small', { text: 'Shift + wheel scrolls sideways, Alt + wheel scrolls up and down, Ctrl + wheel (or a touchpad pinch) zooms.' })), sl); })()),
+      grp('Pen', link('Pen pressure and tablet', 'Pressure curve, Windows Ink, tablet buttons and a pen test pad.', 'Open…', openPen),
         chk('Low-latency drawing', 'Draws straight to the screen for a snappier pen. Takes effect after reloading beleaf.', () => store.get('lowLatency', true) !== false, v => { store.set('lowLatency', v); const c = $('#lowLatCk'); if (c) c.checked = v; toast('Reload beleaf to apply'); }),
         chk('Steady memory (keeps the canvas from vanishing)', 'Keeps your layers in normal memory instead of graphics memory, so the browser can’t wipe them on long sessions. Big canvases may draw a little slower. Takes effect after reloading beleaf.', () => store.get('cpuCanvas', false) === true, v => { store.set('cpuCanvas', !!v); toast('Reload beleaf to apply'); }))],
     'Shortcuts': () => [grp('Keyboard', link('Shortcut settings', 'Primary and sub keys for every tool and command, shared tool keys.', 'Open…', () => openKeys()))],
@@ -9745,6 +9774,155 @@ window.__canvasLost = () => { };
 window.__canvasBack = c => { recLost.add(c); clearTimeout(recT); recT = setTimeout(recNow, 60); };
 // the screen canvas: just draw it again
 view.addEventListener('contextrestored', () => { dirty(); });
+
+/* ================= Clip Studio feel: wheel zoom, a quiet brush cursor, compact sizes, colour sets ================= */
+
+/* ---- the brush cursor: one thin outline that follows the pen with no lag ----
+   Up to about 120 px across it's the system cursor itself (drawn by the computer, so it never trails behind);
+   bigger brushes get the same outline drawn on the canvas. */
+let curKey = '';
+function brushCursorCss() {
+  const b = cur(), d = b.size * V.s, ry = Math.max(.05, (b.roundness ?? 100) / 100), ang = (V.r * 180 / Math.PI + (b.angle || 0)) % 360;
+  if (d > 118) return null;
+  const S = Math.max(17, Math.ceil(d) + 5), c = S / 2, r = Math.max(.5, d / 2);
+  let g;
+  if (d < 6) { const k = (x, y) => `<rect x="${x - .5}" y="${y - .5}" width="1" height="1"/>`; g = `<g fill="#000" opacity=".8">${k(c, c - 5)}${k(c, c + 5)}${k(c - 5, c)}${k(c + 5, c)}${k(c, c)}</g><g fill="#fff" opacity=".85">${k(c, c - 4)}${k(c, c + 4)}${k(c - 4, c)}${k(c + 4, c)}</g>`; }
+  else g = `<g transform="rotate(${ang.toFixed(1)} ${c} ${c})" fill="none"><ellipse cx="${c}" cy="${c}" rx="${r}" ry="${r * ry}" stroke="#fff" stroke-opacity=".75" stroke-width="2"/><ellipse cx="${c}" cy="${c}" rx="${r}" ry="${r * ry}" stroke="#000" stroke-opacity=".8" stroke-width="1"/></g>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}" viewBox="0 0 ${S} ${S}">${g}</svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}") ${Math.round(c)} ${Math.round(c)}, crosshair`;
+}
+// true when the canvas should draw the outline itself (very big brushes)
+function syncBrushCursor() {
+  const on = BRUSHLIKE.has(tool) && !panDrag && !spaceDown && !(xform && xform.drag);
+  if (!on) { if (curKey) { curKey = ''; view.style.cursor = CURSORS[tool] || 'crosshair'; } return false; }
+  const b = cur(), key = [tool, b.size, b.roundness, b.angle, V.s.toFixed(3), V.r.toFixed(3)].join('|');
+  if (key !== curKey || view.style.cursor !== view._curCss) { curKey = key; const css = brushCursorCss(); view.style.cursor = css || 'none'; view._curCss = view.style.cursor; view._bigCur = !css; }
+  return !!view._bigCur;
+}
+
+/* ---- mouse wheel ---- */
+const WHEEL_MODES = [['zoom', 'Zoom in and out'], ['pan', 'Scroll the canvas (Ctrl + wheel zooms)'], ['auto', 'Mouse zooms, touchpad scrolls']];
+function wheelAction(e, p) {
+  const mode = store.get('wheelMode', 'zoom'), notch = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;
+  const zoomBy = () => zoomAt(Math.pow(1.18, Math.max(-4, Math.min(4, -notch / 100))), p[0], p[1]);
+  const pan = () => { V.tx -= e.deltaX; V.ty -= e.deltaY; dirty(false); };
+  if (e.ctrlKey || e.metaKey) return zoomAt(Math.exp(-Math.max(-60, Math.min(60, e.deltaY)) * .01), p[0], p[1]);
+  if (e.shiftKey) { V.tx -= e.deltaY || e.deltaX; dirty(false); return; }
+  if (e.altKey) return pan();
+  if (mode === 'pan') return pan();
+  if (mode === 'auto') { const mouse = e.deltaMode !== 0 || (e.deltaX === 0 && Math.abs(e.deltaY) >= 40); return mouse ? zoomBy() : pan(); }
+  if (e.deltaX && Math.abs(e.deltaX) > Math.abs(e.deltaY)) return pan();
+  zoomBy();
+}
+
+/* ---- brush sizes: a tight grid like Clip Studio ---- */
+SIZE_PRESETS.splice(0, SIZE_PRESETS.length, 0.7, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 7, 8, 10, 12, 15, 17, 20, 25, 30, 40, 50, 60, 70, 80, 100, 120, 150, 170, 200, 250, 300, 400, 500);
+buildSizes = function () {
+  $('#sizes').replaceChildren(...SIZE_PRESETS.map(s => { const d = Math.max(1, Math.min(30, s <= 6 ? s * .9 : 4.5 + Math.sqrt(s) * 1.75));
+    return el('button', { class: 'szb', 'aria-label': 'Size ' + s, title: 'Size ' + s, 'data-size': s, onclick: () => { cur().size = s; brushEdited(true); } }, el('i', { style: `width:${d}px;height:${d}px` }), el('span', { text: s })); }));
+  try { syncSizeSel(); } catch { }
+};
+function syncSizeSel() { const s = cur().size; $$('#sizes .szb').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.size === s))); }
+buildSizes();
+
+/* ---- colour sets: tight swatches, Replace / Add / Delete at the bottom, and a settings window ---- */
+const STD_PALS = [
+  { name: 'Basics', colors: ['#000000', '#3A3A3E', '#7A7A80', '#BDBDC2', '#FFFFFF', '#E0525C', '#F2A65A', '#F5D547', '#5CC8A8', '#4C9AFF', '#7A5CFA', '#E26DB8'] },
+  { name: 'Skin tones', colors: ['#FBE3D3', '#F3C9A8', '#E0A982', '#C68A62', '#A06A47', '#7A4E33', '#553423', '#3A2216'] },
+  { name: 'Pastels', colors: ['#FFD1DC', '#FFE5B4', '#FFF5BA', '#C1F0C1', '#B5EAD7', '#C7CEEA', '#D7C4F2', '#F2C4E6'] },
+  { name: 'Standard color set', colors: (() => {
+    const out = []; for (let i = 0; i < 14; i++) out.push(hslHex(0, 0, i / 13));
+    const hues = [0, 25, 45, 60, 90, 130, 165, 190, 210, 235, 260, 285, 315, 340];
+    for (const [s, l] of [[.9, .82], [.85, .68], [.8, .55], [.75, .45], [.7, .33], [.6, .22], [.5, .13]]) hues.forEach(h => out.push(hslHex(h, s, l)));
+    return out; })() },
+];
+let palPick = -1;
+const palCur = () => palettes[palIdx];
+buildPalGrid = function (box, editable) {
+  const P = palCur(); box.classList.remove('editing');
+  if (!P.colors.length) { box.replaceChildren(el('span', { class: 'empty', text: 'No colours yet. Pick one and press the + below.' })); return; }
+  box.replaceChildren(...P.colors.map((h, i) => {
+    const b = el('button', { class: 'psw' + (editable && i === palPick ? ' picked' : ''), style: 'background:' + h, title: h + (editable ? ' (drag it onto the top bar to keep it there)' : ''), 'aria-label': 'Use ' + h, draggable: editable ? 'true' : 'false', onclick: () => { setColor(h); pushRecent(h); if (editable) { palPick = i; $$('#palGrid .psw').forEach((x, k) => x.classList.toggle('picked', k === i)); palFootSync(); } } });
+    if (editable) b.addEventListener('dragstart', e => { e.dataTransfer.setData('text/x-beleaf-color', h); e.dataTransfer.setData('text/plain', h); e.dataTransfer.effectAllowed = 'copy'; });
+    return b;
+  }));
+};
+const palFoot = el('div', { class: 'palfoot', role: 'toolbar', 'aria-label': 'Colour set' });
+const pfBtn = (id, label, path, fn) => { const b = el('button', { class: 'ibtn sm', id, title: label, 'aria-label': label, onclick: fn }); b.innerHTML = `<svg class="ic" viewBox="0 0 24 24">${path}</svg>`; return b; };
+function palFootSync() { const has = palPick >= 0 && palPick < palCur().colors.length; $('#pfReplace').disabled = !has; $('#pfDelete').disabled = !has; }
+palFoot.append(
+  pfBtn('pfReplace', 'Replace the picked colour with the current colour', '<path d="M4 7h11l-3-3M20 17H9l3 3"/>', () => { const P = palCur(); if (palPick < 0) return; P.colors[palPick] = color.hex; savePals(); buildPal(); toast('Colour replaced'); }),
+  pfBtn('pfAdd', 'Add the current colour', '<path d="M12 5v14M5 12h14"/>', () => { palAddColor(color.hex); palPick = palCur().colors.indexOf(color.hex); buildPal(); }),
+  pfBtn('pfDelete', 'Delete the picked colour', '<path d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13"/>', () => { const P = palCur(); if (palPick < 0) return; P.colors.splice(palPick, 1); palPick = Math.min(palPick, P.colors.length - 1); savePals(); buildPal(); }),
+  el('span', { class: 'pf-gap' }),
+  pfBtn('pfTop', 'Put the current colour on the top bar', '<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M12 13v7M8.5 16.5h7"/>', () => cbColorAdd(color.hex)));
+$('#savedBox .palactions').replaceWith(palFoot);
+const palBuild0 = buildPal; buildPal = function () { if (palPick >= palCur().colors.length) palPick = -1; palBuild0(); palFootSync(); };
+$('#palSel').addEventListener('change', () => { palPick = -1; palFootSync(); });
+// the wrench: colour set settings
+{ const b = $('#palMore'); b.innerHTML = '<svg class="ic" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg>'; b.title = 'Colour set settings'; b.setAttribute('aria-label', 'Colour set settings'); b.onclick = () => openPalSettings(); }
+
+let psW = null;
+function openPalSettings() {
+  if (!psW) psW = nfWin('palSetWin', 'Colour set settings', 'win.palset');
+  const draft = palettes.map(p => ({ name: p.name, colors: p.colors.slice() })); let sel = palIdx;
+  const list = el('div', { class: 'ps-list', role: 'listbox', 'aria-label': 'Colour sets' });
+  const name = async (t, v) => (await askName(t, v) || '').trim();
+  function paint() {
+    list.replaceChildren(...draft.map((p, i) => { const row = el('div', { class: 'ps-row', role: 'option', 'aria-selected': String(i === sel), draggable: 'true', tabindex: '0', onclick: () => { sel = i; paint(); } },
+      el('span', { class: 'ps-grip', 'aria-hidden': 'true', text: '⋮⋮' }), el('span', { class: 'ps-sw' }, ...p.colors.slice(0, 6).map(h => el('i', { style: 'background:' + h }))), el('b', { text: p.name }), el('small', { text: String(p.colors.length) }));
+      row.addEventListener('dragstart', e => { e.dataTransfer.setData('text/x-ps', String(i)); }); row.addEventListener('dragover', e => e.preventDefault());
+      row.addEventListener('drop', e => { e.preventDefault(); const from = +e.dataTransfer.getData('text/x-ps'); if (isNaN(from) || from === i) return; const [m] = draft.splice(from, 1); draft.splice(i, 0, m); sel = i; paint(); });
+      return row; }));
+  }
+  const act = (t, fn, title) => el('button', { class: 'btn sm', type: 'button', text: t, title: title || t, onclick: fn });
+  const move = d => { const j = sel + d; if (j < 0 || j >= draft.length) return; [draft[sel], draft[j]] = [draft[j], draft[sel]]; sel = j; paint(); };
+  psW.body.replaceChildren(
+    list,
+    el('div', { class: 'btnrow ps-acts' },
+      act('↑', () => move(-1), 'Move up'), act('↓', () => move(1), 'Move down'),
+      act('New', async () => { const n = await name('New colour set', 'My colours'); if (n) { draft.push({ name: n, colors: [] }); sel = draft.length - 1; paint(); } }),
+      act('Duplicate', () => { const p = draft[sel]; if (!p) return; draft.splice(sel + 1, 0, { name: p.name + ' copy', colors: p.colors.slice() }); sel++; paint(); }),
+      act('Rename', async () => { const p = draft[sel]; if (!p) return; const n = await name('Rename colour set', p.name); if (n) { p.name = n; paint(); } }),
+      act('Delete', () => { if (draft.length <= 1) return toast('Keep at least one colour set'); draft.splice(sel, 1); sel = Math.max(0, sel - 1); paint(); }),
+      act('Add standard sets', () => { let n = 0; STD_PALS.forEach(s => { if (!draft.some(p => p.name === s.name)) { draft.push({ name: s.name, colors: s.colors.slice() }); n++; } }); paint(); toast(n ? `${n} standard set${n === 1 ? '' : 's'} added` : 'All the standard sets are already here'); }, 'Bring back any built-in sets that were deleted'),
+      act('Import…', () => openPalIO('import')), act('Export…', () => { palIdx = Math.min(sel, palettes.length - 1); openPalIO('export'); })),
+    el('div', { class: 'actions ps-foot' },
+      el('button', { class: 'btn', type: 'button', text: 'Cancel', onclick: () => psW.hide() }),
+      el('button', { class: 'btn primary', type: 'button', text: 'OK', onclick: () => { palettes.splice(0, palettes.length, ...draft); palIdx = Math.max(0, Math.min(sel, palettes.length - 1)); palPick = -1; savePals(); buildPal(); psW.hide(); toast('Colour sets saved'); } })));
+  paint(); psW.show();
+}
+
+/* ---- colours on the top (command) bar: drag them from the colour set, right-click (or hold) to remove ---- */
+const cbColors = () => (CB.colors || (CB.colors = []));
+function cbColorAdd(h, at) { const a = cbColors(), i = a.indexOf(h); if (i >= 0) a.splice(i, 1); if (at == null || at > a.length) a.push(h); else a.splice(at, 0, h); saveCB(); buildCB(); toast('Colour added to the top bar'); }
+const buildCB0 = buildCB;
+buildCB = function () {
+  buildCB0(); const bar = $('#cmdBar'), gear = bar.querySelector('.cbgear'); if (!cbColors().length) { bar.querySelector('.cbsep.cbcolsep')?.remove(); }
+  const sws = cbColors().map((h, i) => { const s = el('button', { class: 'cbcol', style: 'background:' + h, title: h + ' (right-click or hold to remove; drag to reorder)', 'aria-label': 'Use ' + h, draggable: 'true', onclick: () => { setColor(h); pushRecent(h); } });
+    s.addEventListener('contextmenu', e => { e.preventDefault(); cbColors().splice(i, 1); saveCB(); buildCB(); toast('Colour removed from the top bar'); });
+    s.addEventListener('dragstart', e => { e.dataTransfer.setData('text/x-beleaf-color', h); e.dataTransfer.setData('text/x-cb-from', String(i)); });
+    return s; });
+  if (sws.length) gear.before(el('span', { class: 'cbsep cbcolsep', 'aria-hidden': 'true' }), ...sws);
+};
+{
+  const bar = $('#cmdBar');
+  bar.addEventListener('dragover', e => { if ([...e.dataTransfer.types].includes('text/x-beleaf-color')) { e.preventDefault(); bar.classList.add('cbdrop'); } });
+  bar.addEventListener('dragleave', () => bar.classList.remove('cbdrop'));
+  bar.addEventListener('drop', e => {
+    bar.classList.remove('cbdrop'); const h = e.dataTransfer.getData('text/x-beleaf-color'); if (!/^#[0-9a-f]{6}$/i.test(h)) return; e.preventDefault();
+    const sw = e.target.closest('.cbcol'), from = e.dataTransfer.getData('text/x-cb-from'), all = [...bar.querySelectorAll('.cbcol')];
+    let at = sw ? all.indexOf(sw) : null; if (from !== '') { const a = cbColors(); a.splice(+from, 1); if (at != null && at > +from) at--; }
+    cbColorAdd(h.toUpperCase(), at);
+  });
+}
+buildCB();
+
+/* ---- panels can't be squeezed so small that their buttons disappear ---- */
+const UMIN = { color: 250, saved: 170, mix: 200, recent: 64, layers: 150, brush: 140, settings: 120, sizes: 96, nav: 120, ref: 150, notes: 110, emotes: 150 };
+const uminOf = u => UMIN[u && u.dataset.unit] || 74;
+function applyUnitMins() { $$('.dbody > [data-unit], #brushPanel > .scroll > [data-unit]').forEach(u => u.style.setProperty('--umin', uminOf(u) + 'px')); }
+applyUnitMins(); new MutationObserver(applyUnitMins).observe(document.body, { childList: true, subtree: false });
 
 /* ================= phones and tablets: everything in reach =================
    - an "All" button at the start of the tool bar opens one sheet with every tool, panel, quick command and menu, plus search
