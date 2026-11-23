@@ -3405,7 +3405,7 @@ function srcOf(L, i, f, exp) {
     clipCtx(tctx); tctx.globalCompositeOperation = 'source-over'; tctx.globalAlpha = 1; tctx.clearRect(0, 0, DOC.w, DOC.h);
     if (stroking.S) tctx.drawImage(stroking.S.c, 0, 0);
     tctx.globalAlpha = stroking.b.opacity / 100; tctx.globalCompositeOperation = stroking.erase ? 'destination-out' : (L.lockAlpha ? 'source-atop' : 'source-over');
-    drawStrokeOut(tctx, masked(eng.out)); tctx.globalAlpha = 1; tctx.globalCompositeOperation = 'source-over'; src = tmp;
+    drawStrokeOut(tctx, masked(stroking.lo ? loUp : eng.out)); tctx.globalAlpha = 1; tctx.globalCompositeOperation = 'source-over'; src = tmp;
   }
   return src;
 }
@@ -3459,7 +3459,7 @@ function rotChip() {
 function render() {
   needs = false;
   let t0 = performance.now();
-  if (stroking && strokeFlush) { strokeFlush = false; const fr = eng.flush(); if (fr && stroking.sym && stroking.sym.length) dirty(); else dirtyRect(fr); }
+  if (stroking && strokeFlush) { strokeFlush = false; const fr = stroking.lo ? loFlush(stroking) : eng.flush(); if (fr && stroking.sym && stroking.sym.length) dirty(); else dirtyRect(fr); }
   if (stroking) { PERF.time('brush', brushMs + performance.now() - t0); brushMs = 0; }
   t0 = performance.now();
   if (compDirty) { compose(); compDirty = false; compRect = null; PERF.time('composite', performance.now() - t0); }
@@ -3549,15 +3549,17 @@ function beginStroke(x, y, p, tilt, az) {
   }
   const opts = { color: hexRgb(color.hex), erase, sample, seed: (Math.random() * 1e9) | 0 };
   eng.begin(b, opts);
-  stroking = { b, eb: b, opts, erase, S, L, sym: symList() }; strokeInit(stroking, b0);
+  stroking = { b, eb: b, opts, erase, S, L, sym: symList() }; strokeInit(stroking, b0); if (loWanted(b0, tool)) loStart(stroking, b, opts);
   strokeAdd(x, y, p, tilt, az); strokeFlush = true; interacting(); dirty(false); return stroking;
 }
 function endStroke(cancel) { const t0 = performance.now(); try { endStroke0(cancel); } finally { PERF.time('pen up', performance.now() - t0); } }
 function endStroke0(cancel) {
   const s = stroking; if (!s) return; stroking = null;
   prevBox(s);
+  if (s.lo && (cancel || !s.S)) { s.lo.reset(); s.lo = null; }
   if (cancel || !s.S) { eng.reset(); dirty(); return; }
   if (s.L.vec && s.erase && s.S === s.L.s) { eng.reset(); try { vecEraseStroke(s); } catch (e) { console.warn(e); } dirty(); return; }
+  if (s.lo) loFinish(s);
   stroking = s; try { strokePost(s); } catch (e) { console.warn(e); } stroking = null;
   eng.end();
   const bx = eng.box; if (!bx) { eng.reset(); dirty(); return; }
@@ -6032,8 +6034,8 @@ function buildSettings() {
       ctlCheck('Adjust by scale (same on screen at any zoom)', () => b().postScale !== false, v => b().postScale = v),
       ctlCheck('Bezier curve (redraw as a smooth curve)', () => b().postBezier, v => b().postBezier = v),
       sub('Speed and quality'),
-      ctlSeg('Speed and quality', [['auto', 'Automatic'], ['high', 'High'], ['med', 'Medium'], ['low', 'Low']], () => b().quality || 'high', v => { b().quality = v; brushEdited(true); }),
-      el('p', { class: 'note tp-note', text: 'High is the best looking (the default). Medium and Low paint faster with big brushes and look a little rougher. Automatic picks by brush size.' })),
+      ctlSeg('Speed and quality', [['auto', 'Automatic'], ['high', 'High'], ['med', 'Medium'], ['low', 'Low (fastest)']], () => b().quality || 'high', v => { b().quality = v; brushEdited(true); }),
+      el('p', { class: 'note tp-note', text: 'High is the default. Medium uses fewer stamps (a little rougher). Low (fastest) shows a quick half-size preview while you paint, then paints the stroke at full quality when you lift the pen: best for giant brushes. Automatic picks by size.' })),
     group('Pen pressure',
       ctlCheck('Pressure changes size', () => b().sizeDyn.on, v => b().sizeDyn.on = v, true),
       B.sizeDyn.on ? ctlRange('Smallest size', () => b().sizeDyn.min, v => b().sizeDyn.min = v, 0, 100, 1, '%') : null,
@@ -7913,14 +7915,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.23-0614' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.23-0621' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.23-0614';
+const BELEAF_BUILD = '2026.11.23-0621';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
@@ -8644,7 +8646,8 @@ function hsv2rgb(h, s, v) { const i = Math.floor(h * 6), f = h * 6 - i, p = v * 
 const QUAL = { high: 1, med: 1.6, low: 2.4 };
 function brushQuality(b) { const q = b.quality || 'high'; return q === 'auto' ? (b.size >= 300 ? 'low' : b.size >= 120 ? 'med' : 'high') : q; }
 function strokeBrush(b) {
-  const k = QUAL[brushQuality(b)] || 1;
+  // Low: full quality in the end, a quick half-size preview while you paint (see loStart)
+  const k = brushQuality(b) === 'low' ? 1 : QUAL[brushQuality(b)] || 1;
   if (k === 1 && !(b.stab > 0)) return b;
   const o = Object.assign({}, b); o.stab = 0;
   // fewer, slightly stronger stamps: quicker to paint with big brushes, a little rougher
@@ -8672,7 +8675,7 @@ function strokeAdd(x, y, p, tilt, az) {
   }
   const rs = rulerSnap(s, x, y); if (!rs) return; x = rs[0]; y = rs[1];
   s.pts.push([x, y, p, tilt, az, t]);
-  eng.add(x, y, p, tilt, az, t);
+  if (s.lo) s.lo.add(x / 2, y / 2, p, tilt, az, t); else eng.add(x, y, p, tilt, az, t);
 }
 // the thin line from the (lagging) stabilized stroke to the pen, so a strong stabilizer doesn't feel slow
 function drawStrokePreview(x) {
@@ -8719,6 +8722,30 @@ function strokePost(s) {
   const t0 = performance.now(), P = postCorrect(s.pts, s); if (P === s.pts) return;
   eng.reset(); eng.begin(s.eb, s.opts); for (const q of P) eng.add(q[0], q[1], q[2], q[3], q[4], q[5]); s.pts = P;
   PERF.time('post correction', performance.now() - t0);
+}
+
+/* ---- Low quality: paint a half-size preview while the pen is down, then the real stroke when it lifts ----
+   With giant brushes most of the work is filling pixels; at half size there are four times fewer of them. */
+let loEng = null, loUp = null;
+function loWanted(b, tool_) { return brushQuality(b) === 'low' && b.size >= 24 && !b.mix && !b.blendOnly && tool_ !== 'blend' && !(typeof GPUV !== 'undefined' && GPUV.on); }
+function loStart(s, b, opts) {
+  const W = Math.ceil(DOC.w / 2), H = Math.ceil(DOC.h / 2);
+  if (!loEng || loEng.w !== W || loEng.h !== H) { loEng = new StrokeEngine(W, H); loEng.w = W; loEng.h = H; }
+  if (!loUp || loUp.width !== DOC.w || loUp.height !== DOC.h) loUp = mk(DOC.w, DOC.h);
+  loUp.getContext('2d').clearRect(0, 0, DOC.w, DOC.h);
+  const hb = Object.assign({}, b, { size: b.size / 2, stab: 0 }); if (b.texture) hb.texture = Object.assign({}, b.texture, { scale: Math.max(25, (b.texture.scale || 100) / 2) });
+  loEng.reset(); loEng.begin(hb, Object.assign({}, opts, { sample: null })); s.lo = loEng;
+}
+function loFlush(s) {
+  const r = s.lo.flush(); if (!r) return null; const g = loUp.getContext('2d'), [x0, y0, x1, y1] = r;
+  g.imageSmoothingEnabled = true; g.clearRect(x0 * 2, y0 * 2, (x1 - x0) * 2, (y1 - y0) * 2); g.drawImage(s.lo.out, x0, y0, x1 - x0, y1 - y0, x0 * 2, y0 * 2, (x1 - x0) * 2, (y1 - y0) * 2);
+  return [x0 * 2 - 2, y0 * 2 - 2, x1 * 2 + 2, y1 * 2 + 2];
+}
+// pen up: paint the real stroke at full size from the points that were recorded
+function loFinish(s) {
+  if (!s.lo) return; s.lo.reset(); s.lo = null;
+  if (s.post > 0 && s.pts.length >= 4) return; // post correction repaints it anyway
+  const t0 = performance.now(); eng.reset(); eng.begin(s.eb, s.opts); for (const q of s.pts) eng.add(q[0], q[1], q[2], q[3], q[4], q[5]); PERF.time('full-quality stroke', performance.now() - t0);
 }
 
 /* ================= image resolution + canvas size (Edit menu), and DPI for print ================= */
@@ -9183,7 +9210,7 @@ function maskLive(L, depth) {
   if (!(stroking && stroking.S === L.mask)) return L.mask.c;
   const K = fbuf(depth, 'k'); K.x.drawImage(L.mask.c, 0, 0);
   K.x.globalAlpha = stroking.b.opacity / 100; K.x.globalCompositeOperation = stroking.erase ? 'destination-out' : 'source-over';
-  drawStrokeOut(K.x, masked(eng.out)); K.x.globalAlpha = 1; K.x.globalCompositeOperation = 'source-over'; return K.c;
+  drawStrokeOut(K.x, masked(stroking.lo ? loUp : eng.out)); K.x.globalAlpha = 1; K.x.globalCompositeOperation = 'source-over'; return K.c;
 }
 function maskApplyTo(L, base, depth, o) {
   if (!L.mask || L.maskOn === false) return base;
