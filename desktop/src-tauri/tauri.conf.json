@@ -3,23 +3,58 @@
   "productName": "beleaf",
   "version": "0.1.0",
   "identifier": "com.cozycoded.beleaf",
-  "build": { "frontendDist": "../dist" },
+  "build": {
+    "frontendDist": "../dist"
+  },
   "app": {
     "withGlobalTauri": true,
     "windows": [
-      { "title": "beleaf", "width": 1400, "height": 900, "minWidth": 480, "minHeight": 400, "maximized": true, "dragDropEnabled": false }
+      {
+        "title": "beleaf",
+        "width": 1400,
+        "height": 900,
+        "minWidth": 480,
+        "minHeight": 400,
+        "maximized": true,
+        "dragDropEnabled": false,
+        "label": "main"
+      }
     ],
-    "security": { "csp": null }
+    "security": {
+      "csp": null
+    }
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "msi"],
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico"],
+    "targets": [
+      "nsis",
+      "msi"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
     "publisher": "cozycoded",
     "shortDescription": "beleaf drawing app",
     "fileAssociations": [
-      { "ext": ["beleaf"], "name": "beleaf project", "description": "beleaf project", "role": "Editor" }
+      {
+        "ext": [
+          "beleaf"
+        ],
+        "name": "beleaf project",
+        "description": "beleaf project",
+        "role": "Editor"
+      }
     ],
-    "windows": { "webviewInstallMode": { "type": "downloadBootstrapper" }, "nsis": { "installMode": "currentUser" } }
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      },
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
   }
 }

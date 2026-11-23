@@ -1,0 +1,4 @@
+{
+  "identifier": "com.cozycoded.beleaf.app",
+  "app": { "windows": [{ "label": "main", "title": "beleaf", "fullscreen": false }] }
+}

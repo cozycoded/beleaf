@@ -1,0 +1,56 @@
+# Builds the full beleaf (every feature of the website) as an Android app with Tauri, signs it, and puts it on the
+# "android-test" release as beleaf-full.apk. (beleaf.apk on the same release is the separate native app.)
+name: android full app
+on:
+  push:
+    branches: [main]
+    paths: ['index.html', 'icons/**', 'desktop/**', '.github/workflows/android-full.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - uses: android-actions/setup-android@v3
+      - name: Android NDK
+        run: |
+          sdkmanager --install "ndk;27.2.12479018" "platforms;android-34" "build-tools;34.0.0" >/dev/null
+          echo "NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> $GITHUB_ENV
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: 'aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android' }
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: 'desktop/src-tauri -> target' }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install -g @tauri-apps/cli@2
+      - name: The app itself (same file as the website)
+        run: |
+          mkdir -p desktop/dist/icons
+          cp index.html desktop/dist/index.html
+          cp icons/* desktop/dist/icons/
+      - name: Android project
+        working-directory: desktop/src-tauri
+        run: |
+          tauri icon ../../icons/icon-512.png
+          tauri android init --ci
+      - name: Build
+        working-directory: desktop/src-tauri
+        run: tauri android build --apk --target aarch64 --ci
+      - name: Sign
+        run: |
+          APK=$(find desktop/src-tauri/gen/android -name "*release*.apk" | head -1); echo "built: $APK"
+          PW=$(grep keystore_password native/app/Cargo.toml | cut -d'"' -f2)
+          BT=$ANDROID_HOME/build-tools/34.0.0
+          mkdir out
+          $BT/zipalign -f -p 4 "$APK" out/aligned.apk
+          $BT/apksigner sign --ks .android/beleaf-release.keystore --ks-key-alias beleaf --ks-pass "pass:$PW" --key-pass "pass:$PW" --out out/beleaf-full.apk out/aligned.apk
+          $BT/apksigner verify out/beleaf-full.apk && ls -la out
+      - name: Attach to the android-test release
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          gh release view android-test >/dev/null 2>&1 || gh release create android-test --prerelease --title "beleaf for Android (test)" --notes "beleaf-full.apk: every beleaf feature. beleaf.apk: the native (fast) app, still growing."
+          gh release upload android-test out/beleaf-full.apk --clobber

@@ -2,13 +2,19 @@
 name = "beleaf-desktop"
 version = "0.1.0"
 edition = "2021"
-description = "beleaf as a Windows program: the same app, in its own window"
+description = "beleaf as a program (Windows) and an app (Android): the same app, in its own window"
+
+[lib]
+name = "beleaf_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
 
 [profile.release]
 opt-level = "s"

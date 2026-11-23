@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "What beleaf's window may do: save and open files you pick",
+  "windows": ["main"],
+  "permissions": ["core:default", "dialog:default", "dialog:allow-save", "dialog:allow-open", "fs:default", "fs:allow-write-file", "fs:allow-read-file"]
+}
