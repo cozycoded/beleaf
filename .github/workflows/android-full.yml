@@ -41,6 +41,9 @@ jobs:
           npm run tauri -- android init --ci
           # after init, so the Android app gets beleaf's icon instead of Tauri's
           npm run tauri -- icon ../icons/icon-512.png
+          # keep the page clear of the status bar and navigation buttons
+          MA=$(find src-tauri/gen/android -name MainActivity.kt | head -1); echo "replacing $MA"; cat "$MA"
+          cp android/MainActivity.kt "$MA"
       - name: Build
         working-directory: desktop
         run: npm run tauri -- android build --apk --target aarch64 --ci
