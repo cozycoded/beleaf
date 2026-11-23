@@ -1790,6 +1790,9 @@ html,body{overscroll-behavior:none} /* no pull-to-refresh or swipe-back bounce w
 .ps-sw{display:flex}.ps-sw i{width:10px;height:14px;display:block}
 .ps-acts .btn{min-height:30px}
 .ps-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
+.mtabs .mt-edit{margin-left:auto}.mtabs .mt-edit + .mt-pin{margin-left:0}
+.mt-edit-row{display:flex;align-items:center;gap:2px}.mt-edit-row .rm-check{flex:1}
+.ref-menu .mt-edit-row .ibtn:disabled{opacity:.3}
 </style>
 
 <div class="app" id="app" data-open="" data-timeline="" data-quick="on" data-dl="open" data-dr="open">
@@ -5919,6 +5922,7 @@ const ICON = {
   brushes: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
   layers: '<path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/>',
   nav: '<rect x="3" y="5" width="18" height="14" rx="2"/><rect x="8" y="9" width="7" height="5" rx="1"/>',
+  notes: '<path d="M5 4h11l3 3v13H5z"/><path d="M8 10h8M8 14h8M8 18h5"/>',
 };
 const svgIc = k => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ICON[k]}</svg>`;
 const TOOLS = [['hand', 'Hand', 'or hold Space'], ['zoom', 'Zoom', 'drag up/down, tap to zoom in, Alt+tap out'], ['rotate', 'Rotate view', 'drag around the canvas'], '|',
@@ -5942,7 +5946,7 @@ function buildTools() {
     [r, b].forEach(x => x.onclick = () => setTool(id)); rail.push(r); bar.push(b);
   });
   bar.push(el('div', { class: 'bar-sep' }));
-  [['emotes', 'Emotes', 'emotes'], ['brushes', 'Settings', 'brush'], ['layers', 'Layers', 'layers'], ['nav', 'Navigator', 'nav']].forEach(([ic, label, open]) => { const b = el('button', { class: 'btool', 'aria-label': label, onclick: () => openPanel(open) }); b.innerHTML = svgIc(ic) + `<span>${label}</span>`; bar.push(b); });
+  [['emotes', 'Emotes', 'emotes'], ['brushes', 'Settings', 'brush'], ['layers', 'Layers', 'layers'], ['nav', 'Navigator', 'nav'], ['notes', 'Notes', 'notes']].forEach(([ic, label, open]) => { const b = el('button', { class: 'btool', 'aria-label': label, onclick: () => openPanel(open) }); b.innerHTML = svgIc(ic) + `<span>${label}</span>`; bar.push(b); });
   // dividers only show between tools: none at the ends, never two in a row
   const isSep = x => x.classList.contains('rail-sep') || x.classList.contains('bar-sep');
   const tidy = a => { const r = []; a.forEach(x => { if (isSep(x) && (!r.length || isSep(r[r.length - 1]))) return; r.push(x); }); while (r.length && isSep(r[r.length - 1])) r.pop(); return r; };
@@ -7992,14 +7996,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.23-1250' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.23-1619' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.23-1250';
+const BELEAF_BUILD = '2026.11.23-1619';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
@@ -8233,17 +8237,35 @@ const _kc = keysChanged; keysChanged = function () { _kc(); buildCB(); buildQA()
 /* ================= phones: panels you can use while drawing ================= */
 // Floating side panel (portrait): the open panel floats on the right with tabs on top; the canvas stays live around it.
 const MTABS = [['brush', 'Brush', ICON.brushes], ['color', 'Color', UNITS.color[2]], ['layers', 'Layers', ICON.layers], ['emotes', 'Emotes', ICON.emotes], ['nav', 'Navigator', ICON.nav], ['ref', 'Reference', UNITS.ref[2]]];
-MTABS.splice(2, 0, ['recent', 'Recent', UNITS.recent[2]]);
+MTABS.splice(2, 0, ['recent', 'Recent', UNITS.recent[2]]); MTABS.push(['notes', 'Notes', UNITS.notes[2]]);
+// which tabs the floating panel shows, and in what order (edit with the pencil in its tab strip)
+const MTAB_DEF = MTABS.map(t => t[0]);
+function mtabKeys() { let k = store.get('mtabs', null); if (!Array.isArray(k)) k = MTAB_DEF.slice(); k = k.filter(x => MTAB_DEF.includes(x)); if (!store.get('mtabsNotes', false) && !k.includes('notes')) { k.push('notes'); store.set('mtabsNotes', true); store.set('mtabs', k); } return k; }
+function mtabList(open) { const k = mtabKeys(); if (open && PANEL_OF[open] && !k.includes(open)) k.push(open); return k.map(x => MTABS.find(t => t[0] === x)).filter(Boolean); }
+function editMTabs(at) {
+  const paint = () => {
+    const k = mtabKeys(), rows = MTABS.map(([key, label]) => {
+      const on = k.includes(key), i = k.indexOf(key), mv = d => { const a = mtabKeys(), j = a.indexOf(key), n = j + d; if (j < 0 || n < 0 || n >= a.length) return; [a[j], a[n]] = [a[n], a[j]]; store.set('mtabs', a); placeMTabs(); paint(); };
+      const up = el('button', { class: 'ibtn sm', 'aria-label': 'Move ' + label + ' left', title: 'Move left', onclick: e => { e.stopPropagation(); mv(-1); } }); up.disabled = !on || i === 0; up.innerHTML = '<svg class="ic" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>';
+      const dn = el('button', { class: 'ibtn sm', 'aria-label': 'Move ' + label + ' right', title: 'Move right', onclick: e => { e.stopPropagation(); mv(1); } }); dn.disabled = !on || i === k.length - 1; dn.innerHTML = '<svg class="ic" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
+      const ck = el('button', { role: 'menuitemcheckbox', class: 'rm-check', 'aria-checked': String(on), onclick: () => { const a = mtabKeys(); if (on) { if (a.length <= 1) return toast('Keep at least one tab'); a.splice(a.indexOf(key), 1); } else a.push(key); store.set('mtabs', a); placeMTabs(); paint(); } }, el('span', { text: label }));
+      return el('div', { class: 'mt-edit-row' }, ck, up, dn);
+    });
+    refMenu('Tabs in this panel', [el('p', { class: 'rm-note', text: 'Tick the panels you want as tabs here, and move them left or right.' }), ...rows, '-', ['Back to the standard tabs', () => { store.set('mtabs', MTAB_DEF.slice()); placeMTabs(); paint(); }, { keep: true }]], at);
+  };
+  paint();
+}
 const PANEL_OF = { brush: '#brushPanel', color: '#colorPanel', layers: '#layersPanel', emotes: '#emotePanel', nav: '#navPanel', ref: '#refPanel', notes: '#notesPanel', recent: '#recentPanel' };
 // the reference window is in View on every screen size (on phones it opens like the other panels)
-{ const v = MENUS.view, i = v.findIndex(it => Array.isArray(it) && it[0] === 'Navigator'); v.splice(i + 1, 0, ['Reference window', '', () => { if (!docked()) return openPanel('ref'); const u = unitEl('ref'); if (u.hidden) showUnit('ref'); else hideUnit('ref'); }]); }
+{ const v = MENUS.view, i = v.findIndex(it => Array.isArray(it) && it[0] === 'Navigator'); v.splice(i + 1, 0, ['Reference window', '', () => { if (!docked()) return openPanel('ref'); const u = unitEl('ref'); if (u.hidden) showUnit('ref'); else hideUnit('ref'); }], ['Notes', '', () => { if (!docked()) return openPanel('notes'); const u = unitEl('notes'); if (u.hidden) showUnit('notes'); else hideUnit('notes'); }]); }
 let fpMin = !!store.get('panelMin', false);
 const fpGrab = el('div', { class: 'mt-grab', title: 'Drag to move', 'aria-hidden': 'true' }); fpGrab.innerHTML = '<svg class="ic" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>';
 const mTabs = el('div', { class: 'mtabs', role: 'tablist', 'aria-label': 'Panels', hidden: '' });
 function placeMTabs() {
   const o = app.dataset.open, on = !docked() && app.dataset.mlay === 'float' && o && PANEL_OF[o];
   mTabs.hidden = !on; if (!on) return;
-  mTabs.replaceChildren(...MTABS.map(([k, label, ic]) => { const b = el('button', { role: 'tab', 'aria-selected': k === o, title: label, 'aria-label': label, onclick: () => { if (fpMin) setFpMin(false); if (k !== o) openPanel(k); } }); b.innerHTML = `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ic}</svg>${k === o ? `<span>${label}</span>` : ''}`; return b; }),
+  mTabs.replaceChildren(...mtabList(o).map(([k, label, ic]) => { const b = el('button', { role: 'tab', 'aria-selected': k === o, title: label, 'aria-label': label, onclick: () => { if (fpMin) setFpMin(false); if (k !== o) openPanel(k); } }); b.innerHTML = `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ic}</svg>${k === o ? `<span>${label}</span>` : ''}`; return b; }),
+    (() => { const x = el('button', { class: 'mt-x mt-edit', title: 'Choose the tabs in this panel', 'aria-label': 'Choose the tabs in this panel', onclick: () => { const r = x.getBoundingClientRect(); editMTabs([r.left - 200, r.bottom + 4]); } }); x.innerHTML = '<svg class="ic" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4"/></svg>'; return x; })(),
     winPinBtn('win.panel', 'mt-x mt-pin'),
     (() => { const x = el('button', { class: 'mt-x mt-min', title: fpMin ? 'Open up' : 'Shrink to the tab strip', 'aria-label': fpMin ? 'Open panel' : 'Minimise panel', 'aria-pressed': fpMin, onclick: () => setFpMin(!fpMin) }); x.innerHTML = fpMin ? '<svg class="ic" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>' : IC_MIN; return x; })(),
     (() => { const x = el('button', { class: 'mt-x', title: 'Close', 'aria-label': 'Close panel', onclick: () => { app.dataset.open = ''; } }); x.innerHTML = IC_X; return x; })());
