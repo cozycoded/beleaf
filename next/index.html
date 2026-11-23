@@ -7932,14 +7932,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.16-1011' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.22-2142' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.16-1011';
+const BELEAF_BUILD = '2026.11.22-2142';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
@@ -9458,6 +9458,235 @@ function openVector() {
 if (NEXTF) {
   const i = MENUS.layer.findIndex(x => Array.isArray(x) && x[0] === 'New animation layer');
   MENUS.layer.splice(i + 1, 0, ['New vector layer', '', vecNew], ['Vector lines…', '', () => openVector()]);
+}
+
+/* ================= .psd: open your beleaf canvases in Clip Studio Paint (and bring CSP work back) =================
+   Clip Studio Paint opens and saves layered .psd files, so a .psd is the bridge: layers, folders, names, opacity,
+   blend modes, hidden layers, clipping and layer masks all carry across, plus the DPI. */
+const PSD_BLEND = { 'source-over': 'norm', multiply: 'mul ', screen: 'scrn', overlay: 'over', darken: 'dark', lighten: 'lite', 'color-dodge': 'div ', 'color-burn': 'idiv', 'hard-light': 'hLit', 'soft-light': 'sLit', difference: 'diff', exclusion: 'smud', hue: 'hue ', saturation: 'sat ', color: 'colr', luminosity: 'lum ', lighter: 'lddg', pass: 'pass' };
+const PSD_BLEND_IN = Object.assign(Object.fromEntries(Object.entries(PSD_BLEND).map(([a, b]) => [b, a])), { 'lbrn': 'color-burn', 'vLit': 'hard-light', 'lLit': 'hard-light', 'pLit': 'hard-light', 'hMix': 'hard-light', 'dkCl': 'darken', 'lgCl': 'lighten', 'fsub': 'difference', 'fdiv': 'color-dodge', 'diss': 'source-over' });
+class PsdW {
+  constructor() { this.parts = []; this.n = 0; }
+  u8(v) { this.raw(new Uint8Array([v & 255])); } u16(v) { const b = new Uint8Array(2); new DataView(b.buffer).setUint16(0, v); this.raw(b); }
+  i16(v) { const b = new Uint8Array(2); new DataView(b.buffer).setInt16(0, v); this.raw(b); } u32(v) { const b = new Uint8Array(4); new DataView(b.buffer).setUint32(0, v >>> 0); this.raw(b); }
+  i32(v) { const b = new Uint8Array(4); new DataView(b.buffer).setInt32(0, v); this.raw(b); } str(s) { this.raw(new Uint8Array([...s].map(c => c.charCodeAt(0) & 255))); }
+  raw(b) { this.parts.push(b); this.n += b.length; } pad(m) { while (this.n % m) this.u8(0); }
+  bytes() { const o = new Uint8Array(this.n); let p = 0; for (const b of this.parts) { o.set(b, p); p += b.length; } return o; }
+}
+const psdBlock = fill => { const w = new PsdW(); fill(w); return w.bytes(); };
+// PackBits, one row at a time; returns [row lengths, data]
+function psdRle(plane, w, h) {
+  const rows = [], chunks = []; let total = 0;
+  const buf = new Uint8Array(w * 2 + 8);
+  for (let y = 0; y < h; y++) {
+    const r = plane.subarray(y * w, y * w + w); let i = 0, o = 0;
+    while (i < w) {
+      let j = i + 1; while (j < w && j - i < 128 && r[j] === r[i]) j++;
+      if (j - i > 1) { buf[o++] = 257 - (j - i); buf[o++] = r[i]; i = j; continue; }
+      j = i; while (j < w && j - i < 128 && !(j + 2 < w && r[j] === r[j + 1] && r[j] === r[j + 2])) j++;
+      buf[o++] = j - i - 1; for (let k = i; k < j; k++) buf[o++] = r[k]; i = j;
+    }
+    rows.push(o); chunks.push(buf.slice(0, o)); total += o;
+  }
+  return { rows, chunks, total };
+}
+function psdChannel(plane, w, h) { // compression + row counts + data
+  if (!w || !h) return psdBlock(W => W.u16(0));
+  const r = psdRle(plane, w, h); return psdBlock(W => { W.u16(1); r.rows.forEach(n => W.u16(n)); r.chunks.forEach(c => W.raw(c)); });
+}
+function psdPascal(name) { const s = unescape(encodeURIComponent(name)).slice(0, 255).replace(/[^\x20-\x7e]/g, '_'); return psdBlock(W => { W.u8(s.length); W.str(s); W.pad(4); }); }
+const psdTag = (key, data) => psdBlock(W => { W.str('8BIM'); W.str(key); W.u32(data.length + (data.length & 1)); W.raw(data); W.pad(2); });
+const psdUni = name => psdTag('luni', psdBlock(W => { W.u32(name.length); for (const c of name) { const v = c.charCodeAt(0); W.u16(v); } }));
+async function psdBuild() {
+  const W0 = DOC.w, H0 = DOC.h, dpi = DOC.dpi || 72, recs = [], skipped = [];
+  const byId = new Map(layers.map(L => [L.id, L])), kids = new Map(); layers.forEach(L => { const k = L.parent ?? null; if (!kids.has(k)) kids.set(k, []); kids.get(k).push(L); });
+  const trim = (d, w, h) => { let x0 = w, y0 = h, x1 = -1, y1 = -1; for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } return x1 < 0 ? null : [x0, y0, x1 + 1, y1 + 1]; };
+  const rec = (o) => recs.push(o);
+  function layerRec(L) {
+    const S = surfAt(L, anim.cur);
+    const d = S ? S.ctx.getImageData(0, 0, W0, H0).data : new Uint8ClampedArray(W0 * H0 * 4), b = trim(d, W0, H0) || [0, 0, 0, 0];
+    const [x0, y0, x1, y1] = b, w = x1 - x0, h = y1 - y0, pl = [0, 1, 2, 3].map(() => new Uint8Array(w * h));
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const s = ((y + y0) * W0 + x + x0) * 4, t = y * w + x; pl[0][t] = d[s]; pl[1][t] = d[s + 1]; pl[2][t] = d[s + 2]; pl[3][t] = d[s + 3]; }
+    const ch = [[-1, psdChannel(pl[3], w, h)], [0, psdChannel(pl[0], w, h)], [1, psdChannel(pl[1], w, h)], [2, psdChannel(pl[2], w, h)]];
+    let mask = null;
+    if (L.mask) { const m = L.mask.ctx.getImageData(0, 0, W0, H0).data, g = new Uint8Array(W0 * H0); for (let i = 0; i < g.length; i++) g[i] = m[i * 4 + 3]; ch.push([-2, psdChannel(g, W0, H0)]); mask = { off: L.maskOn === false }; }
+    rec({ name: L.name, top: y0, left: x0, bottom: y1, right: x1, ch, blend: PSD_BLEND[L.blend] || 'norm', op: L.opacity, clip: !!L.clip, hidden: !L.visible, mask });
+  }
+  function emit(L) {
+    if (L.adj) { skipped.push(L.name); return; }
+    if (L.kind === 'folder') {
+      const empty = () => [-1, 0, 1, 2].map(i => [i, psdChannel(null, 0, 0)]);
+      rec({ name: '</Layer group>', top: 0, left: 0, bottom: 0, right: 0, ch: empty(), blend: 'norm', op: 1, hidden: false, sect: 3 });
+      (kids.get(L.id) || []).forEach(emit);
+      rec({ name: L.name, top: 0, left: 0, bottom: 0, right: 0, ch: empty(), blend: PSD_BLEND[L.blend] || 'pass', op: L.opacity, hidden: !L.visible, clip: !!L.clip, sect: L.open === false ? 2 : 1 });
+      return;
+    }
+    layerRec(L);
+  }
+  // the canvas colour is its own layer at the bottom in Clip Studio ("Paper")
+  if (DOC.paper && DOC.paper.on !== false && DOC.paper.col) { const c = mk(W0, H0), g = c.getContext('2d'); g.fillStyle = DOC.paper.col; g.fillRect(0, 0, W0, H0); layerRec({ name: 'Paper', visible: true, opacity: 1, blend: 'source-over', kind: 'raster', s: { ctx: g, c } }); }
+  (kids.get(null) || []).forEach(emit);
+  const recBytes = psdBlock(Wr => {
+    Wr.i16(recs.length);
+    for (const r of recs) {
+      Wr.i32(r.top); Wr.i32(r.left); Wr.i32(r.bottom); Wr.i32(r.right); Wr.u16(r.ch.length);
+      for (const [id, data] of r.ch) { Wr.i16(id); Wr.u32(data.length); }
+      Wr.str('8BIM'); Wr.str(r.blend); Wr.u8(Math.round(r.op * 255)); Wr.u8(r.clip ? 1 : 0); Wr.u8((r.hidden ? 2 : 0) | 8 | (r.sect === 3 ? 0x10 : 0)); Wr.u8(0);
+      const extra = psdBlock(E => {
+        if (r.mask) { E.u32(20); E.i32(0); E.i32(0); E.i32(H0); E.i32(W0); E.u8(0); E.u8(r.mask.off ? 2 : 0); E.u16(0); } else E.u32(0);
+        E.u32(0); E.raw(psdPascal(r.name)); E.raw(psdUni(r.name));
+        if (r.sect) E.raw(psdTag('lsct', psdBlock(T => { T.u32(r.sect); if (r.sect !== 3) { T.str('8BIM'); T.str(r.blend); } })));
+      });
+      Wr.u32(extra.length); Wr.raw(extra);
+    }
+    for (const r of recs) for (const [, data] of r.ch) Wr.raw(data);
+    Wr.pad(2);
+  });
+  // the flattened picture (what apps without layer support show)
+  const fd = (() => { const c = mk(W0, H0), g = c.getContext('2d'); g.fillStyle = DOC.paper && DOC.paper.col ? DOC.paper.col : '#FFFFFF'; g.fillRect(0, 0, W0, H0); g.drawImage(comp, 0, 0); return g.getImageData(0, 0, W0, H0).data; })();
+  const merged = [0, 1, 2].map(k => { const p = new Uint8Array(W0 * H0); for (let i = 0; i < p.length; i++) p[i] = fd[i * 4 + k]; return psdRle(p, W0, H0); });
+  const out = new PsdW();
+  out.str('8BPS'); out.u16(1); out.raw(new Uint8Array(6)); out.u16(3); out.u32(H0); out.u32(W0); out.u16(8); out.u16(3);
+  out.u32(0);
+  const res = psdBlock(R => { R.str('8BIM'); R.u16(0x03ED); R.u16(0); R.u32(16); R.u32(Math.round(dpi * 65536)); R.u16(1); R.u16(1); R.u32(Math.round(dpi * 65536)); R.u16(1); R.u16(1); });
+  out.u32(res.length); out.raw(res);
+  out.u32(4 + recBytes.length + 4); out.u32(recBytes.length); out.raw(recBytes); out.u32(0);
+  out.u16(1); merged.forEach(m => m.rows.forEach(n => out.u16(n))); merged.forEach(m => m.chunks.forEach(c => out.raw(c)));
+  return { bytes: out.bytes(), skipped };
+}
+async function exportPsd() {
+  closeMenu(); if (DOC.placeholder) return toast('Make or open a canvas first');
+  if (xform) applyXform(); toast('Making the .psd…');
+  await new Promise(r => setTimeout(r, 30));
+  try {
+    const { bytes, skipped } = await psdBuild(), name = slug(docName()) + '.psd', blob = new Blob([bytes], { type: 'image/vnd.adobe.photoshop' });
+    saveBlob(blob, name);
+    toast(`Saved ${name} (${fmtKB(blob.size)}). In Clip Studio Paint: File › Open.` + (skipped.length ? ` Correction layers were left out (${skipped.join(', ')}).` : ''));
+  } catch (err) { console.warn(err); toast('Couldn’t make the .psd: ' + (err.message || err)); }
+}
+/* ---- opening a .psd ---- */
+async function psdInflate(u8, zipPred, w, h) {
+  const ds = new DecompressionStream('deflate'), out = new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(ds)).arrayBuffer());
+  if (zipPred) for (let y = 0; y < h; y++) for (let x = 1; x < w; x++) out[y * w + x] = (out[y * w + x] + out[y * w + x - 1]) & 255;
+  return out;
+}
+function psdUnRle(dv, p, rows, w, out) {
+  const counts = []; for (let i = 0; i < rows; i++) { counts.push(dv.getUint16(p)); p += 2; }
+  let o = 0;
+  for (let r = 0; r < rows; r++) {
+    const end = p + counts[r], rowEnd = o + w;
+    while (p < end && o < rowEnd) { const n = dv.getInt8(p++); if (n >= 0) { for (let k = 0; k <= n && o < rowEnd; k++) out[o++] = dv.getUint8(p++); } else if (n !== -128) { const v = dv.getUint8(p++); for (let k = 0; k < 1 - n && o < rowEnd; k++) out[o++] = v; } }
+    p = end; o = rowEnd;
+  }
+  return p;
+}
+async function psdRead(u8) {
+  const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength); let p = 0;
+  const s4 = () => String.fromCharCode(u8[p], u8[p + 1], u8[p + 2], u8[p + 3]);
+  if (s4() !== '8BPS') throw new Error('This isn’t a .psd file');
+  const ver = dv.getUint16(4); if (ver !== 1) throw new Error('Large-document .psb files aren’t supported; save as a normal .psd');
+  const nch = dv.getUint16(12), H = dv.getUint32(14), W = dv.getUint32(18), depth = dv.getUint16(22), mode = dv.getUint16(24);
+  if (depth !== 8) throw new Error(`This .psd uses ${depth}-bit colour; save it as 8-bit to open it here`);
+  if (mode !== 3 && mode !== 1) throw new Error('Only RGB or greyscale .psd files can be opened');
+  if (dsTooBig(W, H)) throw new Error(`This canvas is ${W} × ${H}, bigger than beleaf can hold`);
+  p = 26; p += 4 + dv.getUint32(p);
+  // image resources: the DPI
+  let dpi = 72; { const len = dv.getUint32(p), end = p + 4 + len; let q = p + 4; while (q + 12 <= end) { const id = dv.getUint16(q + 4); let nl = u8[q + 6]; let r = q + 7 + nl; if ((nl + 1) % 2) r++; const sz = dv.getUint32(r); r += 4; if (id === 0x03ED) dpi = dv.getUint32(r) / 65536; q = r + sz + (sz & 1); } p = end; }
+  const lmLen = dv.getUint32(p), lmEnd = p + 4 + lmLen; p += 4;
+  const recs = [];
+  if (lmLen) {
+    const liLen = dv.getUint32(p); p += 4;
+    if (liLen) {
+      const cnt = Math.abs(dv.getInt16(p)); p += 2;
+      for (let i = 0; i < cnt; i++) {
+        const r = { top: dv.getInt32(p), left: dv.getInt32(p + 4), bottom: dv.getInt32(p + 8), right: dv.getInt32(p + 12) }; p += 16;
+        const nc = dv.getUint16(p); p += 2; r.ch = []; for (let k = 0; k < nc; k++) { r.ch.push({ id: dv.getInt16(p), len: dv.getUint32(p + 2) }); p += 6; }
+        p += 4; r.blend = s4(); p += 4; r.op = u8[p] / 255; r.clip = u8[p + 1] === 1; r.hidden = !!(u8[p + 2] & 2); p += 4;
+        const exLen = dv.getUint32(p), exEnd = p + 4 + exLen; p += 4;
+        const mLen = dv.getUint32(p); if (mLen >= 20) r.mask = { top: dv.getInt32(p + 4), left: dv.getInt32(p + 8), bottom: dv.getInt32(p + 12), right: dv.getInt32(p + 16), def: u8[p + 20], off: !!(u8[p + 21] & 2) }; p += 4 + mLen;
+        p += 4 + dv.getUint32(p);
+        const nl = u8[p], ns = p; r.name = new TextDecoder('latin1').decode(u8.subarray(p + 1, p + 1 + nl)); p = Math.min(exEnd, ns + Math.ceil((1 + nl) / 4) * 4);
+        while (p + 12 <= exEnd) {
+          const sig = s4(); if (sig !== '8BIM' && sig !== '8B64') break; p += 4; const key = s4(); p += 4; const len = dv.getUint32(p); p += 4;
+          if (key === 'luni') { const n = dv.getUint32(p); let s = ''; for (let k = 0; k < n; k++) s += String.fromCharCode(dv.getUint16(p + 4 + k * 2)); r.name = s.replace(/\0+$/, ''); }
+          if (key === 'lsct' || key === 'lsdk') { r.sect = dv.getUint32(p); if (len >= 12) r.sblend = String.fromCharCode(u8[p + 8], u8[p + 9], u8[p + 10], u8[p + 11]); }
+          p += len + (len & 1);
+        }
+        p = exEnd; recs.push(r);
+      }
+      for (const r of recs) for (const c of r.ch) {
+        const isM = c.id === -2 && r.mask, w = isM ? r.mask.right - r.mask.left : r.right - r.left, h = isM ? r.mask.bottom - r.mask.top : r.bottom - r.top, start = p, comp = dv.getUint16(p); p += 2;
+        if (c.id < -2 || w <= 0 || h <= 0) { p = start + c.len; continue; }
+        const data = new Uint8Array(w * h);
+        if (comp === 0) data.set(u8.subarray(p, p + w * h)); else if (comp === 1) psdUnRle(dv, p, h, w, data); else if (comp === 2 || comp === 3) data.set((await psdInflate(u8.subarray(p, start + c.len), comp === 3, w, h)).subarray(0, w * h));
+        c.data = data; p = start + c.len;
+      }
+    }
+  }
+  p = lmEnd;
+  // the flattened picture, for files saved without layers
+  let merged = null;
+  if (!recs.length && p + 2 <= u8.length) {
+    const comp = dv.getUint16(p); p += 2; const planes = [];
+    if (comp === 1) { const counts = nch * H; let q = p + counts * 2; for (let c = 0; c < nch; c++) { let rowsLen = 0; for (let r = 0; r < H; r++) rowsLen += dv.getUint16(p + (c * H + r) * 2); const out = new Uint8Array(W * H); const sub = new DataView(u8.buffer, u8.byteOffset + q, rowsLen); let o = 0, s = 0; for (let r = 0; r < H; r++) { const rl = dv.getUint16(p + (c * H + r) * 2), end = s + rl, re = o + W; while (s < end && o < re) { const n = sub.getInt8(s++); if (n >= 0) { for (let k = 0; k <= n && o < re; k++) out[o++] = sub.getUint8(s++); } else if (n !== -128) { const v = sub.getUint8(s++); for (let k = 0; k < 1 - n && o < re; k++) out[o++] = v; } } s = end; o = re; } planes.push(out); q += rowsLen; } }
+    else if (comp === 0) for (let c = 0; c < nch; c++) planes.push(u8.slice(p + c * W * H, p + (c + 1) * W * H));
+    merged = planes;
+  }
+  return { W, H, dpi, mode, recs, merged };
+}
+async function psdToRecord(P, name) {
+  const { W, H, mode } = P, blobs = {}, layersOut = []; let id = 1, key = 0;
+  const png = async (fill) => { const c = mk(W, H), g = c.getContext('2d'); fill(g); const b = await new Promise(r => c.toBlob(r, 'image/png')); const k = 'p' + (key++); blobs[k] = b; return k; };
+  const pixLayer = r => async g => {
+    const w = r.right - r.left, h = r.bottom - r.top; if (w <= 0 || h <= 0) return;
+    const get = i => (r.ch.find(c => c.id === i) || {}).data, R = get(0), G = mode === 1 ? R : get(1), B = mode === 1 ? R : get(2), A = get(-1);
+    const img = g.createImageData(w, h); for (let i = 0; i < w * h; i++) { img.data[i * 4] = R ? R[i] : 0; img.data[i * 4 + 1] = G ? G[i] : 0; img.data[i * 4 + 2] = B ? B[i] : 0; img.data[i * 4 + 3] = A ? A[i] : 255; }
+    g.putImageData(img, r.left, r.top);
+  };
+  const maskOf = r => async g => {
+    const M = r.mask, d = (r.ch.find(c => c.id === -2) || {}).data; g.fillStyle = M.def >= 128 ? '#fff' : 'rgba(0,0,0,0)'; g.fillRect(0, 0, W, H);
+    const w = M.right - M.left, h = M.bottom - M.top; if (!d || w <= 0 || h <= 0) return;
+    const img = g.createImageData(w, h); for (let i = 0; i < w * h; i++) { img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = 255; img.data[i * 4 + 3] = d[i]; } g.clearRect(M.left, M.top, w, h); g.putImageData(img, M.left, M.top);
+  };
+  if (!P.recs.length) {
+    if (!P.merged) throw new Error('No pictures found in this .psd');
+    const k = await png(g => { const img = g.createImageData(W, H), pl = P.merged; for (let i = 0; i < W * H; i++) { img.data[i * 4] = pl[0][i]; img.data[i * 4 + 1] = (pl[1] || pl[0])[i]; img.data[i * 4 + 2] = (pl[2] || pl[0])[i]; img.data[i * 4 + 3] = pl[3] ? pl[3][i] : 255; } g.putImageData(img, 0, 0); });
+    layersOut.push({ id: id++, name: 'Layer 1', kind: 'raster', visible: true, opacity: 1, blend: 'source-over', parent: null, s: k, ...FLAGS });
+  } else {
+    // folders in a .psd: a divider below the children and the folder itself above them
+    const stack = [{ parent: null }];
+    for (const r of P.recs) {
+      const cur = stack[stack.length - 1];
+      if (r.sect === 3) { stack.push({ pending: [] }); continue; }
+      const base = { ...FLAGS, id: id++, name: r.name || 'Layer', visible: !r.hidden, opacity: r.op, clip: r.clip };
+      if (r.sect === 1 || r.sect === 2) {
+        const grp = stack.length > 1 ? stack.pop() : { pending: [] };
+        const F = Object.assign(base, { kind: 'folder', blend: PSD_BLEND_IN[r.sblend || r.blend] || 'pass', open: r.sect === 1, parent: null, color: null });
+        (grp.pending || []).forEach(L => { if (L.parent == null) L.parent = F.id; });
+        const top = stack[stack.length - 1]; if (top.pending) top.pending.push(F);
+        layersOut.push(F); continue;
+      }
+      const L = Object.assign(base, { kind: 'raster', blend: PSD_BLEND_IN[r.blend] || 'source-over', parent: null, s: await png(pixLayer(r)) });
+      if (r.mask) { L.mask = await png(maskOf(r)); L.maskOn = !r.mask.off; }
+      if (cur.pending) cur.pending.push(L);
+      layersOut.push(L);
+    }
+  }
+  const n = layersOut.length;
+  return { rec: { pid: newPid(), name, w: W, h: H, dpi: P.dpi, sheet: null, paper: { on: false, col: '#FFFFFF' }, anim: { n: 1, cur: 0, holds: [1], fps: 12, onion: true, loop: true }, active: Math.max(0, n - 1), layers: layersOut, counters: [n + 1, 1, 1], updated: Date.now(), thumb: null, v: 1 }, blobs };
+}
+async function openPsdBytes(u8, fname) {
+  toast('Opening the .psd…');
+  const P = await psdRead(u8), name = (fname || 'Clip Studio file').replace(/\.psd$/i, ''), { rec, blobs } = await psdToRecord(P, name);
+  await openRecord(rec, true, k => blobs[k] || null); DOC.name = name; DOC.dpi = P.dpi || 72; buildTabs(); sheetTitle();
+  toast(`Opened “${name}” (${rec.layers.length} layer${rec.layers.length === 1 ? '' : 's'}) in a new tab`);
+}
+{
+  const inp = el('input', { type: 'file', accept: '.psd,image/vnd.adobe.photoshop', hidden: '' }); document.body.append(inp);
+  inp.onchange = async () => { for (const f of inp.files) { try { await openPsdBytes(new Uint8Array(await f.arrayBuffer()), f.name); } catch (err) { console.warn(err); toast(`${f.name}: ${err.message || err}`); } } inp.value = ''; };
+  const i = MENUS.file.findIndex(x => Array.isArray(x) && x[0] === 'Import .clip / .psd');
+  const items = [['Open .psd (from Clip Studio)…', '', () => { closeMenu(); inp.click(); }], ['Export for Clip Studio (.psd)…', '', exportPsd]];
+  if (i >= 0) MENUS.file.splice(i, 1, ...items); else MENUS.file.push('-', ...items);
 }
 
 /* ================= phones and tablets: everything in reach =================
