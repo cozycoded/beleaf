@@ -6993,7 +6993,7 @@ document.addEventListener('pointerdown', e => {
 document.addEventListener('pointermove', e => {
   if (!sq || e.pointerId !== sq.pid) return; e.preventDefault();
   if (sq.kind === 'h') {
-    const tot = sq.ha + sq.hb, ha = Math.max(74, Math.min(tot - 74, Math.round(sq.ha + e.clientY - sq.y0))), hb = tot - ha;
+    const tot = sq.ha + sq.hb, ma = parseFloat(sq.a.style.minHeight) || 74, mb = parseFloat(sq.b.style.minHeight) || 74, ha = Math.max(ma, Math.min(tot - mb, Math.round(sq.ha + e.clientY - sq.y0))), hb = tot - ha;
     lay.h[sq.a.dataset.unit] = ha; lay.h[sq.b.dataset.unit] = hb; sq.a.style.setProperty('--uflex', `${ha} 1 0px`); sq.b.style.setProperty('--uflex', `${hb} 1 0px`);
   }
   else { const dx = e.clientX - sq.x0, w = Math.max(170, Math.min(560, Math.round(sq.id === 'left' ? sq.w0 + dx : sq.w0 - dx))); lay.w[sq.id] = w; sq.D.style.width = w + 'px'; }
@@ -7700,7 +7700,8 @@ function addGrip(win, { minW = 200, minH = 120, onEnd } = {}) {
     e.preventDefault(); e.stopPropagation(); g.setPointerCapture(e.pointerId);
     const r = win.getBoundingClientRect(), w0 = r.width, h0 = r.height, x0 = e.clientX, y0 = e.clientY;
     const aw = win.classList.contains('aw'), B = aw ? winBox(win) : { right: innerWidth - 4, bottom: innerHeight - 4 };
-    const mv = ev => { const w = Math.max(minW, Math.min(B.right - r.left, w0 + ev.clientX - x0)) + 'px', h = Math.max(minH, Math.min(B.bottom - r.top, h0 + ev.clientY - y0)) + 'px'; if (aw) { win.style.setProperty('--ww', w); win.style.setProperty('--wh', h); } else { win.style.width = w; win.style.height = h; win.style.maxHeight = 'none'; } };
+    const cm = typeof contentMinH === 'function' ? parseFloat(win.style.minHeight) || 0 : 0;
+    const mv = ev => { const w = Math.max(minW, Math.min(B.right - r.left, w0 + ev.clientX - x0)) + 'px', h = Math.max(minH, cm, Math.min(B.bottom - r.top, h0 + ev.clientY - y0)) + 'px'; if (aw) { win.style.setProperty('--ww', w); win.style.setProperty('--wh', h); } else { win.style.width = w; win.style.height = h; win.style.maxHeight = 'none'; } };
     const up = () => { g.removeEventListener('pointermove', mv); g.removeEventListener('pointerup', up); g.removeEventListener('pointercancel', up); onEnd && onEnd(); };
     g.addEventListener('pointermove', mv); g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up);
   });
@@ -7981,14 +7982,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.23-0621' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.23-1240' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.23-0621';
+const BELEAF_BUILD = '2026.11.23-1240';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
@@ -9950,6 +9951,41 @@ const UMIN = { color: 250, saved: 170, mix: 200, recent: 64, layers: 150, brush:
 const uminOf = u => UMIN[u && u.dataset.unit] || 74;
 function applyUnitMins() { $$('.dbody > [data-unit], #brushPanel > .scroll > [data-unit]').forEach(u => u.style.setProperty('--umin', uminOf(u) + 'px')); }
 applyUnitMins(); new MutationObserver(applyUnitMins).observe(document.body, { childList: true, subtree: false });
+
+/* ---- windows and panels can't be made so small that something is cut off ----
+   Lists and other scrolling areas may shrink (down to a few rows, then they scroll); everything else in the window
+   (title, tabs, buttons, sliders) always stays whole. The limit follows whatever the window is showing right now. */
+const KEEP_SCROLL = 130;
+function contentMinH(box) {
+  if (!box || box.hidden || box.classList.contains('min') || box.dataset.collapsed === 'true' || !box.offsetParent && getComputedStyle(box).position !== 'fixed') return 0;
+  const r = box.getBoundingClientRect(); if (!r.height) return 0;
+  const scs = [...box.querySelectorAll('*')].filter(e => e.clientHeight > 24 && e.offsetParent !== null && /(auto|scroll)/.test(getComputedStyle(e).overflowY));
+  const outer = scs.filter(e => !scs.some(o => o !== e && o.contains(e)));
+  // areas side by side shrink together, so a row of them can only give up as much as its least shrinkable one
+  let need = r.height; const rows = [];
+  for (const s of outer) { const q = s.getBoundingClientRect(), red = Math.max(0, s.clientHeight - Math.min(s.scrollHeight, KEEP_SCROLL)); const row = rows.find(w => q.top < w.b - 2 && q.bottom > w.t + 2); if (row) { row.red = Math.min(row.red, red); row.t = Math.min(row.t, q.top); row.b = Math.max(row.b, q.bottom); } else rows.push({ t: q.top, b: q.bottom, red }); }
+  for (const w of rows) need -= w.red;
+  need += Math.max(0, box.scrollHeight - box.clientHeight); // anything already pushed out of sight
+  return Math.min(Math.ceil(need), innerHeight - 16);
+}
+const minWatch = new WeakSet(); let minQ = new Set(), minT = 0;
+function minFix(box) {
+  const prev = box.style.minHeight; box.style.minHeight = '';
+  const m = contentMinH(box); box.style.minHeight = m ? m + 'px' : prev && !m ? '' : '';
+  if (box.classList.contains('aw') && m) { const h = parseFloat(getComputedStyle(box).getPropertyValue('--wh')); if (h && h < m) box.style.setProperty('--wh', m + 'px'); }
+}
+function minSoon(box) { minQ.add(box); if (!minT) minT = requestAnimationFrame(() => { minT = 0; const q = [...minQ]; minQ.clear(); q.forEach(minFix); }); }
+function minWatchAll() {
+  $$('.aw, .fwin, .pop, .dbody > [data-unit], #brushPanel > .scroll > [data-unit]').forEach(box => {
+    if (minWatch.has(box)) return; minWatch.add(box);
+    new MutationObserver(() => minSoon(box)).observe(box, { subtree: true, childList: true, attributes: true, attributeFilter: ['hidden', 'aria-selected', 'data-collapsed', 'class'] });
+    minSoon(box);
+  });
+}
+minWatchAll(); new MutationObserver(() => { minWatchAll(); }).observe(document.body, { childList: true, subtree: true });
+addEventListener('resize', () => $$('.aw, .fwin, .pop').forEach(minSoon));
+// a resize corner re-measures before you drag it
+document.addEventListener('pointerdown', e => { const g = e.target.closest('.rgrip, .ugrip'); if (!g) return; const box = g.classList.contains('ugrip') ? g.parentElement : g.parentElement; minFix(box); if (g.classList.contains('ugrip')) { let nb = box.nextElementSibling; while (nb && (!nb.dataset.unit || nb.hidden)) nb = nb.nextElementSibling; if (nb) minFix(nb); } }, true);
 
 /* ================= phones and tablets: everything in reach =================
    - an "All" button at the start of the tool bar opens one sheet with every tool, panel, quick command and menu, plus search
