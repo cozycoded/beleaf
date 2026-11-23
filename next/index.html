@@ -5307,6 +5307,15 @@ $('#projIn').onchange = async e => { for (const f of e.target.files) { try { awa
 // installed app: double-clicking a .beleaf file opens it here
 if ('launchQueue' in window) try { launchQueue.setConsumer(async p => { for (const h of p.files || []) { try { const f = await h.getFile(); await openProjectBytes(new Uint8Array(await f.arrayBuffer()), f.name); } catch (err) { toast(err.message || String(err)); } } }); } catch { }
 
+// beleaf for Windows: a .beleaf (or .psd) double-clicked in Explorer opens here
+if (window.__TAURI__ && window.__TAURI__.core) setTimeout(async () => {
+  try {
+    const inv = window.__TAURI__.core.invoke, name = await inv('startup_name'); if (!name) return;
+    const u8 = new Uint8Array(await inv('startup_file')); if (!u8.length) return;
+    if (/\.psd$/i.test(name)) await openPsdBytes(u8, name); else await openProjectBytes(u8, name);
+  } catch (err) { console.warn(err); toast('Couldn’t open that file: ' + (err.message || err)); }
+}, 1200);
+
 /* ================= timelapse: every emote box (and the whole canvas) records itself as you draw ================= */
 let tlFrames = {}; // 'b3' -> [Blob…] for emote box 3, 'all' -> whole canvas
 let tlOn = store.get('tlOn2', false), tlPend = new Set(), tlT = 0, tlBusy = false;
@@ -7942,14 +7951,14 @@ function openAbout() {
     const leaf = el('div', { class: 'about-logo' }); leaf.innerHTML = $('#appLogo').innerHTML;
     const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
     m.append(el('div', { class: 'card about-card', role: 'dialog', 'aria-label': 'About beleaf' }, leaf, el('h2', { text: 'beleaf' }), el('p', { class: 'note', text: 'An emote-focused drawing app.' }),
-      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.23-0518' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
+      el('dl', { class: 'about-dl' }, el('dt', { text: 'Version' }), el('dd', { text: '2026.11.23-0527' }), el('dt', { text: 'Running as' }), el('dd', { text: installed ? 'Installed app' : 'Web page' }), el('dt', { text: 'Works offline' }), el('dd', { text: 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Yes' : 'After installing, or after one more visit' })),
       el('div', { class: 'actions' }, el('button', { class: 'btn', text: 'Check for updates…', onclick: () => { m.hidden = true; openUpdates(); } }), el('button', { class: 'btn primary', text: 'Close', onclick: () => m.hidden = true }))));
   }
   m.hidden = false;
 }
 
 /* ================= updates: is there a newer beleaf online? get it with one button ================= */
-const BELEAF_BUILD = '2026.11.23-0518';
+const BELEAF_BUILD = '2026.11.23-0527';
 const updBase = () => location.href.split('#')[0].split('?')[0];
 let updLatest = null, updAt = 0, updToasted = '';
 async function checkUpdate() {
