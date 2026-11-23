@@ -38,8 +38,9 @@ jobs:
       - name: Android project
         working-directory: desktop
         run: |
-          npm run tauri -- icon ../icons/icon-512.png
           npm run tauri -- android init --ci
+          # after init, so the Android app gets beleaf's icon instead of Tauri's
+          npm run tauri -- icon ../icons/icon-512.png
       - name: Build
         working-directory: desktop
         run: npm run tauri -- android build --apk --target aarch64 --ci
