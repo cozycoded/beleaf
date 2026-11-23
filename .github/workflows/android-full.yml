@@ -15,10 +15,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 17 }
-      - uses: android-actions/setup-android@v3
-      - name: Android NDK
+      - name: Android SDK and NDK (already on the runner)
         run: |
-          sdkmanager --install "ndk;27.2.12479018" "platforms;android-34" "build-tools;34.0.0" >/dev/null
+          SM=$(ls -d $ANDROID_HOME/cmdline-tools/*/bin | sort -V | tail -1)/sdkmanager
+          yes | $SM --licenses >/dev/null || true
+          $SM --install "ndk;27.2.12479018" "platforms;android-34" "build-tools;34.0.0" >/dev/null
           echo "NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> $GITHUB_ENV
       - uses: dtolnay/rust-toolchain@stable
         with: { targets: 'aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android' }
