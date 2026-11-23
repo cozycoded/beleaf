@@ -27,20 +27,22 @@ jobs:
         with: { workspaces: 'desktop/src-tauri -> target' }
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
-      - run: npm install -g @tauri-apps/cli@2
+      - name: Tauri tools
+        working-directory: desktop
+        run: npm install
       - name: The app itself (same file as the website)
         run: |
           mkdir -p desktop/dist/icons
           cp index.html desktop/dist/index.html
           cp icons/* desktop/dist/icons/
       - name: Android project
-        working-directory: desktop/src-tauri
+        working-directory: desktop
         run: |
-          tauri icon ../../icons/icon-512.png
-          tauri android init --ci
+          npm run tauri -- icon ../icons/icon-512.png
+          npm run tauri -- android init --ci
       - name: Build
-        working-directory: desktop/src-tauri
-        run: tauri android build --apk --target aarch64 --ci
+        working-directory: desktop
+        run: npm run tauri -- android build --apk --target aarch64 --ci
       - name: Sign
         run: |
           APK=$(find desktop/src-tauri/gen/android -name "*release*.apk" | head -1); echo "built: $APK"

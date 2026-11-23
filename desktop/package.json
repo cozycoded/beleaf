@@ -1,0 +1,6 @@
+{
+  "name": "beleaf-app",
+  "private": true,
+  "scripts": { "tauri": "tauri" },
+  "devDependencies": { "@tauri-apps/cli": "^2" }
+}
