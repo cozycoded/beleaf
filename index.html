@@ -2983,7 +2983,7 @@ function allocDoc(w, h) {
 const newSurface = () => { const c = mk(DOC.w, DOC.h); return { c, ctx: c.getContext('2d') }; };
 let layers = [], active = 0, uid = 1, ver = 0;
 const anim = { n: 1, cur: 0, holds: [1], fps: 12, onion: true, loop: true, playing: false };
-const NEXTF = false; // beleaf next turns on the newest features
+const NEXTF = true; // masks, rulers and symmetry, correction layers, vector layers (in both beleaf and beleaf next now)
 const FLAGS = { clip: false, lockAlpha: false, locked: false, ref: false, draft: false };
 function newLayer(name, fill) {
   const s = newSurface();

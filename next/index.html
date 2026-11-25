@@ -3,10 +3,9 @@
 <meta name="theme-color" content="#141416"><meta name="robots" content="noindex">
 <link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
 <style>html,body{margin:0;height:100%}[hidden]{display:none!important}
-#nextBadge{position:fixed;left:50%;bottom:6px;transform:translateX(-50%);z-index:90;font:600 11px system-ui,sans-serif;color:#fff;background:#7a4cff;border-radius:999px;padding:3px 10px;opacity:.85;pointer-events:none;border:0;white-space:nowrap}
-#stage>#nextBadge{position:absolute;left:8px;bottom:8px;transform:none;z-index:5;opacity:.75}
-@media (max-width:699px){#nextBadge .nb-long{display:none}#stage>#nextBadge{font-size:10px;padding:2px 8px}}</style>
-</head><body><div id="nextBadge">beleaf next · Rust engine test</div><title>beleaf next</title>
+#nextBadge.on .nb-core{fill:currentColor}
+</style>
+</head><body><title>beleaf next</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Lexend:wght@400;500;600;700&family=Comic+Neue:wght@400;700&display=swap">
@@ -1812,6 +1811,7 @@ html,body{overscroll-behavior:none} /* no pull-to-refresh or swipe-back bounce w
     </nav>
     <span class="doc-title" id="docTitle"></span>
     <div class="spacer"></div>
+    <button class="ibtn" id="nextBadge" aria-label="Rust engine - GPU off" title="Rust engine - GPU off"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/><rect class="nb-core" x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/></svg></button>
     <button class="pomochip" id="pomoChip" hidden aria-label="Focus timer"><svg class="ic" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="14" pathLength="1" class="pc-bg"/><circle cx="18" cy="18" r="14" pathLength="1" class="pc-fg"/></svg><b>25:00</b></button>
     <button class="ibtn" id="undoBtn" aria-label="Undo (Ctrl+Z)" title="Undo (Ctrl+Z)"><svg class="ic" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/></svg></button>
     <button class="ibtn" id="redoBtn" aria-label="Redo (Ctrl+Y)" title="Redo (Ctrl+Y)"><svg class="ic" viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 000 12h3"/></svg></button>
@@ -10618,16 +10618,34 @@ var GPUV = (() => {
     return G.on;
   };
   function badge() {
-    const b = document.getElementById('nextBadge'); if (!b) return;
-    b.innerHTML = '<span class="nb-long">beleaf next · Rust engine · </span>GPU ' + (G.on ? 'on' : 'off') + (G.why && !G.on && pref() ? ' (' + G.why + ')' : '');
-    // it sits in a corner of the drawing area, out of the way of the top bar's buttons
-    const st = document.getElementById('stage'); if (st && b.parentNode !== st) st.append(b);
+    const bs = document.querySelectorAll('#nextBadge, #nextBadgeM'); if (!bs.length) return;
+    for (const b of bs) {
+    // a chip icon in the top bar; hovering shows which engine draws and whether the GPU canvas is on (filled middle = GPU on)
+    const t = badgeText(); b.title = t; b.setAttribute('aria-label', t); b.classList.toggle('on', !!G.on);
+    }
+  }
+  function badgeText() {
+    const eng = typeof RUST === 'undefined' || RUST ? 'Rust engine' : RUST_ERR ? 'Old engine (Rust engine unavailable here)' : 'Rust engine (loading)';
+    return eng + ' - GPU ' + (G.on ? 'on' : 'off') + (G.why && !G.on && pref() ? ' (' + G.why + ')' : '');
   }
   G.debug = () => ({ bufs: [...bufs.keys()], compVer, mipVer });
   // for automated tests of beleaf next
   G.t = { get V() { return V; }, get layers() { return layers; }, get active() { return active; }, dirty: c => dirty(c), addLayer: () => addLayer(), addFolder: () => addFolder(false) };
   // start once the app is up
-  setTimeout(() => { if (pref()) G.set(true); else badge(); const b = document.getElementById('nextBadge'); if (b) { b.style.pointerEvents = 'auto'; b.style.cursor = 'pointer'; b.title = 'Turn the GPU canvas on or off'; b.onclick = () => G.set(!G.on); } }, 0);
+  setTimeout(() => { if (pref()) G.set(true); else badge(); try { rustReady.then(badge, badge); } catch { }
+    // clicking or tapping shows the same text (phones have no hover), with a button to switch the GPU canvas
+    const click = () => {
+      toast(badgeText()); const t = document.getElementById('toast'); if (!t) return;
+      const sw = document.createElement('button'); sw.className = 'toast-undo'; sw.textContent = G.on ? 'Turn GPU off' : 'Turn GPU on';
+      sw.onclick = () => { t.hidden = true; if (G.set(!G.on) !== false || !G.on) toast(badgeText()); };
+      t.append(' ', sw); clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 6000);
+    };
+    const b = document.getElementById('nextBadge'); if (b) b.onclick = click;
+    // phones: the top bar is the phone command bar, so the same icon goes at the end of its sliding part (tap shows the text)
+    const mb = document.getElementById('mobBar');
+    const phoneIcon = () => { const sc = mb && mb.querySelector('.mb-scroll'); if (!b || !sc || sc.querySelector('#nextBadgeM')) return;
+      const c = b.cloneNode(true); c.id = 'nextBadgeM'; c.classList.add('mb'); c.onclick = click; sc.append(c); badge(); };
+    if (mb) { new MutationObserver(phoneIcon).observe(mb, { childList: true, subtree: true }); phoneIcon(); } }, 0);
   return G;
 })();
 window.GPUV = GPUV;
