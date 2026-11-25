@@ -1,16 +1,23 @@
 # Builds the full beleaf (every feature of the website) as an Android app with Tauri, signs it, and puts it on the
-# "android-test" release as beleaf-full.apk. (beleaf.apk on the same release is the separate native app.)
+# "android-test" release as beleaf-full.apk, and beleaf next the same way as beleaf-next.apk (installs beside it).
+# (beleaf.apk on the same release is the separate native app.)
 name: android full app
 on:
   push:
     branches: [main]
-    paths: ['index.html', 'icons/**', 'desktop/**', '.github/workflows/android-full.yml']
+    paths: ['index.html', 'next/**', 'icons/**', 'desktop/**', '.github/workflows/android-full.yml']
   workflow_dispatch:
 permissions:
   contents: write
 jobs:
   apk:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { flavor: main, apk: beleaf-full.apk }
+          - { flavor: next, apk: beleaf-next.apk }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -24,17 +31,14 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with: { targets: 'aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android' }
       - uses: Swatinem/rust-cache@v2
-        with: { workspaces: 'desktop/src-tauri -> target' }
+        with: { workspaces: 'desktop/src-tauri -> target', key: '${{ matrix.flavor }}' }
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - name: Tauri tools
         working-directory: desktop
         run: npm install
-      - name: The app itself (same file as the website)
-        run: |
-          mkdir -p desktop/dist/icons
-          cp index.html desktop/dist/index.html
-          cp icons/* desktop/dist/icons/
+      - name: The app itself (same files as the website)
+        run: node desktop/flavor.js ${{ matrix.flavor }}
       - name: Android project
         working-directory: desktop
         run: |
@@ -54,10 +58,10 @@ jobs:
           BT=$ANDROID_HOME/build-tools/34.0.0
           mkdir out
           $BT/zipalign -f -p 4 "$APK" out/aligned.apk
-          $BT/apksigner sign --ks .android/beleaf-release.keystore --ks-key-alias beleaf --ks-pass "pass:$PW" --key-pass "pass:$PW" --out out/beleaf-full.apk out/aligned.apk
-          $BT/apksigner verify out/beleaf-full.apk && ls -la out
+          $BT/apksigner sign --ks .android/beleaf-release.keystore --ks-key-alias beleaf --ks-pass "pass:$PW" --key-pass "pass:$PW" --out out/${{ matrix.apk }} out/aligned.apk
+          $BT/apksigner verify out/${{ matrix.apk }} && ls -la out
       - name: Attach to the android-test release
         env: { GH_TOKEN: '${{ github.token }}' }
         run: |
-          gh release view android-test >/dev/null 2>&1 || gh release create android-test --prerelease --title "beleaf for Android (test)" --notes "beleaf-full.apk: every beleaf feature. beleaf.apk: the native (fast) app, still growing."
-          gh release upload android-test out/beleaf-full.apk --clobber
+          gh release view android-test >/dev/null 2>&1 || gh release create android-test --prerelease --title "beleaf for Android (test)" --notes "beleaf-full.apk: every beleaf feature. beleaf-next.apk: beleaf next. beleaf.apk: the native (fast) app, still growing." || true
+          gh release upload android-test out/${{ matrix.apk }} --clobber

@@ -1,31 +1,35 @@
-# Builds beleaf for Windows (a Tauri program around the web app) and puts the installer on the
+# Builds beleaf for Windows (a Tauri program around the web app) and puts the installers on the
 # "windows-test" release: https://github.com/cozycoded/beleaf/releases/tag/windows-test
+#   beleaf-setup.exe / beleaf.msi            the official site
+#   beleaf-next-setup.exe / beleaf-next.msi  beleaf next (installs beside beleaf, keeps its own drawings)
 name: windows app
 on:
   push:
     branches: [main]
-    paths: ['index.html', 'icons/**', 'desktop/**', '.github/workflows/windows.yml']
+    paths: ['index.html', 'next/**', 'icons/**', 'desktop/**', '.github/workflows/windows.yml']
   workflow_dispatch:
 permissions:
   contents: write
 jobs:
   build:
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { flavor: main, name: beleaf }
+          - { flavor: next, name: beleaf-next }
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-        with: { workspaces: 'desktop/src-tauri -> target' }
+        with: { workspaces: 'desktop/src-tauri -> target', key: '${{ matrix.flavor }}' }
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - name: Tauri tools
         run: npm install -g @tauri-apps/cli@2
-      - name: The app itself (same file as the website)
-        shell: bash
-        run: |
-          mkdir -p desktop/dist/icons
-          cp index.html desktop/dist/index.html
-          cp icons/* desktop/dist/icons/
+      - name: The app itself (same files as the website)
+        run: node desktop/flavor.js ${{ matrix.flavor }}
       - name: Icons
         working-directory: desktop/src-tauri
         run: tauri icon ../../icons/icon-512.png
@@ -36,12 +40,12 @@ jobs:
         shell: bash
         run: |
           mkdir out
-          cp desktop/src-tauri/target/release/bundle/nsis/*.exe out/beleaf-setup.exe
-          cp desktop/src-tauri/target/release/bundle/msi/*.msi out/beleaf.msi
+          cp desktop/src-tauri/target/release/bundle/nsis/*.exe out/${{ matrix.name }}-setup.exe
+          cp desktop/src-tauri/target/release/bundle/msi/*.msi out/${{ matrix.name }}.msi
           ls -la out
       - name: Publish to the windows-test release
         env: { GH_TOKEN: '${{ github.token }}' }
         shell: bash
         run: |
-          gh release view windows-test >/dev/null 2>&1 || gh release create windows-test --prerelease --title "beleaf for Windows (test)" --notes "Download beleaf-setup.exe and run it. Rebuilt automatically whenever beleaf changes."
-          gh release upload windows-test out/beleaf-setup.exe out/beleaf.msi --clobber
+          gh release view windows-test >/dev/null 2>&1 || gh release create windows-test --prerelease --title "beleaf for Windows (test)" --notes "Download beleaf-setup.exe (or beleaf-next-setup.exe for beleaf next) and run it. Rebuilt automatically whenever beleaf changes." || true
+          gh release upload windows-test out/${{ matrix.name }}-setup.exe out/${{ matrix.name }}.msi --clobber
