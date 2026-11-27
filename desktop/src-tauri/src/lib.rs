@@ -1,4 +1,7 @@
 // beleaf as a program: the web app in its own window (WebView2 on Windows, the system WebView on Android).
+// It keeps itself up to date: each start it fetches the newest beleaf from the website in the background and keeps it on
+// this device (see live.rs), so changes to the website reach the program without reinstalling it.
+mod live;
 use std::path::PathBuf;
 
 /// A .beleaf or .psd file beleaf was opened with (double-clicked in Explorer, or dragged onto the icon).
@@ -23,12 +26,21 @@ fn startup_file() -> tauri::ipc::Response {
     tauri::ipc::Response::new(bytes)
 }
 
+/// "checking", "same", "updated" (a newer beleaf was fetched after this window had opened) or "offline".
+#[tauri::command]
+fn live_status() -> String {
+    live::status()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let mut ctx = tauri::generate_context!();
+    let built_in = ctx.set_assets(Box::new(live::Empty));
+    ctx.set_assets(Box::new(live::LiveAssets { inner: built_in }));
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .invoke_handler(tauri::generate_handler![startup_name, startup_file])
-        .run(tauri::generate_context!())
+        .invoke_handler(tauri::generate_handler![startup_name, startup_file, live_status])
+        .run(ctx)
         .expect("beleaf couldn't start");
 }

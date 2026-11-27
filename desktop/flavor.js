@@ -24,6 +24,8 @@ if (flavor === 'next') {
     j.identifier = 'com.cozycoded.beleaf.next';
     for (const w of j.app.windows) { w.title = 'beleaf next'; w.url = 'next/index.html'; }
   });
+  // what the program keeps up to date from the website (see src-tauri/src/live.rs)
+  fs.writeFileSync(path.join(here, 'src-tauri/live.txt'), ['next/index.html', ...fs.readdirSync(path.join(root, 'next/engine')).map(f => 'next/engine/' + f)].join('\n') + '\n');
   const ma = path.join(here, 'android/MainActivity.kt');
   fs.writeFileSync(ma, fs.readFileSync(ma, 'utf8').replace(/^package .*$/m, 'package com.cozycoded.beleaf.next'));
 }

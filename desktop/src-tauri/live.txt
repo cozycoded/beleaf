@@ -1,0 +1,3 @@
+# The files the program keeps up to date from https://cozycoded.github.io/beleaf/ (the page first).
+# desktop/flavor.js rewrites this list for beleaf next.
+index.html

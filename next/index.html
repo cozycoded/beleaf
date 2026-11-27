@@ -10651,6 +10651,25 @@ var GPUV = (() => {
 window.GPUV = GPUV;
 
 
+
+/* the Windows program and Android app: they fetch the newest beleaf from the website by themselves (kept on the device,
+   so they still open offline). When a newer one arrives after the window opened, offer to restart into it. */
+(() => {
+  const T = window.__TAURI__; if (!T || !T.core) return;
+  try { if (sessionStorage.getItem('liveRestarted')) { sessionStorage.removeItem('liveRestarted'); return; } } catch { }
+  let n = 0;
+  const poll = async () => {
+    let s = ''; try { s = await T.core.invoke('live_status'); } catch { return; }
+    if (s === 'checking') { if (++n < 120) setTimeout(poll, 5000); return; }
+    if (s !== 'updated') return;
+    toast('A new version of beleaf' + (/\/next\//.test(location.pathname) ? ' next' : '') + ' is ready'); const t = document.getElementById('toast'); if (!t) return;
+    const b = document.createElement('button'); b.className = 'toast-undo'; b.textContent = 'Restart now';
+    b.onclick = async () => { t.hidden = true; try { sessionStorage.setItem('liveRestarted', '1'); } catch { } try { if (typeof saveNow === 'function') await saveNow(true); } catch { } location.reload(); };
+    t.append(' ', b); clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 20000);
+  };
+  setTimeout(poll, 4000);
+})();
+
 })();
 
 </script>
